@@ -181,12 +181,13 @@ export function useChatRoom(
               : data.message.timestamp,
         };
 
-        addMessageToRoom(data.message.roomId, messageWithTimestamp);
+        // 使用 getState() 获取最新的函数引用，避免闭包陷阱
+        const { addMessageToRoom: addMsg, currentRoomId: activeRoomId, incrementUnread: incUnread } = useChatsStore.getState();
+        addMsg(data.message.roomId, messageWithTimestamp);
 
         // Show toast if the message is for a room that is not currently open
-        const { currentRoomId: activeRoomId } = useChatsStore.getState();
         if (activeRoomId !== data.message.roomId) {
-          incrementUnread(data.message.roomId);
+          incUnread(data.message.roomId);
           const decoded = decodeHtmlEntities(
             String(data.message.content || "")
           );
@@ -196,9 +197,9 @@ export function useChatRoom(
             action: {
               label: "Open",
               onClick: () => {
-                // Switch to the room and ensure we are subscribed
-                switchRoom(data.message.roomId);
-                subscribeToRoomChannel(data.message.roomId);
+                // Switch to the room (订阅会通过 useEffect 自动处理)
+                const { switchRoom: swRoom } = useChatsStore.getState();
+                swRoom(data.message.roomId);
               },
             },
           });
@@ -210,8 +211,9 @@ export function useChatRoom(
         roomId: string;
       }) => {
         console.log("[Pusher Hook] Message deleted:", data.messageId);
-        // Remove the message locally so UI reflects deletion
-        removeMessageFromRoom(data.roomId, data.messageId);
+        // 使用 getState() 获取最新的函数引用
+        const { removeMessageFromRoom: removeMsg } = useChatsStore.getState();
+        removeMsg(data.roomId, data.messageId);
       };
 
       // Unbind any existing handlers first (safety measure)
@@ -222,7 +224,7 @@ export function useChatRoom(
       roomChannel.bind("room-message", handleRoomMessage);
       roomChannel.bind("message-deleted", handleMessageDeleted);
     },
-    [addMessageToRoom, removeMessageFromRoom, switchRoom, incrementUnread]
+    [] // 使用空依赖数组，因为事件处理器内部使用 getState() 获取最新状态
   );
 
   const unsubscribeFromRoomChannel = useCallback((roomId: string) => {

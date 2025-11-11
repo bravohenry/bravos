@@ -151,8 +151,8 @@ const makeAuthenticatedRequest = async (
     // 如果是普通对象，直接展开并更新
     newHeaders = {
       ...originalHeaders,
-      Authorization: `Bearer ${refreshResult.token}`,
-    };
+    Authorization: `Bearer ${refreshResult.token}`,
+  };
     // 确保 X-Username 被保留（如果原始 headers 中有）
     if (!("X-Username" in newHeaders) && originalHeaders && "X-Username" in originalHeaders) {
       newHeaders["X-Username"] = (originalHeaders as Record<string, string>)["X-Username"];
