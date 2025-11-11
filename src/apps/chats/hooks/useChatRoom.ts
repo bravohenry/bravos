@@ -47,10 +47,9 @@ export function useChatRoom(
     createRoom,
     deleteRoom,
     sendMessage,
-    addMessageToRoom,
-    removeMessageFromRoom,
-    incrementUnread,
     messageRenderLimit,
+    // 注意：addMessageToRoom, removeMessageFromRoom, incrementUnread
+    // 在 Pusher 事件处理器中通过 getState() 获取，避免闭包陷阱
   } = useChatsStore();
 
   // Derive isAdmin directly from the username
