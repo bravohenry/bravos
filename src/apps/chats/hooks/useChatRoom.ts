@@ -159,14 +159,14 @@ export function useChatRoom(
   }, [username, fetchRooms, setRooms]);
 
   const subscribeToRoomChannel = useCallback((roomId: string) => {
-    if (!pusherRef.current || roomChannelsRef.current[roomId]) return;
+      if (!pusherRef.current || roomChannelsRef.current[roomId]) return;
 
-    console.log(`[Pusher Hook] Subscribing to room channel: room-${roomId}`);
-    const roomChannel = pusherRef.current.subscribe(`room-${roomId}`);
-    roomChannelsRef.current[roomId] = roomChannel;
+      console.log(`[Pusher Hook] Subscribing to room channel: room-${roomId}`);
+      const roomChannel = pusherRef.current.subscribe(`room-${roomId}`);
+      roomChannelsRef.current[roomId] = roomChannel;
 
     // Create event handlers - use getState() to avoid stale closures
-    const handleRoomMessage = (data: { message: ChatMessage }) => {
+      const handleRoomMessage = (data: { message: ChatMessage }) => {
       console.log("[Pusher Hook] Received room-message:", {
         id: data.message.id,
         clientId: (data.message as any).clientId,
@@ -174,54 +174,54 @@ export function useChatRoom(
         content: data.message.content?.substring(0, 50)
       });
 
-      // Add message with proper timestamp
-      const messageWithTimestamp = {
-        ...data.message,
-        timestamp:
-          typeof data.message.timestamp === "string" ||
-          typeof data.message.timestamp === "number"
-            ? new Date(data.message.timestamp).getTime()
-            : data.message.timestamp,
-      };
+        // Add message with proper timestamp
+        const messageWithTimestamp = {
+          ...data.message,
+          timestamp:
+            typeof data.message.timestamp === "string" ||
+            typeof data.message.timestamp === "number"
+              ? new Date(data.message.timestamp).getTime()
+              : data.message.timestamp,
+        };
 
       // 使用 getState() 获取最新的函数引用，避免闭包陷阱
       const store = useChatsStore.getState();
       store.addMessageToRoom(data.message.roomId, messageWithTimestamp);
 
-      // Show toast if the message is for a room that is not currently open
+        // Show toast if the message is for a room that is not currently open
       if (store.currentRoomId !== data.message.roomId) {
         store.incrementUnread(data.message.roomId);
-        const decoded = decodeHtmlEntities(
-          String(data.message.content || "")
-        );
-        const preview = decoded.replace(/\s+/g, " ").trim().slice(0, 80);
-        toast(`@${data.message.username}`, {
-          description: preview,
-          action: {
-            label: "Open",
-            onClick: () => {
+          const decoded = decodeHtmlEntities(
+            String(data.message.content || "")
+          );
+          const preview = decoded.replace(/\s+/g, " ").trim().slice(0, 80);
+          toast(`@${data.message.username}`, {
+            description: preview,
+            action: {
+              label: "Open",
+              onClick: () => {
               useChatsStore.getState().switchRoom(data.message.roomId);
+              },
             },
-          },
-        });
-      }
-    };
+          });
+        }
+      };
 
-    const handleMessageDeleted = (data: {
-      messageId: string;
-      roomId: string;
-    }) => {
-      console.log("[Pusher Hook] Message deleted:", data.messageId);
+      const handleMessageDeleted = (data: {
+        messageId: string;
+        roomId: string;
+      }) => {
+        console.log("[Pusher Hook] Message deleted:", data.messageId);
       useChatsStore.getState().removeMessageFromRoom(data.roomId, data.messageId);
-    };
+      };
 
-    // Unbind any existing handlers first (safety measure)
-    roomChannel.unbind("room-message");
-    roomChannel.unbind("message-deleted");
+      // Unbind any existing handlers first (safety measure)
+      roomChannel.unbind("room-message");
+      roomChannel.unbind("message-deleted");
 
-    // Bind the handlers
-    roomChannel.bind("room-message", handleRoomMessage);
-    roomChannel.bind("message-deleted", handleMessageDeleted);
+      // Bind the handlers
+      roomChannel.bind("room-message", handleRoomMessage);
+      roomChannel.bind("message-deleted", handleMessageDeleted);
   }, []);
 
   const unsubscribeFromRoomChannel = useCallback((roomId: string) => {
