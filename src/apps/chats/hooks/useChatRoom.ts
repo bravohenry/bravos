@@ -167,7 +167,12 @@ export function useChatRoom(
 
     // Create event handlers - use getState() to avoid stale closures
     const handleRoomMessage = (data: { message: ChatMessage }) => {
-      console.log("[Pusher Hook] Received room-message:", data.message);
+      console.log("[Pusher Hook] Received room-message:", {
+        id: data.message.id,
+        clientId: (data.message as any).clientId,
+        username: data.message.username,
+        content: data.message.content?.substring(0, 50)
+      });
 
       // Add message with proper timestamp
       const messageWithTimestamp = {
