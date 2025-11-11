@@ -1,6 +1,8 @@
 // 安全的 Analytics wrapper，防止被内容拦截器阻止时影响应用
 
-let analyticsTrack: ((event: string, data?: Record<string, unknown>) => void) | null = null;
+type TrackFunction = (event: string, data?: Record<string, any>) => void;
+
+let analyticsTrack: TrackFunction | null = null;
 let analyticsInitialized = false;
 
 // 尝试初始化 Analytics
@@ -10,7 +12,7 @@ async function initAnalytics() {
 
   try {
     const analytics = await import("@vercel/analytics");
-    analyticsTrack = analytics.track;
+    analyticsTrack = analytics.track as TrackFunction;
   } catch (error) {
     // 静默失败，不影响应用运行
     console.warn("Analytics 初始化失败（可能被内容拦截器阻止）");
@@ -19,7 +21,7 @@ async function initAnalytics() {
 }
 
 // 导出安全的 track 函数
-export function track(event: string, data?: Record<string, unknown>) {
+export function track(event: string, data?: Record<string, any>) {
   // 如果还没有初始化，尝试初始化
   if (!analyticsInitialized) {
     initAnalytics().then(() => {
