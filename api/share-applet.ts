@@ -442,7 +442,7 @@ export default async function handler(req: Request) {
       }
 
       // Check if user is zi
-      if (username?.toLowerCase() !== "zi") {
+      if (username?.toLowerCase() !== "zihan") {
         return new Response(
           JSON.stringify({ error: "Forbidden" }),
           {
@@ -523,7 +523,7 @@ export default async function handler(req: Request) {
       }
 
       // Check if user is zi
-      if (username?.toLowerCase() !== "zi") {
+      if (username?.toLowerCase() !== "zihan") {
         return new Response(
           JSON.stringify({ error: "Forbidden" }),
           {

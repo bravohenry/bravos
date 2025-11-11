@@ -207,7 +207,7 @@ export default async function handler(req: Request) {
   const identifier = username ? username.toLowerCase() : null;
 
   // Check if this is zi with valid authentication
-  const isAuthenticatedZi = isAuthenticated && identifier === "zi";
+  const isAuthenticatedZi = isAuthenticated && identifier === "zihan";
 
   // ---------------------------
   // Rate limiting (burst + daily)

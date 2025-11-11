@@ -35,8 +35,8 @@ async function checkAndIncrementAIMessageCount(
   // Set limit based on authentication status
   const limit = isAnonymous ? AI_LIMIT_ANON_PER_5_HOURS : AI_LIMIT_PER_5_HOURS;
 
-  // Identify privileged user (zi)
-  const isZi = identifier === "zi";
+  // Identify privileged user (zihan)
+  const isZi = identifier === "zihan";
 
   // --- Authentication validation section ---
   // If authenticated, validate the token

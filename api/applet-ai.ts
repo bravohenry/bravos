@@ -471,7 +471,7 @@ export default async function handler(req: Request): Promise<Response> {
   const mode = requestedMode ?? "text";
 
   // Allow trusted user "zi" to bypass rate limits (but still requires valid auth token)
-  const rateLimitBypass = usernameHeader === "zi";
+  const rateLimitBypass = usernameHeader === "zihan";
   // If usernameHeader is not null, we've already validated the token, so user is authenticated
   const isAuthenticatedUser = usernameHeader !== null;
   const identifier = isAuthenticatedUser
