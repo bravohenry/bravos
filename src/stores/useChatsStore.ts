@@ -547,12 +547,20 @@ export const useChatsStore = create<ChatsStoreState>()(
             // Prefer replacing by clientId when provided by the server
             const incomingClientId = (incoming as Partial<ChatMessage>)
               .clientId as string | undefined;
+            
+            console.log('[ChatsStore] Dedup check:', {
+              incomingId: incoming.id,
+              incomingClientId,
+              existingMessages: existingMessages.map(m => ({ id: m.id, clientId: m.clientId }))
+            });
+            
             if (incomingClientId) {
               const idxByClientId = existingMessages.findIndex(
                 (m) =>
                   m.id === incomingClientId || m.clientId === incomingClientId
               );
               if (idxByClientId !== -1) {
+                console.log('[ChatsStore] Replacing optimistic message at index', idxByClientId);
                 const tempMsg = existingMessages[idxByClientId];
                 const replaced = {
                   ...incoming,
@@ -566,7 +574,11 @@ export const useChatsStore = create<ChatsStoreState>()(
                     [roomId]: updated.sort((a, b) => a.timestamp - b.timestamp),
                   },
                 };
+              } else {
+                console.log('[ChatsStore] No matching clientId found');
               }
+            } else {
+              console.log('[ChatsStore] No clientId in incoming message');
             }
 
             // Fallback: replace a temp message by matching username + content (decoded)
