@@ -1,7 +1,7 @@
 // Shared CORS utilities for API routes (JS file so JS and TS can both import)
 
 export const ALLOWED_ORIGINS = new Set([
-  "https://bravohenry.com",
+  "https://os.bravohenry.com",
   "http://localhost:3000",
   "http://localhost:5173",
 ]);

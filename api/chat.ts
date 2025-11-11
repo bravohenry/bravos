@@ -122,7 +122,11 @@ interface SystemState {
 }
 
 // Allowed origins for API requests
-const ALLOWED_ORIGINS = new Set(["https://bravohenry.com", "http://localhost:3000"]);
+const ALLOWED_ORIGINS = new Set([
+  "https://os.bravohenry.com",
+  "http://localhost:3000",
+  "http://localhost:5173", // Vite dev server 默认端口
+]);
 
 // Function to validate request origin
 // Only allow explicit origins defined in ALLOWED_ORIGINS – no wildcard ports or IP fallbacks
@@ -489,7 +493,7 @@ export default async function handler(req: Request) {
     // Get IP address for rate limiting anonymous users
     // For Vercel deployments, use x-vercel-forwarded-for (won't be overwritten by proxies)
     // For localhost, use a fixed identifier
-    const isLocalhost = origin === "http://localhost:3000";
+    const isLocalhost = origin === "http://localhost:3000" || origin === "http://localhost:5173";
     let ip: string;
 
     if (isLocalhost) {

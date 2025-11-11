@@ -147,7 +147,7 @@ ${ZI_PERSONA_INSTRUCTIONS}`;
   // Conditionally add Zi's persona instructions
   if (
     rawUrl &&
-    (rawUrl.includes("bravohenry.com") ||
+    (rawUrl.includes("os.bravohenry.com") ||
       rawUrl.includes("x.com") ||
       rawUrl.includes("notion") ||
       rawUrl.includes("cursor"))

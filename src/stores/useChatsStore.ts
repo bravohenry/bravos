@@ -131,12 +131,39 @@ const makeAuthenticatedRequest = async (
   }
 
   // Retry the request with the new token
-  const newHeaders = {
-    ...options.headers,
-    Authorization: `Bearer ${refreshResult.token}`,
-  };
+  // 确保正确保留所有原始 headers，特别是 X-Username
+  const originalHeaders = options.headers;
+  let newHeaders: HeadersInit;
+  
+  if (originalHeaders instanceof Headers) {
+    // 如果是 Headers 对象，需要手动复制所有键值对
+    newHeaders = new Headers(originalHeaders);
+    newHeaders.set("Authorization", `Bearer ${refreshResult.token}`);
+    // 确保 X-Username 被保留
+    if (!newHeaders.has("X-Username") && originalHeaders.has("X-Username")) {
+      newHeaders.set("X-Username", originalHeaders.get("X-Username")!);
+    }
+  } else if (Array.isArray(originalHeaders)) {
+    // 如果是数组格式，转换为对象并更新
+    newHeaders = Object.fromEntries(originalHeaders);
+    newHeaders["Authorization"] = `Bearer ${refreshResult.token}`;
+  } else {
+    // 如果是普通对象，直接展开并更新
+    newHeaders = {
+      ...originalHeaders,
+      Authorization: `Bearer ${refreshResult.token}`,
+    };
+    // 确保 X-Username 被保留（如果原始 headers 中有）
+    if (!("X-Username" in newHeaders) && originalHeaders && "X-Username" in originalHeaders) {
+      newHeaders["X-Username"] = (originalHeaders as Record<string, string>)["X-Username"];
+    }
+  }
 
-  console.log("[ChatsStore] Retrying request with refreshed token");
+  console.log("[ChatsStore] Retrying request with refreshed token", {
+    hasXUsername: newHeaders instanceof Headers 
+      ? newHeaders.has("X-Username")
+      : "X-Username" in newHeaders,
+  });
   return fetch(url, { ...options, headers: newHeaders });
 };
 
@@ -1165,11 +1192,35 @@ export const useChatsStore = create<ChatsStoreState>()(
           // If switching to a real room and we have a username, handle the API call
           if (username) {
             try {
+              let authToken = get().authToken;
+              
+              // 如果有 username 但没有 authToken，先确保生成 token
+              if (!authToken) {
+                console.log("[ChatsStore] No auth token, generating before switch...");
+                const tokenResult = await get().ensureAuthToken();
+                if (tokenResult.ok) {
+                  authToken = get().authToken;
+                } else {
+                  console.error("[ChatsStore] Failed to ensure auth token for switch");
+                  // 继续尝试，但可能会失败
+                }
+              }
+
+              const headers: HeadersInit = {
+                "Content-Type": "application/json",
+              };
+
+              // 如果用户已登录，添加认证头
+              if (authToken) {
+                headers["Authorization"] = `Bearer ${authToken}`;
+                headers["X-Username"] = username;
+              }
+
               const response = await fetch(
                 "/api/chat-rooms?action=switchRoom",
                 {
                   method: "POST",
-                  headers: { "Content-Type": "application/json" },
+                  headers,
                   body: JSON.stringify({
                     previousRoomId: currentRoomId,
                     nextRoomId: newRoomId,

@@ -114,7 +114,7 @@ const RequestSchema = z
   );
 
 const ALLOWED_HOSTS = new Set([
-  "bravohenry.com",
+  "os.bravohenry.com",
   "localhost:3000",
   "localhost:5173",
   "127.0.0.1:3000",
