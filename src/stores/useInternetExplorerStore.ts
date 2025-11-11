@@ -118,125 +118,77 @@ export const DEFAULT_FAVORITES: Favorite[] = [
     isDirectory: false,
   },
   {
-    title: "NewJeans",
-    url: "https://newjeans.jp",
-    favicon: "https://www.google.com/s2/favicons?domain=newjeans.jp&sz=32",
+    title: "Teenage Engineering",
+    url: "https://teenage.engineering/designs",
+    favicon: "https://www.google.com/s2/favicons?domain=teenage.engineering&sz=32",
     year: "current",
     isDirectory: false,
   },
   {
     title: "Friends",
-    isDirectory: true, // Mark as directory
+    isDirectory: true, // 标记为目录
     children: [
       {
-        title: "Ian",
-        url: "https://shaoruu.io",
-        favicon: "https://www.google.com/s2/favicons?domain=shaoruu.io&sz=32",
+        title: "Chi",
+        url: "https://chiquach.com/",
+        favicon: "https://www.google.com/s2/favicons?domain=chiquach.com&sz=32",
         year: "current",
         isDirectory: false,
       },
       {
-        title: "Long",
-        url: "https://os.rocorgi.wang",
-        favicon:
-          "https://www.google.com/s2/favicons?domain=os.rocorgi.wang&sz=32",
+        title: "Daria",
+        url: "https://d.zapolnova.com",
+        favicon: "https://www.google.com/s2/favicons?domain=d.zapolnova.com&sz=32",
         year: "current",
         isDirectory: false,
       },
       {
-        title: "Maya",
-        url: "https://mayabakir.com",
-        favicon:
-          "https://www.google.com/s2/favicons?domain=mayabakir.com&sz=32",
+        title: "Hyun",
+        url: "https://hyunkyungjung.com/",
+        favicon: "https://www.google.com/s2/favicons?domain=hyunkyungjung.com&sz=32",
         year: "current",
         isDirectory: false,
       },
       {
-        title: "Modi",
-        url: "https://www.akm.io",
-        favicon: "https://www.google.com/s2/favicons?domain=www.akm.io&sz=32",
+        title: "Maha",
+        url: "https://mahanetranmurali.com/",
+        favicon: "https://www.google.com/s2/favicons?domain=mahanetranmurali.com&sz=32",
         year: "current",
         isDirectory: false,
       },
       {
-        title: "Sam",
-        url: "https://www.samuelcatania.com",
-        favicon:
-          "https://www.google.com/s2/favicons?domain=www.samuelcatania.com&sz=32",
+        title: "Manushri",
+        url: "https://manushri-dave.super.site/",
+        favicon: "https://www.google.com/s2/favicons?domain=manushri-dave.super.site&sz=32",
         year: "current",
         isDirectory: false,
       },
       {
-        title: "Stephen",
-        url: "https://wustep.me",
-        favicon: "https://www.google.com/s2/favicons?domain=wustep.me&sz=32",
-        year: "current",
-        isDirectory: false,
-      },
-      {
-        title: "Theo",
-        url: "https://tmb.sh",
-        favicon: "https://www.google.com/s2/favicons?domain=tmb.sh&sz=32",
-        year: "current",
-        isDirectory: false,
-      },
-      {
-        title: "Tyler",
-        url: "https://tyler.cafe",
-        favicon: "https://www.google.com/s2/favicons?domain=tyler.cafe&sz=32",
-        year: "current",
-        isDirectory: false,
-      },
-      {
-        title: "Andrew",
-        url: "https://www.andrewl.ee",
-        favicon:
-          "https://www.google.com/s2/favicons?domain=www.andrewl.ee&sz=32",
-        year: "current",
-        isDirectory: false,
-      },
-      {
-        title: "Ekin",
-        url: "https://www.ekinoflazer.com",
-        favicon:
-          "https://www.google.com/s2/favicons?domain=www.ekinoflazer.com&sz=32",
-        year: "current",
-        isDirectory: false,
-      },
-      {
-        title: "Lucas",
-        url: "https://www.lucasn.com",
-        favicon:
-          "https://www.google.com/s2/favicons?domain=www.lucasn.com&sz=32",
+        title: "Nora",
+        url: "https://nora-he.com",
+        favicon: "https://www.google.com/s2/favicons?domain=nora-he.com&sz=32",
         year: "current",
         isDirectory: false,
       },
     ],
   },
-  // Work Folder
+  // Work 文件夹
   {
     title: "Work",
-    isDirectory: true, // Mark as directory
+    isDirectory: true, // 标记为目录
     children: [
       {
-        title: "Cursor",
-        url: "https://cursor.sh",
-        favicon: "https://www.google.com/s2/favicons?domain=cursor.com&sz=32",
-        year: "1992",
+        title: "Biuty",
+        url: "https://biuty.ai",
+        favicon: "https://www.google.com/s2/favicons?domain=biuty.ai&sz=32",
+        year: "current",
         isDirectory: false,
       },
       {
-        title: "Notion",
-        url: "https://notion.com",
-        favicon: "https://www.google.com/s2/favicons?domain=notion.com&sz=32",
-        year: "1800",
-        isDirectory: false,
-      },
-      {
-        title: "Stripe",
-        url: "https://stripe.com",
-        favicon: "https://www.google.com/s2/favicons?domain=stripe.com&sz=32",
-        year: "2018",
+        title: "Cirtus",
+        url: "https://cirtusai.com",
+        favicon: "https://www.google.com/s2/favicons?domain=cirtusai.com&sz=32",
+        year: "current",
         isDirectory: false,
       },
     ],
