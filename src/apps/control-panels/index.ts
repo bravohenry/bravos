@@ -42,7 +42,7 @@ export const appMetadata = {
     name: "Zihan Huang",
     url: "https://bravohenry.com",
   },
-  github: "https://github.com/bravohenry/ziOS",
+  github: "https://github.com/bravohenry/bravos",
   icon: "/icons/control-panels/appearance-manager/app.png",
 };
 

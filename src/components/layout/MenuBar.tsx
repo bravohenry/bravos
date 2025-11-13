@@ -55,7 +55,7 @@ const finderMetadata = {
     name: "Zihan",
     url: "https://bravohenry.com",
   },
-  github: "https://github.com/bravohenry/ziOS",
+  github: "https://github.com/bravohenry/bravos",
   icon: "/icons/mac.png",
 };
 

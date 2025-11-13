@@ -561,7 +561,7 @@ export function MinesweeperAppComponent({
               name: "Minesweeper",
               version: "1.0.0",
               creator: { name: "Zihan", url: "https://bravohenry.com" },
-              github: "https://github.com/bravohenry/ziOS",
+              github: "https://github.com/bravohenry/bravos",
               icon: "/icons/default/minesweeper.png",
             }
           }
