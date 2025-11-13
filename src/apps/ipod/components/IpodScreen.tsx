@@ -166,13 +166,13 @@ function Scrollbar({
       {/* Track - visibility controlled by opacity */}
       <div
         ref={trackRef}
-        className={cn(
-          "w-full h-full border border-[#0a3667] transition-all duration-500",
-          backlightOn
-            ? "bg-[#c5e0f5] bg-gradient-to-b from-[#d1e8fa] to-[#e0f0fc]"
-            : "bg-[#8a9da9]"
-        )}
-        style={{ opacity: 0 }}
+        className="w-full h-full border border-[#0a3667] transition-all duration-500"
+        style={{
+          opacity: 0,
+          background: backlightOn
+            ? "linear-gradient(to bottom, #d1e8fa, #e0f0fc)"
+            : "linear-gradient(to bottom, #a0a8a0, #b8c0b8)",
+        }}
       />
       {/* Thumb - visibility controlled by JS */}
       <div
@@ -551,9 +551,7 @@ export function IpodScreen({
       className={cn(
         "relative w-full h-[150px] border border-black border-2 rounded-[2px] overflow-hidden transition-all duration-500 select-none",
         lcdFilterOn ? "lcd-screen" : "",
-        backlightOn
-          ? "bg-[#c5e0f5] bg-gradient-to-b from-[#d1e8fa] to-[#e0f0fc]"
-          : "bg-[#8a9da9] contrast-65 saturate-50",
+        backlightOn ? "" : "contrast-65 saturate-50",
         // Add the soft blue glow when both LCD filter and backlight are on
         lcdFilterOn &&
           backlightOn &&
@@ -565,7 +563,10 @@ export function IpodScreen({
         maxWidth: '100%',
         maxHeight: '150px',
         position: 'relative',
-        contain: 'layout style paint'
+        contain: 'layout style paint',
+        background: backlightOn
+          ? "linear-gradient(to bottom, #d1e8fa, #e0f0fc)"
+          : "linear-gradient(to bottom, #a0a8a0, #b8c0b8)",
       }}
     >
       {/* LCD screen overlay with scan lines - only show when LCD filter is on */}

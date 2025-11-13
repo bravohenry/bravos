@@ -2331,10 +2331,7 @@ export function IpodAppComponent({
           }}
         >
           <div
-            className={cn(
-              "ipod-force-font w-[250px] h-[400px] rounded-2xl shadow-xl border border-black/40 flex flex-col items-center p-4 pb-8",
-              theme === "classic" ? "bg-white/85" : "bg-black/85"
-            )}
+            className="ipod-force-font w-[250px] h-[400px] rounded-2xl flex flex-col items-center p-4 pb-8 relative"
             style={{
               transform: `scale(${scale})`,
               transformOrigin: "center",
@@ -2346,8 +2343,32 @@ export function IpodAppComponent({
               contain: "layout style paint",
               willChange: "transform",
               backfaceVisibility: "hidden",
+              background:
+                theme === "classic"
+                  ? "linear-gradient(145deg, #ffffff, #f5f5f5)"
+                  : theme === "u2"
+                    ? "linear-gradient(145deg, #1a1a1a, #000000)"
+                    : "linear-gradient(145deg, #2a2a2a, #0a0a0a)",
+              boxShadow:
+                theme === "classic"
+                  ? "0 0 0 1px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.1), 0 8px 16px rgba(0,0,0,0.15), 0 16px 32px rgba(0,0,0,0.2)"
+                  : "0 0 0 1px rgba(255,255,255,0.05), 0 2px 4px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.4), 0 16px 32px rgba(0,0,0,0.5)",
+              border:
+                theme === "classic"
+                  ? "1px solid rgba(0,0,0,0.1)"
+                  : "1px solid rgba(255,255,255,0.05)",
             }}
           >
+            {/* Glossy overlay for classic white theme */}
+            {theme === "classic" && (
+              <div
+                className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-t-2xl z-0"
+                style={{
+                  background:
+                    "linear-gradient(to bottom, rgba(255,255,255,0.4), rgba(255,255,255,0))",
+                }}
+              />
+            )}
             <IpodScreen
               currentTrack={tracks[currentIndex] || null}
               isPlaying={isPlaying && !isFullScreen}

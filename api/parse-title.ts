@@ -1,4 +1,4 @@
-import { openai } from "@ai-sdk/openai";
+import { google } from "@ai-sdk/google";
 import { generateObject } from "ai";
 import { z } from "zod";
 import * as RateLimit from "./utils/rate-limit.js";
@@ -116,9 +116,9 @@ export default async function handler(req: Request) {
       });
     }
 
-    // Use generateObject from the AI SDK v5
+    // Use generateObject from the AI SDK v5 with Gemini 2.0 Flash-Lite
     const { object: parsedData } = await generateObject({
-      model: openai("gpt-4.1-mini"),
+      model: google("gemini-2.0-flash-lite-001"), // 使用 Gemini 2.0 Flash-Lite 模型
       schema: ParsedTitleSchema, // Provide the Zod schema
       messages: [
         {

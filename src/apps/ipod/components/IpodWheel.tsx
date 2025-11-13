@@ -293,15 +293,35 @@ export function IpodWheel({
 
   return (
     <div
-      className={cn(
-        "mt-6 relative w-[180px] h-[180px] rounded-full flex items-center justify-center select-none",
-        theme === "classic"
-          ? "bg-gray-300/60"
-          : theme === "u2"
-          ? "bg-red-700/60"
-          : "bg-neutral-800/50"
-      )}
+      className="mt-6 relative w-[180px] h-[180px] rounded-full flex items-center justify-center select-none"
+      style={{
+        background:
+          theme === "classic"
+            ? "linear-gradient(145deg, #e8e8e8, #d0d0d0)"
+            : theme === "u2"
+              ? "linear-gradient(145deg, #c41e3a, #8b0000)"
+              : "linear-gradient(145deg, #3a3a3a, #1a1a1a)",
+        boxShadow: `
+          inset 0 0 0 1px ${theme === "classic" ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.1)"},
+          inset 0 2px 4px rgba(0,0,0,0.1),
+          0 2px 8px rgba(0,0,0,0.15)
+        `,
+      }}
     >
+      {/* Metallic ring effect */}
+      <div
+        className="absolute inset-0 rounded-full pointer-events-none z-0"
+        style={{
+          background: `conic-gradient(
+            from 0deg,
+            ${theme === "classic" ? "rgba(255,255,255,0.3)" : theme === "u2" ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.1)"} 0deg,
+            transparent 90deg,
+            ${theme === "classic" ? "rgba(0,0,0,0.1)" : theme === "u2" ? "rgba(0,0,0,0.2)" : "rgba(0,0,0,0.3)"} 180deg,
+            transparent 270deg,
+            ${theme === "classic" ? "rgba(255,255,255,0.3)" : theme === "u2" ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.1)"} 360deg
+          )`,
+        }}
+      />
       {/* Center control changed from <button> to <div role="button"> to avoid global XP/98 button styles overriding radius/background */}
       <div
         role="button"
@@ -319,14 +339,34 @@ export function IpodWheel({
           }
         }}
         className={cn(
-          "ipod-wheel-center absolute w-16 h-16 rounded-full z-10 flex items-center justify-center outline-none focus:outline-none focus-visible:outline-none",
-          theme === "classic"
-            ? "bg-white/30"
-            : theme === "u2"
-            ? "bg-black/70"
-            : "bg-black/30"
+          "ipod-wheel-center absolute w-16 h-16 rounded-full z-10 flex items-center justify-center outline-none focus:outline-none focus-visible:outline-none relative",
+          // Remove background color from className as it's now in style
         )}
-      />
+        style={{
+          background:
+            theme === "classic"
+              ? "linear-gradient(145deg, #ffffff, #f0f0f0)"
+              : theme === "u2"
+                ? "linear-gradient(145deg, #2a2a2a, #0a0a0a)"
+                : "linear-gradient(145deg, #4a4a4a, #2a2a2a)",
+          boxShadow: `
+            0 0 0 1px ${theme === "classic" ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)"},
+            0 2px 4px rgba(0,0,0,0.2),
+            inset 0 1px 0 ${theme === "classic" ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.1)"}
+          `,
+        }}
+      >
+        {/* Center button highlight */}
+        <div
+          className="absolute top-[10%] left-[10%] right-[10%] h-[40%] rounded-full pointer-events-none"
+          style={{
+            background:
+              theme === "classic"
+                ? "linear-gradient(to bottom, rgba(255,255,255,0.6), transparent)"
+                : "linear-gradient(to bottom, rgba(255,255,255,0.1), transparent)",
+          }}
+        />
+      </div>
 
       {/* Wheel sections */}
       <div
@@ -338,24 +378,92 @@ export function IpodWheel({
         onTouchEnd={handleTouchEnd}
         onWheel={handleMouseWheel}
       >
-        {/* Wheel labels - no click handlers */}
+        {/* Wheel labels - styled to look printed on the wheel surface */}
+        {/* MENU button (top) */}
         <div
-          className="absolute top-1.5 text-center left-1/2 transform -translate-x-1/2 font-chicago text-xs text-white menu-button cursor-default select-none"
+          className="absolute top-5 text-center left-1/2 transform -translate-x-1/2 font-chicago text-xs uppercase cursor-default select-none"
           onClick={(e) => {
             if (recentTouchRef.current || isInTouchDragRef.current) return;
             e.stopPropagation(); // Prevent triggering wheel mousedown
             onMenuButton();
           }}
+          style={{
+            color:
+              theme === "classic"
+                ? "#4a4a4a"
+                : theme === "u2"
+                  ? "#ffffff"
+                  : "#cccccc",
+            textShadow:
+              theme === "classic"
+                ? "0 1px 0 rgba(255,255,255,0.5), 0 0 1px rgba(0,0,0,0.1)"
+                : theme === "u2"
+                  ? "0 1px 2px rgba(0,0,0,0.5)"
+                  : "0 1px 2px rgba(0,0,0,0.5)",
+            fontWeight: "bold",
+            letterSpacing: "0.5px",
+          }}
         >
           MENU
         </div>
-        <div className="absolute right-2 text-right top-1/2 transform -translate-y-1/2 font-chicago text-[12px] text-white cursor-default select-none">
+        {/* Next button (right) */}
+        <div
+          className="absolute right-6 text-right top-1/2 transform -translate-y-1/2 font-chicago text-[12px] cursor-default select-none"
+          style={{
+            color:
+              theme === "classic"
+                ? "#4a4a4a"
+                : theme === "u2"
+                  ? "#ffffff"
+                  : "#cccccc",
+            textShadow:
+              theme === "classic"
+                ? "0 1px 0 rgba(255,255,255,0.5), 0 0 1px rgba(0,0,0,0.1)"
+                : theme === "u2"
+                  ? "0 1px 2px rgba(0,0,0,0.5)"
+                  : "0 1px 2px rgba(0,0,0,0.5)",
+          }}
+        >
           ⏭
         </div>
-        <div className="absolute bottom-1 text-center left-1/2 transform -translate-x-1/2 font-chicago text-[12px] text-white cursor-default select-none">
+        {/* Play/Pause button (bottom) */}
+        <div
+          className="absolute bottom-5 text-center left-1/2 transform -translate-x-1/2 font-chicago text-[12px] cursor-default select-none"
+          style={{
+            color:
+              theme === "classic"
+                ? "#4a4a4a"
+                : theme === "u2"
+                  ? "#ffffff"
+                  : "#cccccc",
+            textShadow:
+              theme === "classic"
+                ? "0 1px 0 rgba(255,255,255,0.5), 0 0 1px rgba(0,0,0,0.1)"
+                : theme === "u2"
+                  ? "0 1px 2px rgba(0,0,0,0.5)"
+                  : "0 1px 2px rgba(0,0,0,0.5)",
+          }}
+        >
           ⏯
         </div>
-        <div className="absolute left-2 text-left top-1/2 transform -translate-y-1/2 font-chicago text-[12px] text-white cursor-default select-none">
+        {/* Previous button (left) */}
+        <div
+          className="absolute left-6 text-left top-1/2 transform -translate-y-1/2 font-chicago text-[12px] cursor-default select-none"
+          style={{
+            color:
+              theme === "classic"
+                ? "#4a4a4a"
+                : theme === "u2"
+                  ? "#ffffff"
+                  : "#cccccc",
+            textShadow:
+              theme === "classic"
+                ? "0 1px 0 rgba(255,255,255,0.5), 0 0 1px rgba(0,0,0,0.1)"
+                : theme === "u2"
+                  ? "0 1px 2px rgba(0,0,0,0.5)"
+                  : "0 1px 2px rgba(0,0,0,0.5)",
+          }}
+        >
           ⏮
         </div>
       </div>
