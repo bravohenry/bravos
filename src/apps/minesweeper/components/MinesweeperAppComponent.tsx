@@ -211,12 +211,14 @@ export function MinesweeperAppComponent({
       /* 98.css raised look */
       box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #ffffff,
         inset -2px -2px grey, inset 2px 2px #dfdfdf !important;
+      background: #c0c0c0 !important;
     }
     .minesweeper-hidden:hover {
       background-color: #d0d0d0 !important;
     }
     .minesweeper-hidden:active {
-      /* pressed look */
+      /* pressed look - 增加背景色变化让点击更明显 */
+      background-color: #b0b0b0 !important;
       box-shadow: inset -1px -1px #ffffff, inset 1px 1px #0a0a0a,
         inset -2px -2px #dfdfdf, inset 2px 2px grey !important;
     }
@@ -225,7 +227,8 @@ export function MinesweeperAppComponent({
       outline-offset: -4px !important;
     }
     .minesweeper-revealed {
-      background: #d1d1d1 !important;
+      /* 增加背景色对比度，让已揭示的格子更明显 */
+      background: #e8e8e8 !important;
       border-top: 1px solid #808080 !important;
       border-left: 1px solid #808080 !important;
       border-right: 1px solid #f0f0f0 !important;

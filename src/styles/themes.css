@@ -1816,7 +1816,7 @@
 }
 
 /* OS1 按钮样式 - macOS 26 现代按钮 */
-:root[data-os-theme="os1"] button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control):not(.os-switch):not([role="switch"]):not([role="tab"]):not(.dock-icon-button) {
+:root[data-os-theme="os1"] button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control):not(.os-switch):not([role="switch"]):not([role="tab"]):not(.dock-icon-button):not(.minesweeper-cell) {
   font-size: 13px !important;
   font-weight: 500 !important;
   border-radius: 0.5rem !important;
@@ -1829,14 +1829,14 @@
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-:root[data-os-theme="os1"] button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control):not(.os-switch):not([role="switch"]):not([role="tab"]):not(.dock-icon-button):hover {
+:root[data-os-theme="os1"] button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control):not(.os-switch):not([role="switch"]):not([role="tab"]):not(.dock-icon-button):not(.minesweeper-cell):hover {
   background: rgba(255, 255, 255, 0.95) !important;
   border-color: rgba(0, 0, 0, 0.12) !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
   transform: translateY(-1px) !important;
 }
 
-:root[data-os-theme="os1"] button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control):not(.os-switch):not([role="switch"]):not([role="tab"]):not(.dock-icon-button):active {
+:root[data-os-theme="os1"] button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control):not(.os-switch):not([role="switch"]):not([role="tab"]):not(.dock-icon-button):not(.minesweeper-cell):active {
   background: var(--os-color-button-active-face) !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
   transform: translateY(0) !important;
