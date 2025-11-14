@@ -30,6 +30,7 @@ export function AboutFinderDialog({
   const { appStates } = useAppContext();
   const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
+  const isOS1Theme = currentTheme === "os1";
 
   const memoryUsage = useMemo(() => {
     const totalMemory = 32; // 32MB total memory
@@ -79,8 +80,18 @@ export function AboutFinderDialog({
                 className={cn(
                   isXpTheme
                     ? "font-['Pixelated_MS_Sans_Serif',Arial] text-[16px]"
+                    : isOS1Theme
+                    ? "font-os-ui text-2xl font-semibold"
                     : "font-apple-garamond text-2xl"
                 )}
+                style={
+                  isOS1Theme
+                    ? {
+                        fontFamily: "var(--os-font-ui)",
+                        color: "var(--os-color-text-primary)",
+                      }
+                    : undefined
+                }
               >
                 ZiOS
                 {currentTheme === "system7"
@@ -100,13 +111,18 @@ export function AboutFinderDialog({
                 "space-y-4",
                 isXpTheme
                   ? "font-['Pixelated_MS_Sans_Serif',Arial] text-[10px]"
+                  : isOS1Theme
+                  ? "font-os-ui text-[13px]"
                   : "font-geneva-12 text-[10px]"
               )}
               style={{
                 fontFamily: isXpTheme
                   ? '"Pixelated MS Sans Serif", Arial'
+                  : isOS1Theme
+                  ? "var(--os-font-ui)"
                   : undefined,
-                fontSize: isXpTheme ? "10px" : undefined,
+                fontSize: isXpTheme ? "10px" : isOS1Theme ? "13px" : undefined,
+                color: isOS1Theme ? "var(--os-color-text-primary)" : undefined,
               }}
             >
               <div>
@@ -117,14 +133,22 @@ export function AboutFinderDialog({
                 </div>
                 <div
                   className={cn(
-                    "text-[10px] text-gray-500 mt-2",
+                    "text-[10px] mt-2",
                     isXpTheme
-                      ? "font-['Pixelated_MS_Sans_Serif',Arial]"
-                      : "font-geneva-12"
+                      ? "font-['Pixelated_MS_Sans_Serif',Arial] text-gray-500"
+                      : isOS1Theme
+                      ? "font-os-ui text-[11px]"
+                      : "font-geneva-12 text-gray-500"
                   )}
                   style={{
                     fontFamily: isXpTheme
                       ? '"Pixelated MS Sans Serif", Arial'
+                      : isOS1Theme
+                      ? "var(--os-font-ui)"
+                      : undefined,
+                    fontSize: isOS1Theme ? "11px" : undefined,
+                    color: isOS1Theme
+                      ? "var(--os-color-text-secondary)"
                       : undefined,
                   }}
                 >
@@ -133,7 +157,16 @@ export function AboutFinderDialog({
               </div>
             </div>
           </div>
-          <hr className="border-gray-300" />
+          <hr
+            className={cn(
+              isOS1Theme ? "border-gray-200" : "border-gray-300"
+            )}
+            style={
+              isOS1Theme
+                ? { borderColor: "rgba(0, 0, 0, 0.08)", borderWidth: "1px" }
+                : undefined
+            }
+          />
 
           {/* Memory usage bars */}
           <div
@@ -141,13 +174,18 @@ export function AboutFinderDialog({
               "space-y-2 p-2 px-4 pb-4",
               isXpTheme
                 ? "font-['Pixelated_MS_Sans_Serif',Arial] text-[10px]"
+                : isOS1Theme
+                ? "font-os-ui text-[13px]"
                 : "font-geneva-12 text-[10px]"
             )}
             style={{
               fontFamily: isXpTheme
                 ? '"Pixelated MS Sans Serif", Arial'
+                : isOS1Theme
+                ? "var(--os-font-ui)"
                 : undefined,
-              fontSize: isXpTheme ? "10px" : undefined,
+              fontSize: isXpTheme ? "10px" : isOS1Theme ? "13px" : undefined,
+              color: isOS1Theme ? "var(--os-color-text-primary)" : undefined,
             }}
           >
             {memoryUsage.map((app, index) => (
@@ -158,18 +196,40 @@ export function AboutFinderDialog({
                 </div>
                 <div
                   className={cn(
-                    "h-2 w-full",
-                    currentTheme === "macosx" ? "aqua-progress" : "bg-gray-200"
+                    "h-2 w-full rounded",
+                    currentTheme === "macosx"
+                      ? "aqua-progress"
+                      : isOS1Theme
+                      ? "bg-gray-200/50"
+                      : "bg-gray-200"
                   )}
+                  style={
+                    isOS1Theme
+                      ? {
+                          backgroundColor: "rgba(0, 0, 0, 0.08)",
+                          borderRadius: "4px",
+                        }
+                      : undefined
+                  }
                 >
                   <div
                     className={cn(
-                      "h-full transition-all duration-200",
+                      "h-full transition-all duration-200 rounded",
                       currentTheme === "macosx"
                         ? "aqua-progress-fill"
+                        : isOS1Theme
+                        ? ""
                         : "bg-blue-500"
                     )}
-                    style={{ width: `${app.percentage}%` }}
+                    style={{
+                      width: `${app.percentage}%`,
+                      ...(isOS1Theme
+                        ? {
+                            backgroundColor: "var(--os-color-traffic-light-close)",
+                            borderRadius: "4px",
+                          }
+                        : {}),
+                    }}
                   />
                 </div>
               </div>
@@ -192,6 +252,11 @@ export function AboutFinderDialog({
             <div className="window-body">{dialogContent}</div>
           </>
         ) : currentTheme === "macosx" ? (
+          <>
+            <DialogHeader>About This Computer</DialogHeader>
+            {dialogContent}
+          </>
+        ) : isOS1Theme ? (
           <>
             <DialogHeader>About This Computer</DialogHeader>
             {dialogContent}

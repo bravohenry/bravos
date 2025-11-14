@@ -60,6 +60,7 @@ const DialogContent = React.forwardRef<
   const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
   const isMacOsxTheme = currentTheme === "macosx";
+  const isOS1Theme = currentTheme === "os1";
 
   // Function to clean up pointer-events
   const cleanupPointerEvents = React.useCallback(() => {
@@ -92,6 +93,14 @@ const DialogContent = React.forwardRef<
       );
     }
 
+    if (isOS1Theme) {
+      return cn(
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-os-window-bg p-0 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 origin-center overflow-hidden",
+        "border-[length:var(--os-metrics-border-width)] border-os-window shadow-os-window os1-dialog [&_button]:text-[13px]",
+        className
+      );
+    }
+
     // Default System 7 style
     return cn(
       "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-0 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 origin-center",
@@ -119,6 +128,12 @@ const DialogContent = React.forwardRef<
                   backgroundColor: "var(--os-color-window-bg)",
                   backgroundImage: "var(--os-pinstripe-window)",
                 }
+              : isOS1Theme
+              ? {
+                  backgroundColor: "rgba(255, 255, 255, 0.9)",
+                  backdropFilter: "blur(30px) saturate(180%)",
+                  WebkitBackdropFilter: "blur(30px) saturate(180%)",
+                }
               : undefined
           }
         >
@@ -138,6 +153,7 @@ const DialogHeader = ({
   const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
   const isMacOsxTheme = currentTheme === "macosx";
+  const isOS1Theme = currentTheme === "os1";
 
   if (isXpTheme) {
     return (
@@ -152,6 +168,76 @@ const DialogHeader = ({
             <button aria-label="Close" />
           </DialogPrimitive.Close>
         </div>
+      </div>
+    );
+  }
+
+  if (isOS1Theme) {
+    const theme = getTheme(currentTheme);
+    return (
+      <div
+        className={cn(
+          "title-bar os1-title-bar flex items-center h-os-titlebar min-h-[1.375rem] px-3 select-none cursor-move user-select-none z-50 draggable-area",
+          className
+        )}
+        style={{
+          background: theme.colors.titleBar.activeBg,
+          color: theme.colors.titleBar.text,
+          borderRadius: theme.metrics.titleBarRadius,
+          borderBottom: `1px solid ${
+            theme.colors.titleBar.borderBottom ||
+            theme.colors.titleBar.border ||
+            "rgba(0, 0, 0, 0.12)"
+          }`,
+        }}
+        {...props}
+      >
+        {/* 窗口控制按钮 - 放在左侧 */}
+        <div className="os1-window-controls flex items-center gap-2 mr-3">
+          <DialogPrimitive.Close asChild>
+            <button
+              type="button"
+              aria-label="Close"
+              className="os1-window-control os1-window-control--close"
+            >
+              <span aria-hidden="true" className="os1-window-control-icon">
+                &times;
+              </span>
+            </button>
+          </DialogPrimitive.Close>
+          {/* Minimize 和 Maximize 按钮在对话框中禁用 */}
+          <button
+            type="button"
+            aria-label="Minimize (disabled)"
+            className="os1-window-control os1-window-control--ghost"
+            disabled
+            style={{ opacity: 0.5, pointerEvents: "none" }}
+          >
+            <span aria-hidden="true" className="os1-window-control-icon">
+              &minus;
+            </span>
+          </button>
+          <button
+            type="button"
+            aria-label="Maximize (disabled)"
+            className="os1-window-control os1-window-control--ghost"
+            disabled
+            style={{ opacity: 0.5, pointerEvents: "none" }}
+          >
+            <span aria-hidden="true" className="os1-window-control-icon">
+              &#9633;
+            </span>
+          </button>
+        </div>
+        {/* 标题 - 放在右侧 */}
+        <span
+          className="select-none flex-1 text-sm font-medium tracking-wide text-os-titlebar-active-text truncate"
+          style={{
+            textShadow: "none",
+          }}
+        >
+          {children}
+        </span>
       </div>
     );
   }

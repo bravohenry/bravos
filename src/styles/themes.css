@@ -2808,3 +2808,30 @@
 :root[data-os-theme="os1"] .ipod-force-font .border-\[\#0a3667\] {
   border-color: #0a3667 !important;
 }
+
+/* OS1 对话框样式 - macOS 26 毛玻璃效果 */
+:root[data-os-theme="os1"] .os1-dialog {
+  border-radius: var(--os-metrics-radius) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(30px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(180%) !important;
+  border: var(--os-metrics-border-width) solid var(--os-color-window-border) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* OS1 对话框标题栏样式 */
+:root[data-os-theme="os1"] .os1-dialog .os1-title-bar {
+  border-radius: var(--os-metrics-title-bar-radius) 0 0 0 !important;
+}
+
+/* OS1 对话框内容区域样式 */
+:root[data-os-theme="os1"] .os1-dialog > div > div {
+  background: transparent !important;
+}
+
+/* OS1 对话框文本样式 */
+:root[data-os-theme="os1"] .os1-dialog p,
+:root[data-os-theme="os1"] .os1-dialog div {
+  font-family: var(--os-font-ui) !important;
+  color: var(--os-color-text-primary) !important;
+}

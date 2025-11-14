@@ -707,7 +707,7 @@ export default async function handler(req: Request): Promise<Response> {
     } catch (error) {
       logError("Image generation failed:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      const errorDetails = error instanceof Error && error.cause ? String(error.cause) : undefined;
+      const errorDetails = error instanceof Error && (error as any).cause ? String((error as any).cause) : undefined;
       
       // 检查是否是模型过载错误
       const isOverloaded = errorMessage.toLowerCase().includes("overloaded") || 
