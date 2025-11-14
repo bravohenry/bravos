@@ -2090,7 +2090,7 @@
   padding: 0 16px !important; /* 与内容区域 padding 对齐 */
   gap: 0 !important;
   margin-top: 16px !important; /* 上方留出距离 */
-  justify-content: flex-start !important; /* 居左对齐 */
+  justify-content: center !important; /* 居中对齐 */
   /* 所有标签页同一水平线 */
   align-items: flex-start !important;
 }
