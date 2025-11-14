@@ -77,14 +77,12 @@ export function WindowFrame({
   const {
     bringInstanceToForeground,
     minimizeInstance,
-    restoreInstance,
     debugMode,
     updateWindowState,
     updateInstanceWindowState,
   } = useAppStoreShallow((state) => ({
     bringInstanceToForeground: state.bringInstanceToForeground,
     minimizeInstance: state.minimizeInstance,
-    restoreInstance: state.restoreInstance,
     debugMode: state.debugMode,
     updateWindowState: state.updateWindowState,
     updateInstanceWindowState: state.updateInstanceWindowState,
