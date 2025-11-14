@@ -389,7 +389,7 @@ export function AboutFinderDialog({
                   display: "block",
                 }}
               >
-                Open source By{" "}
+                Open Source By{" "}
                 <a
                   href="https://github.com/ryokun6/ryos"
                   target="_blank"
