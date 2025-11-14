@@ -390,6 +390,7 @@ export function TerminalAppComponent({
   const [isInteractingWithPreview, setIsInteractingWithPreview] =
     useState(false);
   const [inputFocused, setInputFocused] = useState(false); // Add state for input focus
+  const [windowSize, setWindowSize] = useState({ width: 80, height: 24 }); // Terminal dimensions
   const spinnerChars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
   // Track if auto-scrolling is enabled
@@ -451,6 +452,38 @@ export function TerminalAppComponent({
     const { commandHistory } = useTerminalStore.getState();
     setHistoryCommands(commandHistory.map((cmd) => cmd.command));
   }, []);
+
+  // Calculate terminal dimensions based on window size
+  useEffect(() => {
+    const calculateTerminalSize = () => {
+      if (terminalRef.current) {
+        const container = terminalRef.current;
+        const style = window.getComputedStyle(container);
+        const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+        const availableWidth = container.clientWidth - padding;
+        const availableHeight = container.clientHeight;
+        
+        // Approximate character width (Monaco font at 12px is about 7.2px per char)
+        const charWidth = fontSize * 0.6;
+        const charHeight = fontSize * 1.2;
+        
+        const cols = Math.floor(availableWidth / charWidth);
+        const rows = Math.floor(availableHeight / charHeight);
+        
+        setWindowSize({ width: Math.max(80, cols), height: Math.max(24, rows) });
+      }
+    };
+
+    calculateTerminalSize();
+    const resizeObserver = new ResizeObserver(calculateTerminalSize);
+    if (terminalRef.current) {
+      resizeObserver.observe(terminalRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [fontSize]);
 
   // Initialize with welcome message
   useEffect(() => {
@@ -2782,7 +2815,7 @@ export function TerminalAppComponent({
       {!isXpTheme && isForeground && menuBar}
       <WindowFrame
         appId="terminal"
-        title="Terminal"
+        title={`Terminal — -zsh — ${windowSize.width}x${windowSize.height}`}
         onClose={onClose}
         isForeground={isForeground}
         transparentBackground={true}
@@ -2793,11 +2826,12 @@ export function TerminalAppComponent({
         menuBar={isXpTheme ? menuBar : undefined}
       >
         <motion.div
-          className="flex flex-col h-full w-full bg-black/80 backdrop-blur-lg text-white antialiased font-monaco overflow-hidden select-text"
+          className="flex flex-col h-full w-full bg-[#1e1e1e] text-white antialiased font-monaco overflow-hidden select-text terminal-container"
           style={{
             fontSize: `${fontSize}px`,
             fontFamily:
               '"Monaco", "ArkPixel", "SerenityOS-Emoji", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", "Courier New", monospace',
+            color: "#ffffff",
           }}
           animate={
             terminalFlash

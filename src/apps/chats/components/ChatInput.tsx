@@ -111,6 +111,7 @@ export function ChatInput({
   const currentTheme = useThemeStore((s) => s.current);
   const isMacTheme = currentTheme === "macosx";
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
+  const isOS1Theme = currentTheme === "os1";
 
   // Get the model display name for debug information
   const modelDisplayName = aiModel ? AI_MODELS[aiModel]?.name : null;
@@ -313,7 +314,7 @@ export function ChatInput({
             }
             onSubmit(e);
           }}
-          className={`flex ${isMacTheme ? "gap-2" : "gap-1"}`}
+          className={`flex ${isMacTheme || isOS1Theme ? "gap-2" : "gap-1"}`}
         >
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.div
@@ -338,15 +339,23 @@ export function ChatInput({
                     ? "Type a message..."
                     : "Type or push 'space' to talk..."
                 }
-                className={`w-full border-1 border-gray-800 text-xs font-geneva-12 h-9 ${
-                  isMacTheme ? "pl-3 pr-16 rounded-full" : "pl-2 pr-16"
-                } backdrop-blur-lg bg-white/80 ${
+                className={`w-full border-1 text-xs font-geneva-12 h-9 ${
+                  isMacTheme || isOS1Theme ? "pl-3 pr-16 rounded-full" : "pl-2 pr-16"
+                } ${
+                  isOS1Theme 
+                    ? "border-gray-200 bg-white/90 backdrop-blur-xl shadow-sm" 
+                    : "border-gray-800 backdrop-blur-lg bg-white/80"
+                } ${
                   isFocused ? "input--focused" : ""
                 } ${isTypingZiMention ? "border-blue-600 bg-blue-50" : ""} ${
                   needsUsername && !isInChatRoom
                     ? "border-orange-600 bg-orange-50"
                     : ""
                 }`}
+                style={isOS1Theme ? {
+                  backdropFilter: "blur(20px) saturate(180%)",
+                  WebkitBackdropFilter: "blur(20px) saturate(180%)",
+                } : undefined}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 onTouchStart={(e) => {
@@ -371,7 +380,7 @@ export function ChatInput({
                   </motion.div>
                 )}
               </AnimatePresence>
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              <div className={`absolute ${isOS1Theme ? "right-3" : "right-2.5"} top-1/2 -translate-y-1/2 flex items-center ${isOS1Theme ? "gap-1.5" : "gap-1"}`}>
                 {showNudgeButton && (
                   <TooltipProvider>
                     <Tooltip>
@@ -381,7 +390,7 @@ export function ChatInput({
                             type="button"
                             onClick={handleNudgeClick}
                             className={`w-[22px] h-[22px] flex items-center justify-center ${
-                              isMacTheme
+                              isMacTheme || isOS1Theme
                                 ? "text-neutral-400 hover:text-neutral-800 transition-colors"
                                 : ""
                             }`}
@@ -407,7 +416,7 @@ export function ChatInput({
                             type="button"
                             onClick={handleMentionClick}
                             className={`w-[22px] h-[22px] flex items-center justify-center ${
-                              isMacTheme
+                              isMacTheme || isOS1Theme
                                 ? "text-neutral-400 hover:text-neutral-800 transition-colors"
                                 : ""
                             }`}
@@ -436,7 +445,7 @@ export function ChatInput({
                           isLoading={isTranscribing}
                           silenceThreshold={1200}
                           className={`w-[22px] h-[22px] flex items-center justify-center ${
-                            isMacTheme
+                            isMacTheme || isOS1Theme
                               ? "text-neutral-400 hover:text-neutral-800 transition-colors"
                               : ""
                           }`}
@@ -466,29 +475,35 @@ export function ChatInput({
                     onStop();
                   }}
                   className={`text-xs w-9 h-9 p-0 flex items-center justify-center ${
-                    isMacTheme ? "rounded-full" : "rounded-none"
+                    isMacTheme || isOS1Theme ? "rounded-full" : "rounded-none"
                   } ${
-                    isMacTheme
+                    isMacTheme || isOS1Theme
                       ? "relative overflow-hidden transition-transform hover:scale-105"
                       : isXpTheme
                       ? "text-black"
                       : "bg-black hover:bg-black/80 text-white border-2 border-gray-800"
                   }`}
                   style={
-                    isMacTheme
-                      ? {
-                          background:
-                            "linear-gradient(rgba(254, 205, 211, 0.9), rgba(252, 165, 165, 0.9))",
-                          boxShadow:
-                            "0 2px 3px rgba(0,0,0,0.2), 0 1px 1px rgba(0,0,0,0.3), inset 0 0 0 0.5px rgba(0,0,0,0.3), inset 0 1px 2px rgba(0,0,0,0.4), inset 0 2px 3px 1px rgba(254, 205, 211, 0.5)",
-                          backdropFilter: "blur(2px)",
-                        }
+                    isMacTheme || isOS1Theme
+                      ? isOS1Theme
+                        ? {
+                            background: "rgba(255, 59, 48, 0.9)",
+                            boxShadow: "0 2px 8px rgba(255, 59, 48, 0.3), 0 1px 2px rgba(0,0,0,0.2)",
+                            backdropFilter: "blur(10px)",
+                          }
+                        : {
+                            background:
+                              "linear-gradient(rgba(254, 205, 211, 0.9), rgba(252, 165, 165, 0.9))",
+                            boxShadow:
+                              "0 2px 3px rgba(0,0,0,0.2), 0 1px 1px rgba(0,0,0,0.3), inset 0 0 0 0.5px rgba(0,0,0,0.3), inset 0 1px 2px rgba(0,0,0,0.4), inset 0 2px 3px 1px rgba(254, 205, 211, 0.5)",
+                            backdropFilter: "blur(2px)",
+                          }
                       : {}
                   }
                 >
-                  {isMacTheme && (
+                  {(isMacTheme || isOS1Theme) && !isOS1Theme && (
                     <>
-                      {/* Top shine */}
+                      {/* Top shine - 仅用于 macOS 主题 */}
                       <div
                         className="pointer-events-none absolute left-1/2 -translate-x-1/2"
                         style={{
@@ -502,7 +517,7 @@ export function ChatInput({
                           zIndex: 2,
                         }}
                       />
-                      {/* Bottom glow */}
+                      {/* Bottom glow - 仅用于 macOS 主题 */}
                       <div
                         className="pointer-events-none absolute left-1/2 -translate-x-1/2"
                         style={{
@@ -520,8 +535,10 @@ export function ChatInput({
                   )}
                   <Square
                     className={`h-4 w-4 ${
-                      isMacTheme
-                        ? "text-black/70 relative z-10"
+                      isMacTheme || isOS1Theme
+                        ? isOS1Theme
+                          ? "text-white relative z-10"
+                          : "text-black/70 relative z-10"
                         : isXpTheme
                         ? "text-black"
                         : ""
@@ -542,30 +559,36 @@ export function ChatInput({
                 <Button
                   type="submit"
                   className={`text-xs w-9 h-9 p-0 flex items-center justify-center ${
-                    isMacTheme ? "rounded-full" : "rounded-none"
+                    isMacTheme || isOS1Theme ? "rounded-full" : "rounded-none"
                   } ${
-                    isMacTheme
+                    isMacTheme || isOS1Theme
                       ? "relative overflow-hidden transition-transform hover:scale-105"
                       : isXpTheme
                       ? "text-black"
                       : "bg-black hover:bg-black/80 text-white border-2 border-gray-800"
                   }`}
                   style={
-                    isMacTheme
-                      ? {
-                          background:
-                            "linear-gradient(rgba(217, 249, 157, 0.9), rgba(190, 227, 120, 0.9))",
-                          boxShadow:
-                            "0 2px 3px rgba(0,0,0,0.2), 0 1px 1px rgba(0,0,0,0.3), inset 0 0 0 0.5px rgba(0,0,0,0.3), inset 0 1px 2px rgba(0,0,0,0.4), inset 0 2px 3px 1px rgba(217, 249, 157, 0.5)",
-                          backdropFilter: "blur(2px)",
-                        }
+                    isMacTheme || isOS1Theme
+                      ? isOS1Theme
+                        ? {
+                            background: "rgba(0, 122, 255, 0.9)",
+                            boxShadow: "0 2px 8px rgba(0, 122, 255, 0.3), 0 1px 2px rgba(0,0,0,0.2)",
+                            backdropFilter: "blur(10px)",
+                          }
+                        : {
+                            background:
+                              "linear-gradient(rgba(217, 249, 157, 0.9), rgba(190, 227, 120, 0.9))",
+                            boxShadow:
+                              "0 2px 3px rgba(0,0,0,0.2), 0 1px 1px rgba(0,0,0,0.3), inset 0 0 0 0.5px rgba(0,0,0,0.3), inset 0 1px 2px rgba(0,0,0,0.4), inset 0 2px 3px 1px rgba(217, 249, 157, 0.5)",
+                            backdropFilter: "blur(2px)",
+                          }
                       : {}
                   }
                   disabled={isLoading}
                 >
-                  {isMacTheme && (
+                  {(isMacTheme || isOS1Theme) && !isOS1Theme && (
                     <>
-                      {/* Top shine */}
+                      {/* Top shine - 仅用于 macOS 主题 */}
                       <div
                         className="pointer-events-none absolute left-1/2 -translate-x-1/2"
                         style={{
@@ -579,7 +602,7 @@ export function ChatInput({
                           zIndex: 2,
                         }}
                       />
-                      {/* Bottom glow */}
+                      {/* Bottom glow - 仅用于 macOS 主题 */}
                       <div
                         className="pointer-events-none absolute left-1/2 -translate-x-1/2"
                         style={{
@@ -597,8 +620,10 @@ export function ChatInput({
                   )}
                   <ArrowUp
                     className={`h-6 w-6 ${
-                      isMacTheme
-                        ? "text-black/70 relative z-10"
+                      isMacTheme || isOS1Theme
+                        ? isOS1Theme
+                          ? "text-white relative z-10"
+                          : "text-black/70 relative z-10"
                         : isXpTheme
                         ? "text-black"
                         : ""

@@ -29,7 +29,61 @@ import {
   useIsPresent,
 } from "framer-motion";
 
-function MacDock() {
+// 常量配置
+const DOCK_CONFIG = {
+  MAX_SCALE: 2.3,
+  DISTANCE: 140,
+  BASE_BUTTON_SIZE: {
+    macosx: 48, // Aqua 主题默认大小
+    os1: 56,    // OS1 主题更大的图标
+  },
+  SPRING_CONFIG: {
+    mass: 0.15,
+    stiffness: 160,
+    damping: 18,
+  },
+  LAYOUT_SPRING_CONFIG: {
+    type: "spring" as const,
+    stiffness: 300,
+    damping: 30,
+    mass: 0.8,
+  },
+} as const;
+
+// 工具函数：从路径获取文件名
+const getFileName = (path: string): string => {
+  const parts = path.split("/");
+  const fileName = parts[parts.length - 1];
+  return fileName.replace(/\.(html|app)$/i, "");
+};
+
+// 工具函数：检查是否为 emoji 图标
+const isEmojiIcon = (icon: string): boolean => {
+  return (
+    Boolean(icon) &&
+    !icon.startsWith("/") &&
+    !icon.startsWith("http") &&
+    icon.length <= 10
+  );
+};
+
+// 工具函数：查找最近打开的实例
+const findMostRecentInstance = (
+  appId: AppId,
+  instances: Record<string, AppInstance>,
+  instanceOrder: string[]
+): string | null => {
+  for (let i = instanceOrder.length - 1; i >= 0; i--) {
+    const id = instanceOrder[i];
+    const inst = instances[id];
+    if (inst && inst.appId === appId && inst.isOpen) {
+      return id;
+    }
+  }
+  return null;
+};
+
+function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
   const isPhone = useIsPhone();
   const { instances, instanceOrder, bringInstanceToForeground } =
     useAppStoreShallow((s) => ({
@@ -53,16 +107,13 @@ function MacDock() {
   const [isEmptyTrashDialogOpen, setIsEmptyTrashDialogOpen] = useState(false);
   const dockContainerRef = useRef<HTMLDivElement | null>(null);
   
-  // Get trash items to check if trash is empty
-  // Use a selector that directly filters items to avoid infinite loops
-  const allItems = useFilesStore((s) => s.items);
-  const trashItems = useMemo(
-    () => Object.values(allItems).filter((item) => item.status === "trashed"),
-    [allItems]
+  // 检查垃圾桶是否为空
+  const isTrashEmpty = useMemo(
+    () => !Object.values(files).some((item) => item.status === "trashed"),
+    [files]
   );
-  const isTrashEmpty = trashItems.length === 0;
 
-  // Helper to get applet info (icon and name) from instance
+  // 获取 Applet 信息（图标和名称）
   const getAppletInfo = useCallback(
     (instance: AppInstance) => {
       const initialData = instance.initialData as
@@ -70,38 +121,24 @@ function MacDock() {
         | undefined;
       const path = initialData?.path || "";
       const file = files[path];
-
-      // Get filename from path for label
-      const getFileName = (path: string): string => {
-        const parts = path.split("/");
-        const fileName = parts[parts.length - 1];
-        return fileName.replace(/\.(html|app)$/i, "");
-      };
-
       const label = path ? getFileName(path) : "Applet Store";
-
-      // Check if the file icon is an emoji (not a file path)
       const fileIcon = file?.icon;
-      const isEmojiIcon =
-        fileIcon &&
-        !fileIcon.startsWith("/") &&
-        !fileIcon.startsWith("http") &&
-        fileIcon.length <= 10;
 
-      // If no path (applet store), use the applet viewer icon
-      // Otherwise, use file icon if emoji, or fallback to package emoji
-      let icon: string;
-      let isEmoji: boolean;
       if (!path) {
-        // Applet store - use app icon
-        icon = getAppIconPath("applet-viewer");
-        isEmoji = false;
-      } else {
-        icon = isEmojiIcon ? fileIcon : "📦";
-        isEmoji = true;
+        // Applet Store - 使用应用图标
+        return {
+          icon: getAppIconPath("applet-viewer"),
+          label,
+          isEmoji: false,
+        };
       }
 
-      return { icon, label, isEmoji };
+      // 如果是 emoji 图标则使用，否则使用默认的包裹 emoji
+      return {
+        icon: isEmojiIcon(fileIcon || "") ? fileIcon! : "📦",
+        label,
+        isEmoji: true,
+      };
     },
     [files]
   );
@@ -159,84 +196,69 @@ function MacDock() {
     return items.filter((item) => !pinnedLeft.includes(item.appId));
   }, [instances, pinnedLeft]);
 
-  const openAppsAllSet = useMemo(() => {
-    const set = new Set<AppId>();
-    Object.values(instances).forEach((inst) => {
-      if (inst.isOpen) set.add(inst.appId as AppId);
-    });
-    return set;
-  }, [instances]);
-
-  const focusMostRecentInstanceOfApp = (appId: AppId) => {
-    // Walk instanceOrder from end to find most recent open instance for appId
-    for (let i = instanceOrder.length - 1; i >= 0; i--) {
-      const id = instanceOrder[i];
-      const inst = instances[id];
-      if (inst && inst.appId === appId && inst.isOpen) {
-        bringInstanceToForeground(id);
-        return;
+  // 聚焦应用最近打开的实例
+  const focusMostRecentInstanceOfApp = useCallback(
+    (appId: AppId) => {
+      const instanceId = findMostRecentInstance(appId, instances, instanceOrder);
+      if (instanceId) {
+        bringInstanceToForeground(instanceId);
       }
-    }
-    // No open instance found
-  };
-
-  const focusOrLaunchApp = useCallback(
-    (appId: AppId, initialData?: unknown) => {
-      // Try focusing existing instance of this app
-      for (let i = instanceOrder.length - 1; i >= 0; i--) {
-        const id = instanceOrder[i];
-        const inst = instances[id];
-        if (inst && inst.appId === appId && inst.isOpen) {
-          bringInstanceToForeground(id);
-          return;
-        }
-      }
-      // Launch new
-      launchApp(appId, initialData !== undefined ? { initialData } : undefined);
     },
-    [instanceOrder, instances, bringInstanceToForeground, launchApp]
+    [instances, instanceOrder, bringInstanceToForeground]
   );
 
-  // Finder-specific: bring existing to foreground, otherwise launch one
-  const focusOrLaunchFinder = useCallback(
-    (initialPath?: string) => {
-      // Try focusing existing Finder instance
-      for (let i = instanceOrder.length - 1; i >= 0; i--) {
-        const id = instanceOrder[i];
-        const inst = instances[id];
-        if (inst && inst.appId === "finder" && inst.isOpen) {
-          bringInstanceToForeground(id);
-          return;
-        }
+  // 聚焦或启动应用
+  const focusOrLaunchApp = useCallback(
+    (appId: AppId, initialData?: unknown) => {
+      const instanceId = findMostRecentInstance(appId, instances, instanceOrder);
+      if (instanceId) {
+        bringInstanceToForeground(instanceId);
+      } else {
+        launchApp(
+          appId,
+          initialData !== undefined ? { initialData } : undefined
+        );
       }
-      // None open; launch new Finder instance (multi-window supported by hook)
-      if (initialPath) launchApp("finder", { initialPath });
-      else launchApp("finder", { initialPath: "/" });
     },
     [instances, instanceOrder, bringInstanceToForeground, launchApp]
   );
 
-  // Focus a Finder window already at targetPath (or its subpath); otherwise launch new Finder at targetPath
+  // Finder 专用：聚焦现有实例或启动新实例
+  const focusOrLaunchFinder = useCallback(
+    (initialPath = "/") => {
+      const instanceId = findMostRecentInstance("finder", instances, instanceOrder);
+      if (instanceId) {
+        bringInstanceToForeground(instanceId);
+      } else {
+        launchApp("finder", { initialPath });
+      }
+    },
+    [instances, instanceOrder, bringInstanceToForeground, launchApp]
+  );
+
+  // 聚焦指定路径的 Finder 窗口，或启动新窗口
   const focusFinderAtPathOrLaunch = useCallback(
     (targetPath: string, initialData?: unknown) => {
+      // 查找匹配路径的 Finder 实例
       for (let i = instanceOrder.length - 1; i >= 0; i--) {
         const id = instanceOrder[i];
         const inst = instances[id];
-        if (inst && inst.appId === "finder" && inst.isOpen) {
+        if (inst?.appId === "finder" && inst.isOpen) {
           const fi = finderInstances[id];
           if (
             fi &&
             (fi.currentPath === targetPath ||
-              fi.currentPath.startsWith(targetPath + "/"))
+              fi.currentPath.startsWith(`${targetPath}/`))
           ) {
             bringInstanceToForeground(id);
             return;
           }
         }
       }
+      // 未找到匹配实例，启动新窗口
       launchApp("finder", {
         initialPath: targetPath,
-        initialData: initialData,
+        initialData,
       });
     },
     [
@@ -248,54 +270,38 @@ function MacDock() {
     ]
   );
 
-  // Dock magnification state/logic driven by Framer motion value at container level
+  // Dock 放大效果：使用 Framer Motion 在容器级别控制
   const mouseX = useMotionValue<number>(Infinity);
-  const MAX_SCALE = 2.3; // peak multiplier at cursor center
-  const DISTANCE = 140; // px range where magnification is applied
-
-  // Disable magnification on mobile/touch (coarse pointer or no hover)
+  
+  // 检测是否启用放大效果（移动设备禁用）
   const [magnifyEnabled, setMagnifyEnabled] = useState(true);
   useEffect(() => {
-    const compute = () => {
-      if (
-        typeof window === "undefined" ||
-        typeof window.matchMedia !== "function"
-      ) {
-        setMagnifyEnabled(true);
-        return;
-      }
+    if (typeof window === "undefined" || !window.matchMedia) {
+      return;
+    }
+
+    const computeMagnifyEnabled = () => {
       const coarse = window.matchMedia("(pointer: coarse)").matches;
       const noHover = window.matchMedia("(hover: none)").matches;
       setMagnifyEnabled(!(coarse || noHover));
     };
-    compute();
+
+    computeMagnifyEnabled();
 
     const mqlPointerCoarse = window.matchMedia("(pointer: coarse)");
     const mqlHoverNone = window.matchMedia("(hover: none)");
-
-    const onChange = () => compute();
-
     const removeListeners: Array<() => void> = [];
 
     const addListener = (mql: MediaQueryList) => {
-      if (typeof mql.addEventListener === "function") {
-        const listener = onChange as EventListener;
-        mql.addEventListener("change", listener);
-        removeListeners.push(() => mql.removeEventListener("change", listener));
-      } else if (
-        typeof (
-          mql as {
-            addListener?: (
-              this: MediaQueryList,
-              listener: (ev: MediaQueryListEvent) => void
-            ) => void;
-          }
-        ).addListener === "function"
-      ) {
-        const legacyListener = () => onChange();
-        (mql as MediaQueryList).addListener!(legacyListener);
+      if (mql.addEventListener) {
+        mql.addEventListener("change", computeMagnifyEnabled);
         removeListeners.push(() =>
-          (mql as MediaQueryList).removeListener!(legacyListener)
+          mql.removeEventListener("change", computeMagnifyEnabled)
+        );
+      } else if ((mql as any).addListener) {
+        (mql as any).addListener(computeMagnifyEnabled);
+        removeListeners.push(() =>
+          (mql as any).removeListener(computeMagnifyEnabled)
         );
       }
     };
@@ -303,12 +309,10 @@ function MacDock() {
     addListener(mqlPointerCoarse);
     addListener(mqlHoverNone);
 
-    return () => {
-      removeListeners.forEach((fn) => fn());
-    };
+    return () => removeListeners.forEach((fn) => fn());
   }, []);
 
-  // Ensure no magnification state is applied when disabled
+  // 禁用放大效果时重置鼠标位置
   useEffect(() => {
     if (!magnifyEnabled) mouseX.set(Infinity);
   }, [magnifyEnabled, mouseX]);
@@ -346,7 +350,6 @@ function MacDock() {
       onClick: () => void;
       icon: string;
       idKey: string;
-      showIndicator?: boolean;
       isEmoji?: boolean;
       onDragOver?: (e: React.DragEvent<HTMLButtonElement>) => void;
       onDrop?: (e: React.DragEvent<HTMLButtonElement>) => void;
@@ -355,37 +358,56 @@ function MacDock() {
     }
   >(
     (
-      { label, onClick, icon, idKey, showIndicator = false, isEmoji = false, onDragOver, onDrop, onDragLeave, onContextMenu },
+      {
+        label,
+        onClick,
+        icon,
+        idKey,
+        isEmoji = false,
+        onDragOver,
+        onDrop,
+        onDragLeave,
+        onContextMenu,
+      },
       forwardedRef
     ) => {
       const isNew = hasMounted && !seenIdsRef.current.has(idKey);
-      const baseButtonSize = 48; // px (w-12)
-      const maxButtonSize = Math.round(baseButtonSize * MAX_SCALE);
       const wrapperRef = useRef<HTMLDivElement | null>(null);
       const isPresent = useIsPresent();
+      
+      // 根据主题获取基础按钮大小
+      const baseButtonSize = isOS1
+        ? DOCK_CONFIG.BASE_BUTTON_SIZE.os1
+        : DOCK_CONFIG.BASE_BUTTON_SIZE.macosx;
+      
+      // 计算鼠标距离图标中心的距离
       const distanceCalc = useTransform(mouseX, (val) => {
         const bounds = wrapperRef.current?.getBoundingClientRect();
         if (!bounds || !Number.isFinite(val)) return Infinity;
         return val - (bounds.left + bounds.width / 2);
       });
+      
+      // 根据距离计算图标大小
+      const maxButtonSize = Math.round(baseButtonSize * DOCK_CONFIG.MAX_SCALE);
       const sizeTransform = useTransform(
         distanceCalc,
-        [-DISTANCE, 0, DISTANCE],
+        [-DOCK_CONFIG.DISTANCE, 0, DOCK_CONFIG.DISTANCE],
         [baseButtonSize, maxButtonSize, baseButtonSize]
       );
-      const sizeSpring = useSpring(sizeTransform, {
-        mass: 0.15,
-        stiffness: 160,
-        damping: 18,
-      });
+      const sizeSpring = useSpring(sizeTransform, DOCK_CONFIG.SPRING_CONFIG);
+      
+      // 图标宽度值
       const widthValue = isPresent
         ? magnifyEnabled
           ? sizeSpring
           : baseButtonSize
         : 0;
 
-      // Scale factor for emoji to match magnification (relative to baseButtonSize)
-      const emojiScale = useTransform(sizeSpring, (val) => val / baseButtonSize);
+      // Emoji 缩放因子（相对于基础大小）
+      const emojiScale = useTransform(
+        sizeSpring,
+        (val) => val / baseButtonSize
+      );
  
       const setCombinedRef = useCallback(
         (node: HTMLDivElement | null) => {
@@ -412,18 +434,7 @@ function MacDock() {
             scale: 0,
             opacity: 0,
           }}
-          transition={{
-            type: "spring",
-            stiffness: 300,
-            damping: 30,
-            mass: 0.8,
-            layout: {
-              type: "spring",
-              stiffness: 300,
-              damping: 30,
-              mass: 0.8,
-            },
-          }}
+          transition={DOCK_CONFIG.LAYOUT_SPRING_CONFIG}
           style={{
             transformOrigin: "bottom center",
             willChange: "width, height, transform",
@@ -432,6 +443,8 @@ function MacDock() {
             marginLeft: isPresent ? 4 : 0,
             marginRight: isPresent ? 4 : 0,
             overflow: "visible",
+            background: "transparent",
+            border: "none",
           }}
           className="flex-shrink-0"
         >
@@ -443,23 +456,24 @@ function MacDock() {
             {...(onDragOver && { onDragOver })}
             {...(onDrop && { onDrop })}
             {...(onDragLeave && { onDragLeave })}
-            className="relative flex items-end justify-center w-full h-full"
+            className={`relative flex items-center justify-center w-full h-full transition-all duration-200 ${isOS1 ? "dock-icon-button dock-icon-button-glow" : ""}`}
             style={{
               willChange: "transform",
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              margin: 0,
             }}
           >
             {isEmoji ? (
               <motion.span
-                className="select-none pointer-events-none flex items-end justify-center"
+                className="select-none pointer-events-none flex items-center justify-center dock-icon-glow"
                 style={{
-                  // Slightly larger base size so initial (non-hover) emoji isn't too small
                   fontSize: baseButtonSize * 0.84,
                   lineHeight: 1,
-                  originY: 1,
+                  originY: 0.5,
                   originX: 0.5,
                   scale: magnifyEnabled ? emojiScale : 1,
-                  // Lift a couple px so it's not too tight against the bottom
-                  y: -5,
                   width: "100%",
                   height: "100%",
                 }}
@@ -470,31 +484,19 @@ function MacDock() {
               <ThemedIcon
                 name={icon}
                 alt={label}
-                className="select-none pointer-events-none"
+                className="select-none pointer-events-none dock-icon-glow"
                 draggable={false}
                 style={{
                   imageRendering: "-webkit-optimize-contrast",
                   width: "100%",
                   height: "100%",
+                  background: "transparent",
+                  border: "none",
+                  borderRadius: 0,
+                  objectFit: "contain",
                 }}
               />
             )}
-            {showIndicator ? (
-              <span
-                aria-hidden
-                className="absolute"
-                style={{
-                  bottom: -3,
-                  width: 0,
-                  height: 0,
-                  borderLeft: "4px solid transparent",
-                  borderRight: "4px solid transparent",
-                  borderTop: "0",
-                  borderBottom: "4px solid #000",
-                  filter: "none",
-                }}
-              />
-            ) : null}
           </button>
         </motion.div>
       );
@@ -508,16 +510,19 @@ function MacDock() {
         layout
         layoutId={`dock-divider-${idKey}`}
         initial={{ opacity: 0, scaleY: 0.8 }}
-        animate={{ opacity: 0.9, scaleY: 1 }}
+        animate={{ opacity: 1, scaleY: 1 }}
         exit={{ opacity: 0, scaleY: 0.8 }}
         transition={{ type: "spring", stiffness: 260, damping: 26 }}
-        className="bg-black/20"
         style={{
           width: 1,
-          height: 48,
-          marginLeft: 6,
-          marginRight: 6,
+          height: isOS1
+            ? DOCK_CONFIG.BASE_BUTTON_SIZE.os1
+            : DOCK_CONFIG.BASE_BUTTON_SIZE.macosx,
+          marginLeft: 8,
+          marginRight: 8,
           alignSelf: "center",
+          // 简单的透明灰色分隔线
+          background: "rgba(0, 0, 0, 0.2)",
         }}
       />
     )
@@ -528,7 +533,9 @@ function MacDock() {
       ref={dockContainerRef}
       className="fixed left-0 right-0 z-50"
       style={{
-        bottom: 0,
+        // OS1 主题：Dock 与底部保持距离（macOS Ventura 风格）
+        // macOS 主题：保持原样，紧贴底部
+        bottom: isOS1 ? "12px" : "0",
         pointerEvents: "none",
       }}
     >
@@ -541,17 +548,45 @@ function MacDock() {
         <motion.div
           layout
           layoutRoot
-          className="inline-flex items-end px-1 py-1"
+          className={`inline-flex items-end px-2 py-2 ${isOS1 ? "os1-dock" : ""}`}
           style={{
             pointerEvents: "auto",
-            background: "rgba(248, 248, 248, 0.75)",
-            backgroundImage: "var(--os-pinstripe-menubar)",
-            border: "none",
-            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-            height: 56,
+            // 根据主题选择不同的样式
+            ...(isOS1
+              ? {
+                  // macOS Ventura 风格的 Dock：更透明、更现代的毛玻璃效果
+                  background: "rgba(255, 255, 255, 0.4)",
+                  backgroundImage: "none",
+                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                  borderTop: "1px solid rgba(255, 255, 255, 0.3)",
+                  boxShadow: `
+                    0 -4px 24px rgba(0, 0, 0, 0.12),
+                    0 -2px 8px rgba(0, 0, 0, 0.08),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.5)
+                  `,
+                  height: 76, // 增加高度以在图标和指示器之间留出空间
+                  borderRadius: "20px", // macOS Ventura：四个角都是圆角
+                  backdropFilter: "blur(40px) saturate(180%)",
+                  WebkitBackdropFilter: "blur(40px) saturate(180%)",
+                }
+              : {
+                  // Aqua Dock 风格：使用与导航栏相同的背景纹理
+                  background: "rgba(248, 248, 248, 0.85)",
+                  backgroundImage: "var(--os-pinstripe-menubar)",
+                  border: "1px solid rgba(0, 0, 0, 0.15)",
+                  borderTop: "1px solid rgba(255, 255, 255, 0.5)",
+                  boxShadow: `
+                    0 -2px 10px rgba(0, 0, 0, 0.2),
+                    0 2px 4px rgba(0, 0, 0, 0.1),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.6)
+                  `,
+                  height: 64,
+                  borderRadius: "0", // 四个角都是直角
+                  backdropFilter: "blur(20px)",
+                  WebkitBackdropFilter: "blur(20px)",
+                }),
             maxWidth: "min(92vw, 980px)",
             transformOrigin: "center bottom",
-            borderRadius: "0px",
             overflowX: isPhone ? "auto" : "visible",
             overflowY: "visible",
             WebkitOverflowScrolling: isPhone ? "touch" : undefined,
@@ -580,7 +615,6 @@ function MacDock() {
               {/* Left pinned */}
               {pinnedLeft.map((appId) => {
                 const icon = getAppIconPath(appId);
-                const isOpen = openAppsAllSet.has(appId);
                 const label = appRegistry[appId]?.name ?? appId;
                 return (
                   <IconButton
@@ -595,7 +629,6 @@ function MacDock() {
                         focusOrLaunchApp(appId);
                       }
                     }}
-                    showIndicator={isOpen}
                   />
                 );
               })}
@@ -615,7 +648,6 @@ function MacDock() {
                       icon={icon}
                       idKey={item.instanceId}
                       onClick={() => bringInstanceToForeground(item.instanceId!)}
-                      showIndicator
                       isEmoji={isEmoji}
                     />
                   );
@@ -630,7 +662,6 @@ function MacDock() {
                       icon={icon}
                       idKey={item.appId}
                       onClick={() => focusMostRecentInstanceOfApp(item.appId)}
-                      showIndicator
                     />
                   );
                 }
@@ -772,8 +803,19 @@ function MacDock() {
   );
 }
 
+function OS1Dock() {
+  // 复用 MacDock 的逻辑，但使用 macOS 26 风格的样式
+  return <MacDock isOS1={true} />;
+}
+
 export function Dock() {
   const currentTheme = useThemeStore((s) => s.current);
-  if (currentTheme !== "macosx") return null;
-  return <MacDock />;
+  if (currentTheme === "macosx") {
+    return <MacDock />;
+  }
+  if (currentTheme === "os1") {
+    return <OS1Dock />;
+  }
+  return null;
 }
+

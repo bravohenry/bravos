@@ -14,6 +14,12 @@ import {
 } from "./utils/cors.js";
 import * as RateLimit from "./utils/rate-limit.js";
 import { Redis } from "@upstash/redis";
+import {
+  SupportedModel,
+  DEFAULT_MODEL,
+  getModelInstance,
+} from "./utils/aiModels.js";
+import { SUPPORTED_AI_MODELS } from "../src/types/aiModels.js";
 
 export const runtime = "edge";
 export const edge = true;
@@ -80,6 +86,7 @@ const RequestSchema = z
     context: z.string().min(1).max(2000).optional(),
     temperature: z.number().min(0).max(1).optional(),
     mode: z.enum(["text", "image"]).optional(),
+    model: z.enum(SUPPORTED_AI_MODELS as [SupportedModel, ...SupportedModel[]]).optional(),
     images: z
       .array(ImageAttachmentSchema)
       .max(4, "A maximum of 4 images are allowed per request.")
@@ -466,9 +473,11 @@ export default async function handler(req: Request): Promise<Response> {
     );
   }
 
-  const { prompt, messages, context, temperature, mode: requestedMode } =
+  const { prompt, messages, context, temperature, mode: requestedMode, model: requestedModel } =
     parsedBody;
   const mode = requestedMode ?? "text";
+  // 使用请求中指定的模型，如果没有指定则使用默认模型
+  const model = requestedModel ?? DEFAULT_MODEL;
 
   // Allow trusted user "zi" to bypass rate limits (but still requires valid auth token)
   const rateLimitBypass = usernameHeader === "zihan";
@@ -490,8 +499,9 @@ export default async function handler(req: Request): Promise<Response> {
     ) ?? 0;
   const requestImagesCount = parsedBody.images?.length ?? 0;
 
-  log("Request payload summary", {
+    log("Request payload summary", {
     mode,
+    model,
     isAuthenticatedUser,
     rateLimitBypass,
     identifier,
@@ -629,8 +639,16 @@ export default async function handler(req: Request): Promise<Response> {
     }
 
     try {
+      // 对于图像生成，如果指定了模型则使用指定模型，否则使用默认的图像生成模型
+      // 注意：只有支持图像生成的模型才能用于此模式
+      const imageModel = model === "gemini-2.5-flash-image" 
+        ? google("gemini-2.5-flash-image")
+        : model 
+        ? getModelInstance(model)
+        : google("gemini-2.5-flash-image"); // 默认图像生成模型
+      
       const imageResult = await generateText({
-        model: google("gemini-2.5-flash-image-preview"),
+        model: imageModel,
         prompt: [
           {
             role: "user",
@@ -688,8 +706,28 @@ export default async function handler(req: Request): Promise<Response> {
       });
     } catch (error) {
       logError("Image generation failed:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorDetails = error instanceof Error && error.cause ? String(error.cause) : undefined;
+      
+      // 检查是否是模型过载错误
+      const isOverloaded = errorMessage.toLowerCase().includes("overloaded") || 
+                          errorMessage.toLowerCase().includes("try again later");
+      
+      // 检查是否是临时性错误（可以重试）
+      const isRetryable = isOverloaded || 
+                         errorMessage.toLowerCase().includes("temporary") ||
+                         errorMessage.toLowerCase().includes("503") ||
+                         errorMessage.toLowerCase().includes("502");
+      
       return jsonResponse(
-        { error: "Failed to generate image" },
+        { 
+          error: isOverloaded 
+            ? "Model is temporarily overloaded. Please try again in a few moments."
+            : "Failed to generate image",
+          details: errorMessage,
+          retryable: isRetryable,
+          ...(errorDetails ? { cause: errorDetails } : {})
+        },
         500,
         effectiveOrigin
       );
@@ -717,8 +755,10 @@ export default async function handler(req: Request): Promise<Response> {
   }
 
   try {
+    // 使用系统模型选择机制，支持所有已配置的模型
+    const selectedModel = getModelInstance(model);
     const { text } = await generateText({
-      model: google("gemini-2.5-flash"),
+      model: selectedModel,
       messages: finalMessages,
       temperature: temperature ?? 0.6,
       maxOutputTokens: 4000,

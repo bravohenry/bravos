@@ -14,6 +14,7 @@ import { IpodApp } from "@/apps/ipod";
 import { TerminalApp } from "@/apps/terminal";
 import { AppletViewerApp } from "@/apps/applet-viewer";
 import { appIds } from "./appIds";
+import { useThemeStore } from "@/stores/useThemeStore";
 import type {
   BaseApp,
   ControlPanelsInitialData,
@@ -160,6 +161,12 @@ export const appRegistry = {
 
 // Helper function to get app icon path
 export const getAppIconPath = (appId: AppId): string => {
+  // Special handling for OS1 theme: use console icon for control-panels
+  const currentTheme = useThemeStore.getState().current;
+  if (currentTheme === "os1" && appId === "control-panels") {
+    return "/icons/os1/console.png";
+  }
+  
   const app = appRegistry[appId];
   if (typeof app.icon === "string") {
     return app.icon;

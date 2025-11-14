@@ -55,6 +55,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const currentTheme = useThemeStore((state) => state.current);
     const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
     const isMacTheme = currentTheme === "macosx";
+    const isOS1Theme = currentTheme === "os1";
 
     const [isFocused, setIsFocused] = React.useState(false);
     const [isPressed, setIsPressed] = React.useState(false);
@@ -205,6 +206,24 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             buttonVariants({ variant, size }),
             "!border-none !bg-transparent !shadow-none !box-shadow-none !background-none",
             "[background:transparent!important] [box-shadow:none!important] [border:none!important]",
+            className
+          )}
+          ref={ref}
+          {...props}
+          onClick={handleClick}
+        />
+      );
+    }
+
+    // For OS1 theme with ghost variant, ensure completely transparent
+    if (isOS1Theme && variant === "ghost") {
+      return (
+        <Comp
+          className={cn(
+            buttonVariants({ variant, size }),
+            "!border-none !bg-transparent !shadow-none !outline-none",
+            "focus-visible:ring-0 focus-visible:outline-none",
+            "[background:transparent!important] [box-shadow:none!important] [border:none!important] [outline:none!important]",
             className
           )}
           ref={ref}

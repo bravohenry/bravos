@@ -539,6 +539,12 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
   // Get current theme
   const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
+  const isOS1Theme = currentTheme === "os1";
+  
+  // Get foreground window title for OS1 theme
+  const foregroundWindowTitle = isOS1Theme && foregroundInstance 
+    ? (foregroundInstance.title || getAppName(foregroundInstance.appId))
+    : null;
 
   // Get file system items for applet icons
   const files = useFilesStore((s) => s.items);
@@ -995,9 +1001,21 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
         color: "var(--os-color-menubar-text)",
       }}
     >
-      <AppleMenu apps={apps} />
-      {hasActiveApp ? children : <DefaultMenuItems />}
-      <div className="ml-auto flex items-center">
+      <div className="relative z-10">
+        <AppleMenu apps={apps} />
+      </div>
+      {/* OS1 主题：在 Apple logo 和 File 菜单之间显示当前活动窗口的标题 */}
+      {isOS1Theme && foregroundWindowTitle && (
+        <div className="flex items-center px-3">
+          <span className="text-sm font-bold text-os-menubar-text truncate max-w-md">
+            {foregroundWindowTitle}
+          </span>
+        </div>
+      )}
+      <div className="relative z-10">
+        {hasActiveApp ? children : <DefaultMenuItems />}
+      </div>
+      <div className="ml-auto flex items-center relative z-10">
         <div className="hidden sm:flex">
           <VolumeControl />
         </div>

@@ -42,6 +42,7 @@ const SelectTrigger = React.forwardRef<
   const [isPressed, setIsPressed] = React.useState(false);
 
   const isMacOSTheme = currentTheme === "macosx";
+  const isOS1Theme = currentTheme === "os1";
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
 
   return (
@@ -49,11 +50,14 @@ const SelectTrigger = React.forwardRef<
       ref={ref}
       className={cn(
         // Base classes for non-macOS themes
-        !isMacOSTheme &&
+        !isMacOSTheme && !isOS1Theme &&
           "flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm [border-image:url('/assets/button.svg')_30_stretch] active:[border-image:url('/assets/button-default.svg')_60_stretch] focus:[border-image:url('/assets/button-default.svg')_60_stretch] border-[5px] ring-offset-background placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
         // macOS theme classes
         isMacOSTheme &&
           "macos-select-trigger flex w-full items-center justify-between whitespace-nowrap rounded px-2 py-1 text-sm placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+        // OS1 theme classes
+        isOS1Theme &&
+          "flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
         className
       )}
       style={{
@@ -61,8 +65,10 @@ const SelectTrigger = React.forwardRef<
           ? '"Pixelated MS Sans Serif", Arial'
           : isMacOSTheme
           ? '"LucidaGrande", "Lucida Grande", "Hiragino Sans", "Hiragino Sans GB", "Heiti SC", "Lucida Sans Unicode", sans-serif'
+          : isOS1Theme
+          ? '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif'
           : undefined,
-        fontSize: isXpTheme ? "11px" : isMacOSTheme ? "14px" : undefined,
+        fontSize: isXpTheme ? "11px" : isMacOSTheme ? "14px" : isOS1Theme ? "13px" : undefined,
         ...(isXpTheme && {
           color: "black",
         }),
@@ -115,7 +121,7 @@ const SelectTrigger = React.forwardRef<
       {...props}
     >
       {children}
-      {!isMacOSTheme && (
+      {!isMacOSTheme && !isOS1Theme && (
         <SelectPrimitive.Icon asChild>
           <ChevronDown className="h-4 w-4 opacity-50" />
         </SelectPrimitive.Icon>
@@ -166,6 +172,7 @@ const SelectContent = React.forwardRef<
 >(({ className, children, position = "popper", ...props }, ref) => {
   const currentTheme = useThemeStore((state) => state.current);
   const isMacOSTheme = currentTheme === "macosx";
+  const isOS1Theme = currentTheme === "os1";
 
   return (
     <SelectPrimitive.Portal>
@@ -186,6 +193,15 @@ const SelectContent = React.forwardRef<
             boxShadow: "0 4px 16px rgba(0, 0, 0, 0.4)",
             padding: "4px 0px",
           }),
+          ...(isOS1Theme && {
+            border: "1px solid rgba(0, 0, 0, 0.08)",
+            borderRadius: "10px",
+            background: "rgba(255, 255, 255, 0.85)",
+            backdropFilter: "blur(30px) saturate(180%)",
+            WebkitBackdropFilter: "blur(30px) saturate(180%)",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)",
+            padding: "6px",
+          }),
         }}
         position={position}
         {...props}
@@ -196,7 +212,8 @@ const SelectContent = React.forwardRef<
             "p-1",
             position === "popper" &&
               "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]",
-            isMacOSTheme && "p-0"
+            isMacOSTheme && "p-0",
+            isOS1Theme && "p-0"
           )}
         >
           {children}
@@ -248,6 +265,7 @@ const SelectItem = React.forwardRef<
   const currentTheme = useThemeStore((state) => state.current);
 
   const isMacOSTheme = currentTheme === "macosx";
+  const isOS1Theme = currentTheme === "os1";
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
 
   return (
@@ -262,11 +280,15 @@ const SelectItem = React.forwardRef<
           ? '"Pixelated MS Sans Serif", Arial'
           : isMacOSTheme
           ? '"LucidaGrande", "Lucida Grande", "Hiragino Sans", "Hiragino Sans GB", "Heiti SC", "Lucida Sans Unicode", sans-serif'
+          : isOS1Theme
+          ? '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif'
           : undefined,
         fontSize: isXpTheme
           ? "11px"
           : isMacOSTheme
           ? "13px !important"
+          : isOS1Theme
+          ? "13px"
           : undefined,
         ...(isMacOSTheme && {
           WebkitFontSmoothing: "antialiased",
@@ -275,6 +297,16 @@ const SelectItem = React.forwardRef<
           padding: "6px 20px 6px 16px",
           margin: "1px 0",
           textShadow: "0 2px 3px rgba(0, 0, 0, 0.25)",
+        }),
+        ...(isOS1Theme && {
+          borderRadius: "6px",
+          padding: "6px 12px",
+          margin: "2px 4px",
+          WebkitFontSmoothing: "antialiased",
+          MozOsxFontSmoothing: "grayscale",
+          fontSize: "13px",
+          fontWeight: "400",
+          letterSpacing: "-0.01em",
         }),
       }}
       onSelect={(event) => {
@@ -297,13 +329,26 @@ SelectItem.displayName = SelectPrimitive.Item.displayName;
 const SelectSeparator = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Separator>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>
->(({ className, ...props }, ref) => (
-  <SelectPrimitive.Separator
-    ref={ref}
-    className={cn("-mx-1 my-1 h-px bg-muted", className)}
-    {...props}
-  />
-));
+>(({ className, ...props }, ref) => {
+  const currentTheme = useThemeStore((state) => state.current);
+  const isOS1Theme = currentTheme === "os1";
+
+  return (
+    <SelectPrimitive.Separator
+      ref={ref}
+      className={cn("-mx-1 my-1 h-px bg-muted", className)}
+      style={{
+        ...(isOS1Theme && {
+          backgroundColor: "rgba(0, 0, 0, 0.08)",
+          border: "none",
+          margin: "6px 8px",
+          height: "1px",
+        }),
+      }}
+      {...props}
+    />
+  );
+});
 SelectSeparator.displayName = SelectPrimitive.Separator.displayName;
 
 export {

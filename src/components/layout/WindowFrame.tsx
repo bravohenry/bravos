@@ -76,11 +76,15 @@ export function WindowFrame({
   const { bringToForeground } = useAppContext();
   const {
     bringInstanceToForeground,
+    minimizeInstance,
+    restoreInstance,
     debugMode,
     updateWindowState,
     updateInstanceWindowState,
   } = useAppStoreShallow((state) => ({
     bringInstanceToForeground: state.bringInstanceToForeground,
+    minimizeInstance: state.minimizeInstance,
+    restoreInstance: state.restoreInstance,
     debugMode: state.debugMode,
     updateWindowState: state.updateWindowState,
     updateInstanceWindowState: state.updateInstanceWindowState,
@@ -818,7 +822,10 @@ export function WindowFrame({
                   aria-label="Minimize"
                   onClick={(e) => {
                     e.stopPropagation();
-                    // Minimize functionality could be added here
+                    if (instanceId) {
+                      playWindowCollapse();
+                      minimizeInstance(instanceId);
+                    }
                   }}
                   onMouseDown={(e) => e.stopPropagation()}
                   onTouchStart={(e) => e.stopPropagation()}
@@ -841,6 +848,141 @@ export function WindowFrame({
                   onMouseDown={(e) => e.stopPropagation()}
                   onTouchStart={(e) => e.stopPropagation()}
                 />
+              </div>
+            </div>
+          ) : currentTheme === "os1" ? (
+            <div
+              className={cn(
+                "title-bar os1-title-bar flex items-center h-os-titlebar min-h-[1.375rem] px-3 select-none cursor-move user-select-none z-50",
+                transparentBackground && "backdrop-blur-sm bg-white/50"
+              )}
+              style={{
+                background: isForeground
+                  ? theme.colors.titleBar.activeBg
+                  : theme.colors.titleBar.inactiveBg,
+                color: isForeground
+                  ? theme.colors.titleBar.text
+                  : theme.colors.titleBar.inactiveText,
+                borderRadius: theme.metrics.titleBarRadius,
+                borderBottom: `1px solid ${
+                  isForeground
+                    ? theme.colors.titleBar.borderBottom ||
+                      theme.colors.titleBar.border ||
+                      "rgba(0, 0, 0, 0.12)"
+                    : theme.colors.titleBar.borderInactive ||
+                      "rgba(0, 0, 0, 0.08)"
+                }`,
+                opacity: isForeground ? 1 : 0.85,
+              }}
+              onMouseDown={handleMouseDownWithForeground}
+              onDoubleClick={(e) => {
+                if (isFromTitlebarControls(e.target)) return;
+                handleFullMaximize(e);
+              }}
+              onTouchStart={(e: React.TouchEvent<HTMLElement>) => {
+                if (isFromTitlebarControls(e.target)) {
+                  e.stopPropagation();
+                  return;
+                }
+                handleTitleBarTap(e);
+                handleMouseDownWithForeground(e);
+                if (isPhone) {
+                  handleTouchStart(e);
+                }
+              }}
+              onTouchMove={(e: React.TouchEvent<HTMLElement>) => {
+                if (isPhone) {
+                  handleTouchMove(e);
+                }
+              }}
+              onTouchEnd={() => {
+                if (isPhone) {
+                  handleTouchEnd();
+                }
+              }}
+            >
+              {/* 窗口控制按钮 - 放在左侧 */}
+              <div
+                className={cn(
+                  "os1-window-controls flex items-center gap-2 mr-3",
+                  !isForeground && "inactive"
+                )}
+                data-titlebar-controls
+              >
+                <button
+                  type="button"
+                  aria-label="Close"
+                  className="os1-window-control os1-window-control--close"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClose();
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                >
+                  <span aria-hidden="true" className="os1-window-control-icon">
+                    &times;
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  aria-label="Minimize"
+                  className="os1-window-control os1-window-control--ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (instanceId) {
+                      playWindowCollapse();
+                      minimizeInstance(instanceId);
+                    }
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                >
+                  <span aria-hidden="true" className="os1-window-control-icon">
+                    &minus;
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  aria-label="Maximize"
+                  className="os1-window-control os1-window-control--ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleFullMaximize(e);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                >
+                  <span aria-hidden="true" className="os1-window-control-icon">
+                    &#9633;
+                  </span>
+                </button>
+              </div>
+              {/* 图标和标题 - 放在右侧 */}
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <ThemedIcon
+                  name={getAppIconPath(appId)}
+                  alt={title}
+                  className={cn(
+                    "w-4 h-4",
+                    !isForeground && "opacity-70",
+                    transparentBackground && "drop-shadow-sm"
+                  )}
+                />
+                {/* OS1 主题下隐藏标题，标题显示在菜单栏中 */}
+                {currentTheme !== "os1" && (
+                  <span
+                    className={cn(
+                      "os1-title-text truncate text-sm font-medium tracking-wide",
+                      isForeground
+                        ? "text-os-titlebar-active-text"
+                        : "text-os-titlebar-inactive-text"
+                    )}
+                    onTouchMove={(e) => e.preventDefault()}
+                  >
+                    {title}
+                  </span>
+                )}
               </div>
             </div>
           ) : currentTheme === "macosx" ? (
@@ -970,7 +1112,10 @@ export function WindowFrame({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    // Minimize functionality could be added here
+                    if (instanceId) {
+                      playWindowCollapse();
+                      minimizeInstance(instanceId);
+                    }
                   }}
                   onMouseDown={(e) => e.stopPropagation()}
                   onTouchStart={(e) => e.stopPropagation()}

@@ -48,6 +48,8 @@ interface AppStoreState extends AppManagerState {
   ) => string;
   closeAppInstance: (instanceId: string) => void;
   bringInstanceToForeground: (instanceId: string) => void;
+  minimizeInstance: (instanceId: string) => void;
+  restoreInstance: (instanceId: string) => void;
   updateInstanceWindowState: (
     instanceId: string,
     position: { x: number; y: number },
@@ -595,6 +597,8 @@ export const useAppStore = create<AppStoreState>()(
               instances[id] = {
                 ...instances[id],
                 isForeground: id === instanceId,
+                // 恢复时自动取消最小化状态
+                isMinimized: id === instanceId ? false : instances[id].isMinimized,
               };
             });
             order = [...order.filter((id) => id !== instanceId), instanceId];
@@ -606,6 +610,7 @@ export const useAppStore = create<AppStoreState>()(
                 instanceId,
                 isOpen: !!instances[instanceId]?.isOpen,
                 isForeground: !!foreground && foreground === instanceId,
+                isMinimized: !!instances[instanceId]?.isMinimized,
               },
             })
           );
@@ -615,6 +620,82 @@ export const useAppStore = create<AppStoreState>()(
             foregroundInstanceId: foreground,
           };
         });
+      },
+
+      minimizeInstance: (instanceId) => {
+        set((state) => {
+          const inst = state.instances[instanceId];
+          if (!inst?.isOpen) return state;
+          const instances = { ...state.instances };
+          let order = [...state.instanceOrder];
+          let nextForeground: string | null = null;
+
+          // 找到下一个应该带到前台的窗口（排除当前要最小化的窗口）
+          const visibleInstances = order
+            .filter((id) => id !== instanceId && instances[id]?.isOpen && !instances[id]?.isMinimized)
+            .reverse();
+          if (visibleInstances.length > 0) {
+            nextForeground = visibleInstances[0];
+          }
+
+          // 设置最小化状态
+          instances[instanceId] = {
+            ...instances[instanceId],
+            isMinimized: true,
+            isForeground: false,
+          };
+
+          // 将下一个窗口带到前台
+          if (nextForeground) {
+            Object.keys(instances).forEach((id) => {
+              if (id === nextForeground) {
+                instances[id] = {
+                  ...instances[id],
+                  isForeground: true,
+                };
+              } else if (id !== instanceId) {
+                instances[id] = {
+                  ...instances[id],
+                  isForeground: false,
+                };
+              }
+            });
+            order = [
+              ...order.filter((id) => id !== nextForeground),
+              nextForeground,
+            ];
+          } else {
+            // 没有其他可见窗口，清除所有前台状态
+            Object.keys(instances).forEach((id) => {
+              instances[id] = {
+                ...instances[id],
+                isForeground: false,
+              };
+            });
+          }
+
+          window.dispatchEvent(
+            new CustomEvent("instanceStateChange", {
+              detail: {
+                instanceId,
+                isOpen: true,
+                isForeground: false,
+                isMinimized: true,
+              },
+            })
+          );
+
+          return {
+            instances,
+            instanceOrder: order,
+            foregroundInstanceId: nextForeground,
+          };
+        });
+      },
+
+      restoreInstance: (instanceId) => {
+        // 恢复窗口实际上就是将其带到前台，bringInstanceToForeground 已经处理了取消最小化
+        get().bringInstanceToForeground(instanceId);
       },
 
       updateInstanceWindowState: (instanceId, position, size) =>
@@ -629,7 +710,13 @@ export const useAppStore = create<AppStoreState>()(
         Object.values(get().instances).filter((i) => i.appId === appId),
       getForegroundInstance: () => {
         const id = get().foregroundInstanceId;
-        return id ? get().instances[id] || null : null;
+        if (!id) return null;
+        const instance = get().instances[id];
+        // 只返回真正可见的实例（打开且未最小化）
+        if (instance && instance.isOpen && !instance.isMinimized) {
+          return instance;
+        }
+        return null;
       },
       navigateToNextInstance: (currentId) => {
         const { instanceOrder } = get();

@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AboutFinderDialog } from "@/components/dialogs/AboutFinderDialog";
 import { AnyApp } from "@/apps/base/types";
-import { AppId } from "@/config/appRegistry";
+import { AppId, getAppIconPath } from "@/config/appRegistry";
 import { useLaunchApp } from "@/hooks/useLaunchApp";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { cn } from "@/lib/utils";
@@ -21,25 +21,33 @@ interface AppleMenuProps {
 
 export function AppleMenu({ apps }: AppleMenuProps) {
   const [aboutFinderOpen, setAboutFinderOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const launchApp = useLaunchApp();
   const currentTheme = useThemeStore((state) => state.current);
   const isMacOsxTheme = currentTheme === "macosx";
 
   const handleAppClick = (appId: string) => {
     // Simply launch the app - the instance system will handle focus if already open
-    launchApp(appId as AppId);
+    console.log(`[AppleMenu] Launching app: ${appId}`);
+    try {
+      launchApp(appId as AppId);
+    } catch (error) {
+      console.error(`[AppleMenu] Error launching app ${appId}:`, error);
+    }
+    // 关闭菜单
+    setIsMenuOpen(false);
   };
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
             size="default"
             className={cn(
               "h-6 px-3 py-1 border-none hover:bg-black/10 active:bg-black/20 focus-visible:ring-0",
-              isMacOsxTheme ? "text-xl px-1" : "text-md"
+              isMacOsxTheme ? "text-xl px-1 flex items-center justify-center" : "text-md"
             )}
             style={{ color: "inherit" }}
           >
@@ -47,7 +55,7 @@ export function AppleMenu({ apps }: AppleMenuProps) {
               <ThemedIcon
                 name="apple.png"
                 alt="Apple Menu"
-                style={{ width: 30, height: 30 }}
+                style={{ width: 30, height: 30, display: "block" }}
               />
             ) : (
               "\uf8ff" // 
@@ -62,26 +70,33 @@ export function AppleMenu({ apps }: AppleMenuProps) {
             About This Computer
           </DropdownMenuItem>
           <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
-          {apps.map((app) => (
-            <DropdownMenuItem
-              key={app.id}
-              onClick={() => handleAppClick(app.id)}
-              className="text-md h-6 px-3 active:bg-gray-900 active:text-white flex items-center gap-2"
-            >
-              {typeof app.icon === "string" ? (
-                <div className="w-4 h-4 flex items-center justify-center">
-                  {app.icon}
-                </div>
-              ) : (
-                <ThemedIcon
-                  name={app.icon.src}
-                  alt={app.name}
-                  className="w-4 h-4 [image-rendering:pixelated]"
-                />
-              )}
-              {app.name}
-            </DropdownMenuItem>
-          ))}
+          {apps.map((app) => {
+            // Use getAppIconPath to get theme-aware icon path (e.g., console icon for control-panels in OS1)
+            const iconPath = getAppIconPath(app.id as AppId);
+            return (
+              <DropdownMenuItem
+                key={app.id}
+                onSelect={(e) => {
+                  e.preventDefault();
+                  handleAppClick(app.id);
+                }}
+                className="text-md h-6 px-3 active:bg-gray-900 active:text-white flex items-center gap-2"
+              >
+                {typeof app.icon === "string" ? (
+                  <div className="w-4 h-4 flex items-center justify-center">
+                    {app.icon}
+                  </div>
+                ) : (
+                  <ThemedIcon
+                    name={iconPath}
+                    alt={app.name}
+                    className="w-4 h-4 [image-rendering:pixelated]"
+                  />
+                )}
+                {app.name}
+              </DropdownMenuItem>
+            );
+          })}
         </DropdownMenuContent>
       </DropdownMenu>
 

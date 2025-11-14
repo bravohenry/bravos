@@ -10,6 +10,7 @@ import {
 import { AboutFinderDialog } from "@/components/dialogs/AboutFinderDialog";
 import { AnyApp } from "@/apps/base/types";
 import { AppId } from "@/config/appIds";
+import { getAppIconPath } from "@/config/appRegistry";
 import { ThemedIcon } from "@/components/shared/ThemedIcon";
 
 interface StartMenuProps {
@@ -198,40 +199,46 @@ export function StartMenu({ apps }: StartMenuProps) {
                 />
 
                 {/* Apps */}
-                {apps.map((app) => (
-                  <DropdownMenuItem
-                    key={app.id}
-                    onClick={() => handleAppClick(app.id)}
-                    className="h-8 px-3 flex items-center gap-2 hover:bg-blue-500 hover:text-white"
-                    style={{
-                      fontSize: "11px",
-                      color: "#000000",
-                      fontFamily: "var(--font-ms-sans)",
-                      imageRendering: "pixelated",
-                    }}
-                  >
-                    {typeof app.icon === "string" ? (
-                      app.icon.startsWith("/icons/") ? (
+                {apps.map((app) => {
+                  // Use getAppIconPath to get theme-aware icon path (e.g., console icon for control-panels in OS1)
+                  const iconPath = typeof app.icon === "string" 
+                    ? (app.icon.startsWith("/icons/") ? app.icon : app.icon)
+                    : getAppIconPath(app.id as AppId);
+                  return (
+                    <DropdownMenuItem
+                      key={app.id}
+                      onClick={() => handleAppClick(app.id)}
+                      className="h-8 px-3 flex items-center gap-2 hover:bg-blue-500 hover:text-white"
+                      style={{
+                        fontSize: "11px",
+                        color: "#000000",
+                        fontFamily: "var(--font-ms-sans)",
+                        imageRendering: "pixelated",
+                      }}
+                    >
+                      {typeof app.icon === "string" ? (
+                        app.icon.startsWith("/icons/") ? (
+                          <ThemedIcon
+                            name={iconPath}
+                            alt={app.name}
+                            className="w-6 h-6 [image-rendering:pixelated]"
+                          />
+                        ) : (
+                          <div className="w-6 h-6 flex items-center justify-center">
+                            {app.icon}
+                          </div>
+                        )
+                      ) : (
                         <ThemedIcon
-                          name={app.icon}
+                          name={iconPath}
                           alt={app.name}
                           className="w-6 h-6 [image-rendering:pixelated]"
                         />
-                      ) : (
-                        <div className="w-6 h-6 flex items-center justify-center">
-                          {app.icon}
-                        </div>
-                      )
-                    ) : (
-                      <ThemedIcon
-                        name={app.icon.src}
-                        alt={app.name}
-                        className="w-6 h-6 [image-rendering:pixelated]"
-                      />
-                    )}
-                    {app.name}
-                  </DropdownMenuItem>
-                ))}
+                      )}
+                      {app.name}
+                    </DropdownMenuItem>
+                  );
+                })}
               </div>
             </div>
           </div>

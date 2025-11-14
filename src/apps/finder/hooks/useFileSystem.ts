@@ -16,6 +16,7 @@ import { useTextEditStore } from "@/stores/useTextEditStore";
 import { useAppStore } from "@/stores/useAppStore";
 import { migrateIndexedDBToUUIDs } from "@/utils/indexedDBMigration";
 import { useFinderStore } from "@/stores/useFinderStore";
+import { useThemeStore } from "@/stores/useThemeStore";
 
 // STORES is now imported from @/utils/indexedDB to avoid duplication
 
@@ -399,6 +400,7 @@ export function useFileSystem(
   // Zustand Stores
   const fileStore = useFilesStore();
   const launchApp = useLaunchApp();
+  const currentTheme = useThemeStore((state) => state.current); // 订阅主题变化
   const {
     tracks: ipodTracks,
     setCurrentIndex: setIpodIndex,
@@ -612,7 +614,7 @@ export function useFileSystem(
           name: app.name,
           isDirectory: false,
           path: `/Applications/${app.name}`,
-          icon: app.icon,
+          icon: getAppIconPath(app.id as AppId), // 使用主题感知的图标路径
           appId: app.id,
           type: "application",
         }));
@@ -914,12 +916,14 @@ export function useFileSystem(
       setIsLoading(false);
     }
     // Add fileStore dependency to re-run if items change
+    // 添加主题依赖，当主题变化时重新加载文件列表（特别是 /Applications 目录中的图标）
   }, [
     currentPath,
     fileStore.items,
     ipodTracks,
     videoTracks,
     internetExplorerStore.favorites,
+    currentTheme, // 主题变化时重新加载文件列表
   ]);
 
   // Define handleFileOpen

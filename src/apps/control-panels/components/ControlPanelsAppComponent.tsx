@@ -54,11 +54,14 @@ interface StoreItemWithKey {
 
 type PhotoCategory =
   | "3d_graphics"
+  | "aqua"
   | "convergency"
   | "foliage"
+  | "graphics"
   | "landscapes"
   | "nostalgia"
   | "objects"
+  | "os1"
   | "structures";
 
 const PHOTO_WALLPAPERS: Record<PhotoCategory, string[]> = {
@@ -73,6 +76,7 @@ const PHOTO_WALLPAPERS: Record<PhotoCategory, string[]> = {
     "ufo_2",
     "ufo_3",
   ],
+  aqua: [], // Aqua 主题壁纸，从 manifest 动态加载
   convergency: Array.from({ length: 15 }, (_, i) => `convergence_${i + 1}`),
   foliage: [
     "blue_flowers",
@@ -84,6 +88,17 @@ const PHOTO_WALLPAPERS: Record<PhotoCategory, string[]> = {
     "spider_lily",
     "waterdrops_on_leaf",
     "yellow_tulips",
+  ],
+  graphics: [
+    "capsule",
+    "capsule_azul",
+    "capsule_pistachio",
+    "tub",
+    "tub_azul",
+    "tub_bondi",
+    "ufo_1",
+    "ufo_2",
+    "ufo_3",
   ],
   landscapes: [
     "beach",
@@ -143,6 +158,7 @@ const PHOTO_WALLPAPERS: Record<PhotoCategory, string[]> = {
     "stone_wall",
     "wall_of_stones",
   ],
+  os1: [], // OS1 主题壁纸，从 manifest 动态加载
 };
 
 // Transform photo paths
@@ -1444,6 +1460,7 @@ export function ControlPanelsAppComponent({
 
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
   const isMacOSXTheme = currentTheme === "macosx";
+  const isOS1Theme = currentTheme === "os1";
   const isSystem7Theme = currentTheme === "system7";
   const isClassicMacTheme = isMacOSXTheme || isSystem7Theme;
   const isWindowsLegacyTheme = isXpTheme;
@@ -1475,15 +1492,21 @@ export function ControlPanelsAppComponent({
         menuBar={isXpTheme ? menuBar : undefined}
       >
         <div
-          className={`flex flex-col h-full w-full ${
+          className={`flex flex-col h-full w-full control-panels-os1 ${
             isWindowsLegacyTheme ? "pt-0 pb-2 px-2" : ""
           } ${
             isClassicMacTheme
               ? isMacOSXTheme
                 ? "p-4 pt-2"
                 : "p-4 bg-[#E3E3E3]"
+              : isOS1Theme
+              ? "bg-white/85 backdrop-blur-xl"
               : ""
           }`}
+          style={isOS1Theme ? {
+            backdropFilter: "blur(30px) saturate(180%)",
+            WebkitBackdropFilter: "blur(30px) saturate(180%)",
+          } : undefined}
         >
           <Tabs
             defaultValue={initialData?.defaultTab || "appearance"}

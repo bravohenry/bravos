@@ -428,8 +428,11 @@
 /* macOS menubar buttons should have regular weight and padding */
 :root[data-os-theme="macosx"] .menubar button {
   font-weight: normal !important;
-  padding-top: 0.25rem !important;
-  padding-bottom: 0.25rem !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   position: relative;
   z-index: 2;
 }
@@ -1619,4 +1622,1187 @@
   bottom: 2px;
   filter: blur(1px);
   pointer-events: none;
+}
+
+/* ============================================ */
+/* OS1 Theme - macOS 26 风格 */
+/* ============================================ */
+:root[data-os-theme="os1"] {
+  --os-font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Helvetica Neue", Arial, sans-serif;
+  --os-font-mono: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas,
+    "Courier New", monospace;
+  --os-color-window-bg: rgba(255, 255, 255, 0.85);
+  --os-color-menubar-bg: rgba(255, 255, 255, 0.7);
+  --os-color-menubar-border: rgba(0, 0, 0, 0.08);
+  --os-color-menubar-text: #1d1d1f;
+  --os-color-window-border: rgba(0, 0, 0, 0.08);
+  --os-color-window-border-inactive: rgba(0, 0, 0, 0.05);
+  --os-color-titlebar-border: rgba(0, 0, 0, 0.06);
+  --os-color-titlebar-border-inactive: rgba(0, 0, 0, 0.04);
+  --os-color-titlebar-active-bg: rgba(255, 255, 255, 0.8);
+  --os-color-titlebar-inactive-bg: rgba(240, 240, 240, 0.7);
+  --os-color-titlebar-text: #1d1d1f;
+  --os-color-titlebar-text-inactive: #86868b;
+  --os-color-button-face: rgba(255, 255, 255, 0.9);
+  --os-color-button-highlight: rgba(255, 255, 255, 0.95);
+  --os-color-button-shadow: rgba(0, 0, 0, 0.06);
+  --os-color-button-active-face: rgba(240, 240, 240, 0.9);
+  --os-color-traffic-light-close: #ff5f57;
+  --os-color-traffic-light-minimize: #ffbd2e;
+  --os-color-traffic-light-maximize: #28c840;
+  --os-color-selection-bg: rgba(0, 122, 255, 0.3);
+  --os-color-selection-text: #007aff;
+  --os-color-selection-glow: rgba(0, 122, 255, 0.2);
+  --os-color-text-primary: #1d1d1f;
+  --os-color-text-secondary: #86868b;
+  --os-color-text-disabled: #c7c7cc;
+  --os-metrics-border-width: 1px;
+  --os-metrics-radius: 0.75rem;
+  --os-metrics-titlebar-height: 1.5rem;
+  --os-metrics-titlebar-border-width: 1px;
+  --os-metrics-menubar-height: 1.5rem;
+  --os-window-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* 非活动窗口的选择颜色 */
+:root[data-os-theme="os1"] .window:not(.is-foreground) {
+  --os-color-selection-bg: rgba(0, 122, 255, 0.15);
+  --os-color-selection-text: #007aff;
+}
+
+/* OS1 主题字体样式 - macOS 26 现代风格 */
+:root[data-os-theme="os1"] body {
+  font-family: var(--os-font-ui) !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  font-smooth: auto !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+}
+
+:root[data-os-theme="os1"] * {
+  font-family: inherit;
+}
+
+/* OS1 菜单栏样式 - macOS 26 毛玻璃效果 */
+:root[data-os-theme="os1"] .menubar {
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  background: var(--os-color-menubar-bg) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-bottom: 1px solid var(--os-color-menubar-border) !important;
+  color: var(--os-color-menubar-text) !important;
+}
+
+/* OS1 标题栏样式 - macOS 26 毛玻璃效果 */
+:root[data-os-theme="os1"] .title-bar {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  background: var(--os-color-titlebar-active-bg) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  color: var(--os-color-titlebar-text) !important;
+}
+
+:root[data-os-theme="os1"] .window.is-foreground .title-bar {
+  border-bottom: var(--os-metrics-titlebar-border-width) solid
+    var(--os-color-titlebar-border) !important;
+}
+
+:root[data-os-theme="os1"] .window:not(.is-foreground) .title-bar {
+  background: var(--os-color-titlebar-inactive-bg) !important;
+  backdrop-filter: blur(15px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(15px) saturate(150%) !important;
+  color: var(--os-color-titlebar-text-inactive) !important;
+  border-bottom: var(--os-metrics-titlebar-border-width) solid
+    var(--os-color-titlebar-border-inactive) !important;
+}
+
+:root[data-os-theme="os1"] .os1-title-bar {
+  border-radius: 12px 12px 0px 0px;
+  transition: background 0.2s ease, color 0.2s ease, opacity 0.2s ease,
+    backdrop-filter 0.2s ease;
+}
+
+:root[data-os-theme="os1"] .os1-title-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-shadow: none;
+}
+
+:root[data-os-theme="os1"] .os1-window-controls {
+  gap: 0.375rem; /* macOS 26 风格的紧凑间距 */
+}
+
+:root[data-os-theme="os1"] .os1-window-controls button {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0;
+  transition: all 0.2s ease;
+  outline: none;
+  opacity: 0.8;
+}
+
+:root[data-os-theme="os1"] .os1-window-controls button:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+:root[data-os-theme="os1"] .os1-window-controls button:active {
+  opacity: 0.9;
+  transform: scale(0.95);
+}
+
+:root[data-os-theme="os1"] .os1-window-controls.inactive button {
+  opacity: 0.5;
+}
+
+:root[data-os-theme="os1"] .os1-window-control--close {
+  background: var(--os-color-traffic-light-close);
+}
+
+:root[data-os-theme="os1"] .os1-window-control--close:hover {
+  background: var(--os-color-traffic-light-close);
+  box-shadow: 0 0 0 2px rgba(255, 95, 87, 0.2);
+}
+
+:root[data-os-theme="os1"] .os1-window-control--close:active {
+  background: #e14640;
+}
+
+:root[data-os-theme="os1"] .os1-window-controls.inactive .os1-window-control--close {
+  background: rgba(0, 0, 0, 0.15);
+  opacity: 0.4;
+}
+
+:root[data-os-theme="os1"] .os1-window-control--ghost {
+  background: var(--os-color-traffic-light-minimize);
+}
+
+:root[data-os-theme="os1"] .os1-window-control--ghost:last-of-type {
+  background: var(--os-color-traffic-light-maximize);
+}
+
+:root[data-os-theme="os1"] .os1-window-control--ghost:hover {
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+:root[data-os-theme="os1"] .os1-window-control-icon {
+  display: none; /* macOS 26 风格使用纯色圆形按钮，不显示图标 */
+}
+
+/* OS1 窗口边框和背景 - macOS 26 毛玻璃效果 */
+:root[data-os-theme="os1"] .window {
+  border: var(--os-metrics-border-width) solid var(--os-color-window-border) !important;
+  border-radius: var(--os-metrics-radius) !important;
+  background: var(--os-color-window-bg) !important;
+  backdrop-filter: blur(30px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(180%) !important;
+  overflow: hidden !important;
+}
+
+:root[data-os-theme="os1"] .window:not(.is-foreground) {
+  border-color: var(--os-color-window-border-inactive) !important;
+  backdrop-filter: blur(20px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
+}
+
+/* OS1 按钮样式 - macOS 26 现代按钮 */
+:root[data-os-theme="os1"] button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control):not(.os-switch):not([role="switch"]):not([role="tab"]) {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  border-radius: 0.5rem !important;
+  background: var(--os-color-button-face) !important;
+  backdrop-filter: blur(10px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(150%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  color: var(--os-color-text-primary) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+:root[data-os-theme="os1"] button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control):not(.os-switch):not([role="switch"]):not([role="tab"]):not(.dock-icon-button):hover {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+  transform: translateY(-1px) !important;
+}
+
+:root[data-os-theme="os1"] button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control):not(.os-switch):not([role="switch"]):not([role="tab"]):not(.dock-icon-button):active {
+  background: var(--os-color-button-active-face) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+  transform: translateY(0) !important;
+}
+
+/* OS1 输入框样式 - macOS 26 现代输入框 */
+:root[data-os-theme="os1"] input,
+:root[data-os-theme="os1"] textarea,
+:root[data-os-theme="os1"] select {
+  font-size: 13px !important;
+  border-radius: 0.5rem !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(10px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(150%) !important;
+  color: var(--os-color-text-primary) !important;
+  padding: 0.5rem 0.75rem !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.2s ease !important;
+}
+
+:root[data-os-theme="os1"] input:focus,
+:root[data-os-theme="os1"] textarea:focus,
+:root[data-os-theme="os1"] select:focus {
+  outline: none !important;
+  border-color: #007aff !important;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* OS1 聊天气泡样式 - macOS 26 毛玻璃效果 */
+:root[data-os-theme="os1"] .chat-bubble {
+  border-radius: 1rem !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+/* OS1 窗口阴影 - macOS 26 柔和多层阴影 */
+:root[data-os-theme="os1"] .shadow-os-window.is-foreground {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+:root[data-os-theme="os1"] .shadow-os-window:not(.is-foreground) {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* OS1 下拉菜单样式 - macOS 26 现代焦点 */
+:root[data-os-theme="os1"] [role="menuitem"]:focus,
+:root[data-os-theme="os1"] [role="menuitemcheckbox"]:focus,
+:root[data-os-theme="os1"] [role="menuitemradio"]:focus,
+:root[data-os-theme="os1"] [role="option"]:focus,
+:root[data-os-theme="os1"] [role="option"][data-highlighted] {
+  background-color: var(--os-color-selection-bg) !important;
+  color: var(--os-color-selection-text) !important;
+  outline: none !important;
+  border-radius: 0.375rem !important;
+}
+
+/* OS1 标签和文本样式 - macOS 26 */
+:root[data-os-theme="os1"] label {
+  font-size: 12px !important;
+  color: var(--os-color-text-primary) !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+}
+
+:root[data-os-theme="os1"] p,
+:root[data-os-theme="os1"] div {
+  font-size: 14px !important;
+  color: var(--os-color-text-primary) !important;
+  line-height: 1.5 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* OS1 终端样式 */
+:root[data-os-theme="os1"] .terminal-input {
+  font-family: var(--os-font-mono) !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  -webkit-font-smoothing: antialiased !important;
+  font-smooth: auto !important;
+}
+
+/* OS1 终端内容区域 - 确保文字是白色，覆盖全局样式 */
+:root[data-os-theme="os1"] .terminal-container,
+:root[data-os-theme="os1"] .terminal-container * {
+  color: #ffffff !important;
+}
+
+/* 确保 Terminal 内的 div 和 p 也是白色，优先级高于全局规则 */
+:root[data-os-theme="os1"] .terminal-container div,
+:root[data-os-theme="os1"] .terminal-container p {
+  color: #ffffff !important;
+}
+
+/* 保留特定颜色的元素（如绿色提示符、紫色 AI 输出等） */
+:root[data-os-theme="os1"] .terminal-container .text-green-400 {
+  color: rgb(74, 222, 128) !important; /* green-400 */
+}
+
+:root[data-os-theme="os1"] .terminal-container .text-purple-400 {
+  color: rgb(192, 132, 252) !important; /* purple-400 */
+}
+
+:root[data-os-theme="os1"] .terminal-container .text-gray-400,
+:root[data-os-theme="os1"] .terminal-container .text-gray-500 {
+  color: rgb(156, 163, 175) !important; /* gray-400/500 */
+}
+
+:root[data-os-theme="os1"] .terminal-container .text-red-400 {
+  color: rgb(248, 113, 113) !important; /* red-400 */
+}
+
+:root[data-os-theme="os1"] .terminal-container .text-purple-100 {
+  color: rgb(243, 232, 255) !important; /* purple-100 */
+}
+
+/* OS1 选择框样式 - macOS 26 现代下拉菜单 */
+:root[data-os-theme="os1"] select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23007AFF' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-position: right 0.75rem center !important;
+  background-repeat: no-repeat !important;
+  padding-right: 2.5rem !important;
+}
+
+/* OS1 Control Panels 样式 - 现代 macOS 系统设置风格 */
+:root[data-os-theme="os1"] .control-panels-os1 {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(30px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(180%) !important;
+}
+
+/* OS1 Control Panels 标签页内容区域 - 参考 macOS 排版逻辑 */
+:root[data-os-theme="os1"] .control-panels-os1 [role="tabpanel"] {
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  /* 参考 macOS：内容区域无圆角，与激活标签页对齐 */
+  border-radius: 0 !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-top: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  margin-top: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* OS1 Control Panels 标签和描述文字 */
+:root[data-os-theme="os1"] .control-panels-os1 label {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+  letter-spacing: -0.01em !important;
+}
+
+:root[data-os-theme="os1"] .control-panels-os1 label.text-gray-600 {
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  color: rgba(0, 0, 0, 0.5) !important;
+  line-height: 1.4 !important;
+}
+
+/* OS1 Control Panels 分隔线 */
+:root[data-os-theme="os1"] .control-panels-os1 hr,
+:root[data-os-theme="os1"] .control-panels-os1 .border-t {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  border-width: 1px !important;
+}
+
+/* OS1 Control Panels 下拉菜单触发器 */
+:root[data-os-theme="os1"] .control-panels-os1 [role="combobox"],
+:root[data-os-theme="os1"] .control-panels-os1 button[role="combobox"] {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: 6px !important;
+  padding: 6px 32px 6px 12px !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+  transition: all 0.15s ease !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+:root[data-os-theme="os1"] .control-panels-os1 [role="combobox"]:hover,
+:root[data-os-theme="os1"] .control-panels-os1 button[role="combobox"]:hover {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06) !important;
+}
+
+:root[data-os-theme="os1"] .control-panels-os1 [role="combobox"][data-state="open"],
+:root[data-os-theme="os1"] .control-panels-os1 button[role="combobox"][data-state="open"] {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(0, 122, 255, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* OS1 Switch 开关样式 */
+:root[data-os-theme="os1"] .os-switch {
+  width: 51px !important;
+  height: 22px !important;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+:root[data-os-theme="os1"] .os-switch[data-state="unchecked"] {
+  background: rgba(0, 0, 0, 0.1) !important;
+}
+
+:root[data-os-theme="os1"] .os-switch[data-state="checked"] {
+  background: #0091FF !important;
+}
+
+:root[data-os-theme="os1"] .os-switch-thumb {
+  width: 31px !important;
+  height: 19px !important;
+  border-radius: 100px !important;
+  background: #FFFFFF !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 2px !important;
+  transform: translateY(-50%) !important;
+  transition: left 0.2s ease, right 0.2s ease !important;
+  pointer-events: none !important;
+}
+
+:root[data-os-theme="os1"] .os-switch[data-state="checked"] .os-switch-thumb {
+  left: auto !important;
+  right: 2px !important;
+}
+
+/* OS1 Control Panels 标签页样式 */
+/* OS1 Control Panels 标签页列表 - 参考浏览器标签页设计 */
+:root[data-os-theme="os1"] .control-panels-os1 [role="tablist"] {
+  position: relative;
+  background: transparent !important; /* 保持透明 */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  padding: 0 16px !important; /* 与内容区域 padding 对齐 */
+  gap: 0 !important;
+  margin-top: 16px !important; /* 上方留出距离 */
+  justify-content: flex-start !important; /* 居左对齐 */
+  /* 所有标签页同一水平线 */
+  align-items: flex-start !important;
+}
+
+/* OS1 Control Panels 标签页 - 参考浏览器标签页设计 */
+:root[data-os-theme="os1"] .control-panels-os1 [role="tab"] {
+  position: relative;
+  /* 所有标签页同一水平线，无向上偏移 */
+  margin-top: 0 !important;
+  margin-bottom: -1px !important;
+  /* 只有上方圆角，平底 */
+  border-radius: 12px 12px 0 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  /* 未激活标签页：无背景色，无边框 */
+  background: transparent !important;
+  border: none !important;
+  border-bottom: none !important;
+  padding: 8px 20px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: rgba(0, 0, 0, 0.6) !important;
+  transition: all 0.15s ease !important;
+  /* 按钮之间无间隙，连在一起 */
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  flex-shrink: 0 !important;
+  overflow: hidden;
+}
+
+/* 标签页 hover 状态 */
+:root[data-os-theme="os1"] .control-panels-os1 [role="tab"]:hover:not([data-state="active"]) {
+  color: rgba(0, 0, 0, 0.8) !important;
+  /* hover 时保持透明背景 */
+  background: transparent !important;
+}
+
+/* 标签页选中状态 - 参考浏览器标签页设计 */
+:root[data-os-theme="os1"] .control-panels-os1 [role="tab"][data-state="active"] {
+  /* 保持在同一水平线 */
+  margin-top: 0 !important;
+  /* 激活标签页在最上层 */
+  z-index: 10 !important;
+  position: relative !important;
+  /* 透明背景，蓝色下边框 */
+  color: rgba(0, 0, 0, 0.9) !important;
+  border-bottom: 2px solid #007AFF !important;
+  background: transparent !important;
+}
+
+/* OS1 Control Panels 按钮样式 */
+:root[data-os-theme="os1"] .control-panels-os1 button:not([role="switch"]):not([role="combobox"]):not([role="tab"]) {
+  background: rgba(0, 122, 255, 0.1) !important;
+  border: 1px solid rgba(0, 122, 255, 0.2) !important;
+  border-radius: 6px !important;
+  padding: 6px 16px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #007AFF !important;
+  transition: all 0.15s ease !important;
+}
+
+:root[data-os-theme="os1"] .control-panels-os1 button:not([role="switch"]):not([role="combobox"]):not([role="tab"]):hover {
+  background: rgba(0, 122, 255, 0.15) !important;
+  border-color: rgba(0, 122, 255, 0.3) !important;
+}
+
+/* OS1 滚动条样式 - macOS 26 现代滚动条 */
+:root[data-os-theme="os1"] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+:root[data-os-theme="os1"] ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 5px;
+}
+
+:root[data-os-theme="os1"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+:root[data-os-theme="os1"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+  background-clip: padding-box;
+}
+
+/* OS1 下拉菜单样式 - macOS 26 风格 */
+/* 下拉菜单样式已在 dropdown-menu.tsx 组件中定义 */
+
+/* OS1 菜单项悬停和焦点效果 */
+:root[data-os-theme="os1"] [role="menuitem"]:hover,
+:root[data-os-theme="os1"] [role="menuitem"][data-highlighted],
+:root[data-os-theme="os1"] [role="menuitem"]:focus {
+  background-color: rgba(0, 122, 255, 0.1) !important;
+  color: #007aff !important;
+  outline: none !important;
+}
+
+/* OS1 菜单栏按钮基础样式 - 无描线和 fill */
+:root[data-os-theme="os1"] .menubar button,
+:root[data-os-theme="os1"] .menubar button[class*="ghost"],
+:root[data-os-theme="os1"] .menubar [role="button"] {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  border-radius: 6px !important;
+  padding: 4px 8px !important;
+  transition: background-color 0.15s ease !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+  color: inherit !important;
+  /* 移除所有可能的 ring 和 focus 样式 */
+  --tw-ring-width: 0 !important;
+  --tw-ring-offset-width: 0 !important;
+  --tw-ring-color: transparent !important;
+}
+
+/* 移除 focus-visible 的 ring */
+:root[data-os-theme="os1"] .menubar button:focus-visible,
+:root[data-os-theme="os1"] .menubar button[class*="ghost"]:focus-visible,
+:root[data-os-theme="os1"] .menubar [role="button"]:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  --tw-ring-width: 0 !important;
+  --tw-ring-offset-width: 0 !important;
+}
+
+/* OS1 菜单栏按钮悬停效果 - 浅色药丸背景 */
+:root[data-os-theme="os1"] .menubar button:hover,
+:root[data-os-theme="os1"] .menubar [role="menuitem"]:hover,
+:root[data-os-theme="os1"] .menubar [role="button"]:hover {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+  border-radius: 6px !important;
+  transition: background-color 0.15s ease !important;
+}
+
+/* OS1 菜单栏按钮激活/选中效果 - 浅色药丸背景 */
+:root[data-os-theme="os1"] .menubar button:active,
+:root[data-os-theme="os1"] .menubar button[aria-expanded="true"],
+:root[data-os-theme="os1"] .menubar button[data-state="open"],
+:root[data-os-theme="os1"] .menubar [role="menuitem"]:active,
+:root[data-os-theme="os1"] .menubar [role="button"]:active,
+:root[data-os-theme="os1"] .menubar [role="button"][aria-expanded="true"] {
+  background-color: rgba(0, 0, 0, 0.12) !important;
+  border-radius: 6px !important;
+}
+
+/* OS1 菜单项图标样式 */
+:root[data-os-theme="os1"] [role="menuitem"] svg,
+:root[data-os-theme="os1"] [role="menuitem"] img {
+  opacity: 0.8;
+  width: 16px;
+  height: 16px;
+}
+
+/* OS1 键盘快捷键样式 */
+:root[data-os-theme="os1"] [data-radix-dropdown-menu-shortcut] {
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  margin-left: auto;
+  padding-left: 16px;
+}
+
+/* OS1 Dock 图标样式 - 移除所有背景框 */
+/* 确保 Dock 按钮不受全局按钮样式影响，优先级要高于全局按钮样式 */
+:root[data-os-theme="os1"] .os1-dock button.dock-icon-button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control),
+:root[data-os-theme="os1"] .os1-dock .dock-icon-button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control) {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  color: inherit !important;
+  transform: none !important;
+}
+
+:root[data-os-theme="os1"] .os1-dock button.dock-icon-button:hover {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+:root[data-os-theme="os1"] .os1-dock button.dock-icon-button:active {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* 排除指示器（小圆点），只影响图标本身 */
+:root[data-os-theme="os1"] .os1-dock button img,
+:root[data-os-theme="os1"] .os1-dock button .themed-icon,
+:root[data-os-theme="os1"] .os1-dock [class*="dock-icon"] button img,
+:root[data-os-theme="os1"] .os1-dock [class*="dock-icon"] button .themed-icon,
+:root[data-os-theme="os1"] .os1-dock button > span:not([aria-hidden]),
+:root[data-os-theme="os1"] .os1-dock [class*="dock-icon"] button > span:not([aria-hidden]) {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* 确保指示器（小圆点）正常显示 - 恢复其样式 */
+:root[data-os-theme="os1"] .os1-dock button > span[aria-hidden="true"],
+:root[data-os-theme="os1"] .os1-dock [class*="dock-icon"] button > span[aria-hidden="true"] {
+  /* 指示器应该保持其样式，不被覆盖 */
+  /* 使用内联样式中的值，确保指示器正常显示 */
+  background: transparent !important;
+  background-color: rgba(0, 0, 0, 0.6) !important;
+  border: none !important;
+  border-radius: 50% !important;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.3), 0 0 2px rgba(0, 0, 0, 0.2) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 5px !important;
+  height: 5px !important;
+  /* 确保指示器在底部中间位置 */
+  bottom: 6px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  position: absolute !important;
+}
+
+/* OS1 Dock 图标容器 - 确保没有背景，并添加间距 */
+:root[data-os-theme="os1"] .os1-dock [class*="dock-icon"],
+:root[data-os-theme="os1"] .os1-dock > div > div {
+  background: transparent !important;
+  border: none !important;
+  /* 添加图标之间的上下间距 */
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+}
+
+/* ============================================ */
+/* OS1 Chat 应用专用样式 - macOS 26 风格聊天界面 */
+/* ============================================ */
+
+/* 发送消息气泡（右侧） - macOS 蓝色 */
+:root[data-os-theme="os1"] .os1-message-bubble-sent {
+  background: rgba(0, 122, 255, 0.9) !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3), 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 接收消息气泡（左侧） - 浅灰色毛玻璃 */
+:root[data-os-theme="os1"] .os1-message-bubble-received {
+  background: rgba(240, 240, 240, 0.9) !important;
+  color: #1d1d1f !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* 聊天侧边栏样式 */
+:root[data-os-theme="os1"] .chat-room-sidebar {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+}
+
+/* 聊天消息元数据（时间戳、用户名）样式 */
+:root[data-os-theme="os1"] .chat-messages-meta {
+  font-size: 11px !important;
+  color: rgba(0, 0, 0, 0.4) !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* 聊天输入框专用样式 */
+:root[data-os-theme="os1"] .chat-input input {
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+}
+
+:root[data-os-theme="os1"] .chat-input input:focus {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(0, 122, 255, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15), 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* 聊天按钮样式优化 */
+:root[data-os-theme="os1"] .chat-input button {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* 聊天发送按钮（蓝色圆形按钮） */
+:root[data-os-theme="os1"] .chat-input button[type="submit"] {
+  background: rgba(0, 122, 255, 0.9) !important;
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+:root[data-os-theme="os1"] .chat-input button[type="submit"]:hover {
+  background: rgba(0, 122, 255, 1) !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 3px 12px rgba(0, 122, 255, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+:root[data-os-theme="os1"] .chat-input button[type="submit"]:active {
+  transform: scale(0.95) !important;
+}
+
+/* 聊天停止按钮（红色圆形按钮） */
+:root[data-os-theme="os1"] .chat-input button[type="button"] {
+  background: rgba(255, 59, 48, 0.9) !important;
+  box-shadow: 0 2px 8px rgba(255, 59, 48, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+:root[data-os-theme="os1"] .chat-input button[type="button"]:hover {
+  background: rgba(255, 59, 48, 1) !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 3px 12px rgba(255, 59, 48, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+:root[data-os-theme="os1"] .chat-input button[type="button"]:active {
+  transform: scale(0.95) !important;
+}
+
+/* 聊天房间列表项 */
+:root[data-os-theme="os1"] .chat-room-item {
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+:root[data-os-theme="os1"] .chat-room-item:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+:root[data-os-theme="os1"] .chat-room-item.selected {
+  background: rgba(0, 145, 255, 0.9) !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+}
+
+/* OS1 聊天侧边栏选中项样式 - 蓝色背景，圆角，白色文字 */
+:root[data-os-theme="os1"] .chat-room-sidebar div[class*="bg-\\[#0091FF\\]"],
+:root[data-os-theme="os1"] .chat-room-sidebar div.rounded-lg[class*="bg-\\[#0091FF\\]"],
+:root[data-os-theme="os1"] .chat-room-sidebar > div > div > div > div.rounded-lg[class*="bg-\\[#0091FF\\]"] {
+  background: rgba(0, 145, 255, 0.9) !important;
+  border-radius: 8px !important;
+}
+
+:root[data-os-theme="os1"] .chat-room-sidebar div[class*="bg-\\[#0091FF\\]"] span,
+:root[data-os-theme="os1"] .chat-room-sidebar div.rounded-lg[class*="bg-\\[#0091FF\\]"] span {
+  color: #ffffff !important;
+}
+
+:root[data-os-theme="os1"] .chat-room-sidebar div[class*="bg-\\[#0091FF\\]"] *,
+:root[data-os-theme="os1"] .chat-room-sidebar div.rounded-lg[class*="bg-\\[#0091FF\\]"] * {
+  color: #ffffff !important;
+}
+
+/* 确保所有 OS1 主题下带 rounded-lg 的聊天房间项都有圆角 */
+:root[data-os-theme="os1"] .chat-room-sidebar .rounded-lg {
+  border-radius: 8px !important;
+}
+
+/* OS1 聊天侧边栏 hover 状态 - 圆角和背景 */
+:root[data-os-theme="os1"] .chat-room-sidebar .rounded-lg:hover,
+:root[data-os-theme="os1"] .chat-room-sidebar > div > div > div > div.rounded-lg:hover,
+:root[data-os-theme="os1"] .chat-room-sidebar div[class*="rounded-lg"]:hover,
+:root[data-os-theme="os1"] .chat-room-sidebar div.py-2.px-3.rounded-lg:hover {
+  border-radius: 8px !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* 确保 hover 状态不会覆盖圆角 - 更具体的选择器 */
+:root[data-os-theme="os1"] .chat-room-sidebar .rounded-lg:hover:not([class*="bg-\\[#0091FF\\]"]),
+:root[data-os-theme="os1"] .chat-room-sidebar div.py-2.px-3.rounded-lg:hover:not([class*="bg-\\[#0091FF\\]"]) {
+  border-radius: 8px !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* 聊天气泡链接样式 */
+:root[data-os-theme="os1"] .chat-bubble a {
+  color: #007aff !important;
+  text-decoration: underline !important;
+  text-underline-offset: 2px !important;
+}
+
+:root[data-os-theme="os1"] .os1-message-bubble-sent a {
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-weight: 500 !important;
+}
+
+/* Zi 生气气泡中的链接样式 */
+:root[data-os-theme="os1"] .os1-message-bubble-angry a {
+  color: #991b1b !important; /* red-800 更深的红色，确保在红色背景上可读 */
+  text-decoration: underline !important;
+  text-underline-offset: 2px !important;
+  font-weight: 500 !important;
+}
+
+/* 聊天标题栏样式 */
+:root[data-os-theme="os1"] .chat-title-bar {
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+/* 聊天消息区域背景 */
+:root[data-os-theme="os1"] .chat-messages-area {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(30px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(180%) !important;
+}
+
+/* Zi 生气的消息气泡（红色） - 参考 aqua 主题的红色 */
+:root[data-os-theme="os1"] .os1-message-bubble-angry {
+  background: rgba(254, 202, 202, 0.9) !important; /* red-200 参考 aqua 主题 */
+  color: #b91c1c !important; /* red-700 文字颜色 */
+  border: 1px solid rgba(185, 28, 28, 0.2) !important;
+  box-shadow: 0 2px 8px rgba(254, 202, 202, 0.4), 0 1px 3px rgba(185, 28, 28, 0.2) !important;
+}
+
+/* OS1 主题群聊气泡颜色 - 参考 aqua 主题的颜色 */
+:root[data-os-theme="os1"] .chat-bubble.bg-pink-100 {
+  background: rgba(251, 207, 232, 0.9) !important; /* pink-200 */
+  color: #1d1d1f !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+:root[data-os-theme="os1"] .chat-bubble.bg-purple-100 {
+  background: rgba(233, 213, 255, 0.9) !important; /* purple-200 */
+  color: #1d1d1f !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+:root[data-os-theme="os1"] .chat-bubble.bg-indigo-100 {
+  background: rgba(199, 210, 254, 0.9) !important; /* indigo-200 */
+  color: #1d1d1f !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+:root[data-os-theme="os1"] .chat-bubble.bg-teal-100 {
+  background: rgba(153, 246, 228, 0.9) !important; /* teal-200 */
+  color: #1d1d1f !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+:root[data-os-theme="os1"] .chat-bubble.bg-lime-100 {
+  background: rgba(217, 249, 157, 0.9) !important; /* lime-200 */
+  color: #1d1d1f !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+:root[data-os-theme="os1"] .chat-bubble.bg-amber-100 {
+  background: rgba(253, 230, 138, 0.9) !important; /* amber-200 */
+  color: #1d1d1f !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+:root[data-os-theme="os1"] .chat-bubble.bg-cyan-100 {
+  background: rgba(165, 243, 252, 0.9) !important; /* cyan-200 */
+  color: #1d1d1f !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+:root[data-os-theme="os1"] .chat-bubble.bg-rose-100 {
+  background: rgba(254, 205, 211, 0.9) !important; /* rose-200 */
+  color: #1d1d1f !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+:root[data-os-theme="os1"] .chat-bubble.bg-gray-100 {
+  background: rgba(229, 231, 235, 0.9) !important; /* gray-200 */
+  color: #1d1d1f !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* ============================================ */
+/* OS1 主题 - 保留 iPod 原始字体和颜色 */
+/* ============================================ */
+
+/* 重置 iPod 字体，恢复原始字体 */
+:root[data-os-theme="os1"] .ipod-force-font {
+  font-family: inherit !important;
+  font-size: 16px !important; /* 重置基础字体大小 */
+}
+
+:root[data-os-theme="os1"] .ipod-force-font * {
+  font-family: inherit !important;
+  font-size: unset !important; /* 重置 OS1 主题的字体大小覆盖 */
+}
+
+/* 重置 iPod 内的 div 和 p 字体大小和颜色 - 让 Tailwind 类名生效 */
+:root[data-os-theme="os1"] .ipod-force-font div,
+:root[data-os-theme="os1"] .ipod-force-font p {
+  font-size: unset !important;
+  color: unset !important; /* 重置颜色，让 Tailwind 类名（如 text-white, text-[#0a3667]）生效 */
+  line-height: unset !important;
+  letter-spacing: unset !important;
+}
+
+/* 保留 Chicago 字体 */
+:root[data-os-theme="os1"] .ipod-force-font .font-chicago,
+:root[data-os-theme="os1"] .font-chicago {
+  font-family: "ChicagoKare", "ArkPixel", "SerenityOS-Emoji", system-ui,
+    -apple-system, sans-serif !important;
+  -webkit-font-smoothing: none !important;
+  font-smooth: never !important;
+}
+
+/* 保留 Chicago 字体大小 */
+:root[data-os-theme="os1"] .ipod-force-font .font-chicago.text-xs {
+  font-size: 0.75rem !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .font-chicago.text-\[12px\] {
+  font-size: 12px !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .font-chicago.text-\[16px\] {
+  font-size: 16px !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .font-chicago.text-\[20px\] {
+  font-size: 20px !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .font-chicago.text-xl {
+  font-size: 1.25rem !important;
+}
+
+/* 保留响应式 Chicago 字体大小 */
+:root[data-os-theme="os1"]
+  .ipod-force-font
+  .font-chicago.text-\[min\(5vw\,5vh\)\] {
+  font-size: min(5vw, 5vh) !important;
+}
+
+/* 保留全屏歌词响应式字体大小 */
+:root[data-os-theme="os1"] .ipod-force-font .text-\[min\(8vw\,8vh\)\] {
+  font-size: min(8vw, 8vh) !important;
+}
+
+/* 保留 Geneva-12 字体 */
+:root[data-os-theme="os1"] .ipod-force-font .font-geneva-12,
+:root[data-os-theme="os1"] .synth-force-font .font-geneva-12 {
+  font-family: "Geneva-12", "ArkPixel", "SerenityOS-Emoji", system-ui,
+    -apple-system, sans-serif !important;
+  -webkit-font-smoothing: antialiased !important;
+  font-smooth: always !important;
+  font-size: 12px !important;
+}
+
+/* 保留圆角歌词字体 */
+:root[data-os-theme="os1"] .ipod-force-font .font-lyrics-rounded {
+  font-family: "SF Pro Rounded", "Arial Rounded MT Bold",
+    "Hiragino Maru Gothic ProN", "Yuanti SC", "Nanum Gothic", sans-serif !important;
+  font-weight: 400 !important;
+  -webkit-font-smoothing: antialiased !important;
+  font-smooth: auto !important;
+}
+
+/* 保留特定 iPod 字体大小 */
+:root[data-os-theme="os1"] .ipod-force-font .text-xs {
+  font-size: 0.75rem !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .text-sm {
+  font-size: 0.875rem !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .text-base {
+  font-size: 1rem !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .text-lg {
+  font-size: 1.125rem !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .text-xl {
+  font-size: 1.25rem !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .text-2xl {
+  font-size: 1.5rem !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .text-3xl {
+  font-size: 1.875rem !important;
+}
+
+/* 保留特定像素字体大小 */
+:root[data-os-theme="os1"] .ipod-force-font .text-\[12px\] {
+  font-size: 12px !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .text-\[16px\] {
+  font-size: 16px !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .text-\[18px\] {
+  font-size: 18px !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .text-\[20px\] {
+  font-size: 20px !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .text-\[24px\] {
+  font-size: 24px !important;
+}
+
+/* 保留大屏幕 Hangul 字符大小 */
+@media (min-width: 768px) {
+  :root[data-os-theme="os1"] .ipod-force-font .md\:text-\[20px\] {
+    font-size: 20px !important;
+  }
+}
+
+/* 确保响应式全屏歌词字体大小正确 */
+:root[data-os-theme="os1"]
+  .ipod-force-font
+  .font-geneva-12.text-\[min\(8vw\,8vh\)\] {
+  font-size: min(8vw, 8vh) !important;
+}
+
+/* 更大的全屏歌词选项 */
+:root[data-os-theme="os1"] .ipod-force-font .text-\[min\(10vw\,10vh\)\] {
+  font-size: min(10vw, 10vh) !important;
+}
+
+:root[data-os-theme="os1"]
+  .ipod-force-font
+  .font-geneva-12.text-\[min\(10vw\,10vh\)\] {
+  font-size: min(10vw, 10vh) !important;
+}
+
+/* 保留 iPod 原始颜色 - 确保不受 OS1 主题颜色影响 */
+/* 注意：iPod 的颜色主要通过内联样式和 Tailwind 类名设置，这里只确保 OS1 主题的全局颜色设置不会覆盖它们 */
+:root[data-os-theme="os1"] .ipod-force-font {
+  /* 重置 OS1 主题可能设置的全局颜色变量，让 iPod 使用自己的颜色 */
+  --os-color-text-primary: unset !important;
+  --os-color-text-secondary: unset !important;
+  --os-color-text-disabled: unset !important;
+}
+
+/* 保留 iPod 屏幕背景颜色 - 由组件内联样式控制 */
+:root[data-os-theme="os1"] .ipod-force-font .lcd-screen {
+  background: inherit !important;
+}
+
+/* 确保 Tailwind 颜色类名在 iPod 中正常工作 */
+:root[data-os-theme="os1"] .ipod-force-font .text-white {
+  color: rgb(255, 255, 255) !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .text-black {
+  color: rgb(0, 0, 0) !important;
+}
+
+/* 保留 iPod 特定的颜色值 - 使用转义的选择器匹配 Tailwind 任意值类名 */
+:root[data-os-theme="os1"] .ipod-force-font .text-\[\#0a3667\] {
+  color: #0a3667 !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .text-\[\#c5e0f5\] {
+  color: #c5e0f5 !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .text-\[\#8a9da9\] {
+  color: #8a9da9 !important;
+}
+
+/* 确保背景颜色类名也能正常工作 */
+:root[data-os-theme="os1"] .ipod-force-font .bg-\[\#0a3667\] {
+  background-color: #0a3667 !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .bg-\[\#c5e0f5\] {
+  background-color: #c5e0f5 !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .bg-\[\#8a9da9\] {
+  background-color: #8a9da9 !important;
+}
+
+:root[data-os-theme="os1"] .ipod-force-font .bg-\[\#c0d8f0\] {
+  background-color: #c0d8f0 !important;
+}
+
+/* 确保边框颜色类名也能正常工作 */
+:root[data-os-theme="os1"] .ipod-force-font .border-\[\#0a3667\] {
+  border-color: #0a3667 !important;
 }

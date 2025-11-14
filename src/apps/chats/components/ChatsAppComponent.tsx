@@ -448,6 +448,7 @@ export function ChatsAppComponent({
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
   const isWindowsLegacyTheme = isXpTheme;
   const isMacTheme = currentTheme === "macosx";
+  const isOS1Theme = currentTheme === "os1";
 
   const menuBar = (
     <ChatsMenuBar
@@ -623,27 +624,44 @@ export function ChatsAppComponent({
             </div>
 
             {/* Chat area */}
-            <div className="relative flex flex-col flex-1 h-full bg-white/85">
+            <div 
+              className={`relative flex flex-col flex-1 h-full ${
+                isOS1Theme 
+                  ? "bg-white/85 backdrop-blur-xl" 
+                  : "bg-white/85"
+              }`}
+              style={isOS1Theme ? {
+                backdropFilter: "blur(30px) saturate(180%)",
+                WebkitBackdropFilter: "blur(30px) saturate(180%)",
+              } : undefined}
+            >
               {/* Mobile chat title bar */}
               <div
                 className={`sticky top-0 z-10 flex items-center justify-between px-2 py-1 border-b ${
                   // Layer pinstripes with semi-transparent white via backgroundImage for macOS
-                  isMacTheme ? "" : "bg-neutral-200/90 backdrop-blur-lg"
+                  isMacTheme || isOS1Theme ? "" : "bg-neutral-200/90 backdrop-blur-lg"
                 } ${
                   isWindowsLegacyTheme
                     ? "border-[#919b9c]"
-                    : isMacTheme
+                    : isMacTheme || isOS1Theme
                     ? ""
                     : "border-black"
                 }`}
                 style={
-                  isMacTheme
-                    ? {
-                        backgroundImage: "var(--os-pinstripe-window)",
-                        opacity: 0.95,
-                        borderBottom:
-                          "var(--os-metrics-titlebar-border-width, 1px) solid var(--os-color-titlebar-border-inactive, rgba(0, 0, 0, 0.2))",
-                      }
+                  isMacTheme || isOS1Theme
+                    ? isOS1Theme
+                      ? {
+                          background: "rgba(255, 255, 255, 0.8)",
+                          backdropFilter: "blur(20px) saturate(180%)",
+                          WebkitBackdropFilter: "blur(20px) saturate(180%)",
+                          borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+                        }
+                      : {
+                          backgroundImage: "var(--os-pinstripe-window)",
+                          opacity: 0.95,
+                          borderBottom:
+                            "var(--os-metrics-titlebar-border-width, 1px) solid var(--os-color-titlebar-border-inactive, rgba(0, 0, 0, 0.2))",
+                        }
                     : undefined
                 }
               >

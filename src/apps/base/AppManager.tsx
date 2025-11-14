@@ -338,7 +338,7 @@ export function AppManager({ apps }: AppManagerProps) {
       <Dock />
       {/* App Instances */}
       {Object.values(instances).map((instance) => {
-        if (!instance.isOpen) return null;
+        if (!instance.isOpen || instance.isMinimized) return null;
 
         const appId = instance.appId as AppId;
         const zIndex = getZIndexForInstance(instance.instanceId);

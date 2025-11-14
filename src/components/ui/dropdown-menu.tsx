@@ -117,6 +117,7 @@ const DropdownMenuSubContent = React.forwardRef<
 >(({ className, style, ...props }, ref) => {
   const currentTheme = useThemeStore((state) => state.current);
   const isMacOSTheme = currentTheme === "macosx";
+  const isOS1Theme = currentTheme === "os1";
   const isMobile = useMediaQuery("(max-width: 768px)");
 
   return (
@@ -137,6 +138,16 @@ const DropdownMenuSubContent = React.forwardRef<
             padding: "4px 0px",
             ...(isMobile ? {} : { minWidth: "180px" }),
           }),
+          ...(isOS1Theme && {
+            border: "1px solid rgba(0, 0, 0, 0.08)",
+            borderRadius: "10px",
+            background: "rgba(255, 255, 255, 0.85)",
+            backdropFilter: "blur(30px) saturate(180%)",
+            WebkitBackdropFilter: "blur(30px) saturate(180%)",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)",
+            padding: "6px",
+            ...(isMobile ? {} : { minWidth: "200px" }),
+          }),
           ...(isMobile && { minWidth: "unset" }),
           ...style,
         }}
@@ -154,6 +165,7 @@ const DropdownMenuContent = React.forwardRef<
 >(({ className, sideOffset = 4, style, ...props }, ref) => {
   const currentTheme = useThemeStore((state) => state.current);
   const isMacOSTheme = currentTheme === "macosx";
+  const isOS1Theme = currentTheme === "os1";
   const isMobile = useMediaQuery("(max-width: 768px)");
 
   return (
@@ -176,6 +188,16 @@ const DropdownMenuContent = React.forwardRef<
             padding: "4px 0px",
             ...(isMobile ? {} : { minWidth: style?.minWidth ?? "180px" }),
           }),
+          ...(isOS1Theme && {
+            border: "1px solid rgba(0, 0, 0, 0.08)",
+            borderRadius: "10px",
+            background: "rgba(255, 255, 255, 0.85)",
+            backdropFilter: "blur(30px) saturate(180%)",
+            WebkitBackdropFilter: "blur(30px) saturate(180%)",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)",
+            padding: "6px",
+            ...(isMobile ? {} : { minWidth: style?.minWidth ?? "200px" }),
+          }),
           ...(isMobile && { minWidth: "unset" }),
           ...style,
         }}
@@ -194,6 +216,7 @@ const DropdownMenuItem = React.forwardRef<
 >(({ className, inset, ...props }, ref) => {
   const currentTheme = useThemeStore((state) => state.current);
   const isMacOSTheme = currentTheme === "macosx";
+  const isOS1Theme = currentTheme === "os1";
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
 
   return (
@@ -210,11 +233,15 @@ const DropdownMenuItem = React.forwardRef<
           ? '"Pixelated MS Sans Serif", Arial'
           : isMacOSTheme
           ? '"LucidaGrande", "Lucida Grande", "Hiragino Sans", "Hiragino Sans GB", "Heiti SC", "Lucida Sans Unicode", sans-serif'
+          : isOS1Theme
+          ? '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif'
           : undefined,
         fontSize: isXpTheme
           ? "11px"
           : isMacOSTheme
           ? "13px !important"
+          : isOS1Theme
+          ? "13px"
           : undefined,
         ...(isMacOSTheme && {
           borderRadius: "0px",
@@ -222,6 +249,16 @@ const DropdownMenuItem = React.forwardRef<
           margin: "1px 0",
           WebkitFontSmoothing: "antialiased",
           textShadow: "0 2px 3px rgba(0, 0, 0, 0.25)",
+        }),
+        ...(isOS1Theme && {
+          borderRadius: "6px",
+          padding: "6px 12px",
+          margin: "2px 4px",
+          WebkitFontSmoothing: "antialiased",
+          MozOsxFontSmoothing: "grayscale",
+          fontSize: "13px",
+          fontWeight: "400",
+          letterSpacing: "-0.01em",
         }),
       }}
       {...props}
@@ -360,6 +397,7 @@ const DropdownMenuSeparator = React.forwardRef<
   const currentTheme = useThemeStore((state) => state.current);
   const isSystem7 = currentTheme === "system7";
   const isMacOSTheme = currentTheme === "macosx";
+  const isOS1Theme = currentTheme === "os1";
 
   return (
     <DropdownMenuPrimitive.Separator
@@ -367,15 +405,21 @@ const DropdownMenuSeparator = React.forwardRef<
       className={cn(
         className,
         "-mx-1 my-1 h-[1px] border-b-0",
-        !isMacOSTheme && "border-t border-muted",
+        !isMacOSTheme && !isOS1Theme && "border-t border-muted",
         isSystem7 && "border-dotted",
-        !isSystem7 && !isMacOSTheme && "border-solid"
+        !isSystem7 && !isMacOSTheme && !isOS1Theme && "border-solid"
       )}
       style={{
         ...(isMacOSTheme && {
           backgroundColor: "rgba(0, 0, 0, 0.15)",
           border: "none",
           margin: "4px 0",
+          height: "1px",
+        }),
+        ...(isOS1Theme && {
+          backgroundColor: "rgba(0, 0, 0, 0.08)",
+          border: "none",
+          margin: "6px 8px",
           height: "1px",
         }),
       }}

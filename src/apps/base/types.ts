@@ -70,6 +70,7 @@ export interface AppState<TInitialData = unknown> {
   position?: { x: number; y: number };
   size?: { width: number; height: number };
   isForeground?: boolean;
+  isMinimized?: boolean;
   initialData?: TInitialData;
 }
 
