@@ -852,12 +852,16 @@ export function WindowFrame({
             <div
               className={cn(
                 "title-bar os1-title-bar flex items-center h-os-titlebar min-h-[1.375rem] px-3 select-none cursor-move user-select-none z-50",
-                transparentBackground && "backdrop-blur-sm bg-white/50"
+                // 添加透明背景和毛玻璃效果
+                "bg-white/80 backdrop-blur-xl"
               )}
               style={{
-                background: isForeground
-                  ? theme.colors.titleBar.activeBg
-                  : theme.colors.titleBar.inactiveBg,
+                // 移除原来的 background，改用透明背景
+                // background: isForeground
+                //   ? theme.colors.titleBar.activeBg
+                //   : theme.colors.titleBar.inactiveBg,
+                backdropFilter: "blur(20px) saturate(180%)",
+                WebkitBackdropFilter: "blur(20px) saturate(180%)",
                 color: isForeground
                   ? theme.colors.titleBar.text
                   : theme.colors.titleBar.inactiveText,
@@ -1315,7 +1319,9 @@ export function WindowFrame({
           <div
             className={cn(
               "flex flex-1 min-h-0 flex-col md:flex-row",
-              isXpTheme && "window-body flex-1"
+              isXpTheme && "window-body flex-1",
+              // OS1 主题下添加上边左右圆角
+              currentTheme === "os1" && "rounded-tl-xl rounded-tr-xl overflow-hidden"
             )}
             style={
               isXpTheme

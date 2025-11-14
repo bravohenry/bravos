@@ -149,6 +149,7 @@ export function PhotoBoothComponent({
 
   const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
+  const isOs1Theme = currentTheme === "os1";
 
   const handleClearPhotos = () => {
     clearPhotos();
@@ -1168,43 +1169,84 @@ export function PhotoBoothComponent({
               </button>
             </div>
 
-            <Button
-              onClick={
-                isMultiPhotoMode
-                  ? () => {}
-                  : () => {
-                      const event = new CustomEvent("webcam-capture");
-                      window.dispatchEvent(event);
-                    }
-              }
-              className={`rounded-full h-14 w-14 [&_svg]:size-5 ${
-                isMultiPhotoMode
-                  ? `bg-gray-500 cursor-not-allowed`
-                  : `bg-red-500 hover:bg-red-600`
-              }`}
-              style={{
-                background: isXpTheme
-                  ? isMultiPhotoMode
-                    ? "#6b7280"
-                    : "#dc2626"
-                  : undefined,
-                border: isXpTheme ? "none" : undefined,
-                cursor: isMultiPhotoMode ? "not-allowed" : "pointer",
-              }}
-              onMouseEnter={(e) => {
-                if (isXpTheme && !isMultiPhotoMode) {
-                  e.currentTarget.style.background = "#b91c1c";
+            {isOs1Theme ? (
+              <div
+                role="button"
+                aria-label="Take photo"
+                aria-disabled={isMultiPhotoMode}
+                tabIndex={isMultiPhotoMode ? -1 : 0}
+                onClick={() => {
+                  if (isMultiPhotoMode) return;
+                  const event = new CustomEvent("webcam-capture");
+                  window.dispatchEvent(event);
+                }}
+                onKeyDown={(event) => {
+                  if (isMultiPhotoMode) return;
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    const captureEvent = new CustomEvent("webcam-capture");
+                    window.dispatchEvent(captureEvent);
+                  }
+                }}
+                className={`h-16 w-16 rounded-full border-4 transition-colors duration-150 focus:outline-none focus-visible:ring-0 ${
+                  isMultiPhotoMode
+                    ? "border-gray-500 cursor-not-allowed"
+                    : "border-red-500 hover:border-red-400"
+                }`}
+                style={{
+                  borderColor: isMultiPhotoMode ? "#6b7280" : "#dc2626",
+                  cursor: isMultiPhotoMode ? "not-allowed" : "pointer",
+                  background: "transparent",
+                  padding: "4px",
+                }}
+              >
+                <span
+                  className={`flex h-full w-full items-center justify-center rounded-full transition-colors ${
+                    isMultiPhotoMode ? "bg-gray-600" : "bg-black"
+                  }`}
+                >
+                  <Camera stroke="white" />
+                </span>
+              </div>
+            ) : (
+              <Button
+                onClick={
+                  isMultiPhotoMode
+                    ? () => {}
+                    : () => {
+                        const event = new CustomEvent("webcam-capture");
+                        window.dispatchEvent(event);
+                      }
                 }
-              }}
-              onMouseLeave={(e) => {
-                if (isXpTheme && !isMultiPhotoMode) {
-                  e.currentTarget.style.background = "#dc2626";
-                }
-              }}
-              disabled={isMultiPhotoMode}
-            >
-              <Camera stroke="white" />
-            </Button>
+                className={`rounded-full h-14 w-14 [&_svg]:size-5 ${
+                  isMultiPhotoMode
+                    ? `bg-gray-500 cursor-not-allowed`
+                    : `bg-red-500 hover:bg-red-600`
+                }`}
+                style={{
+                  background: isXpTheme
+                    ? isMultiPhotoMode
+                      ? "#6b7280"
+                      : "#dc2626"
+                    : undefined,
+                  border: isXpTheme ? "none" : undefined,
+                  cursor: isMultiPhotoMode ? "not-allowed" : "pointer",
+                }}
+                onMouseEnter={(e) => {
+                  if (isXpTheme && !isMultiPhotoMode) {
+                    e.currentTarget.style.background = "#b91c1c";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (isXpTheme && !isMultiPhotoMode) {
+                    e.currentTarget.style.background = "#dc2626";
+                  }
+                }}
+                disabled={isMultiPhotoMode}
+              >
+                <Camera stroke="white" />
+              </Button>
+            )}
 
             <Button
               onClick={toggleEffects}

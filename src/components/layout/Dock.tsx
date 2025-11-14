@@ -31,7 +31,10 @@ import {
 
 // 常量配置
 const DOCK_CONFIG = {
-  MAX_SCALE: 2.3,
+  MAX_SCALE: {
+    macosx: 2.3,
+    os1: 1.6,
+  },
   DISTANCE: 140,
   BASE_BUTTON_SIZE: {
     macosx: 58, // Aqua 主题默认大小
@@ -388,7 +391,10 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
       });
       
       // 根据距离计算图标大小
-      const maxButtonSize = Math.round(baseButtonSize * DOCK_CONFIG.MAX_SCALE);
+      const maxScale = isOS1
+        ? DOCK_CONFIG.MAX_SCALE.os1
+        : DOCK_CONFIG.MAX_SCALE.macosx;
+      const maxButtonSize = Math.round(baseButtonSize * maxScale);
       const sizeTransform = useTransform(
         distanceCalc,
         [-DOCK_CONFIG.DISTANCE, 0, DOCK_CONFIG.DISTANCE],

@@ -1914,6 +1914,19 @@
   letter-spacing: -0.01em !important;
 }
 
+/* OS1 About Finder Dialog 特定样式 - 覆盖全局样式 */
+:root[data-os-theme="os1"] [data-about-finder-footer] {
+  font-size: 10px !important;
+  color: var(--os-color-text-secondary) !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0 !important;
+  text-align: center !important;
+}
+
+:root[data-os-theme="os1"] [data-about-finder-footer] a {
+  color: var(--os-color-text-secondary) !important;
+}
+
 /* OS1 终端样式 */
 :root[data-os-theme="os1"] .terminal-input {
   font-family: var(--os-font-mono) !important;

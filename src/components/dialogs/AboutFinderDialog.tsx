@@ -65,176 +65,366 @@ export function AboutFinderDialog({
   }, [memoryUsage]);
 
   const dialogContent = (
-    <div className={isXpTheme ? "p-2 px-4" : "p-4"}>
+    <div className={isXpTheme ? "p-2 px-4" : isOS1Theme ? "p-6" : "p-4"}>
       <div className="flex">
         {/* Right side with system info */}
-        <div className="space-y-3 flex-1 ">
-          <div className="flex flex-row items-center space-x-2 p-2 px-4">
-            <div className="flex flex-col w-1/3 items-center space-x-2">
-              <ThemedIcon
-                name="mac-classic.png"
-                alt="Happy Mac"
-                className="w-10 h-10 mb-1 mr-0"
-              />
-              <div
-                className={cn(
-                  isXpTheme
-                    ? "font-['Pixelated_MS_Sans_Serif',Arial] text-[16px]"
-                    : isOS1Theme
-                    ? "font-os-ui text-2xl font-semibold"
-                    : "font-apple-garamond text-2xl"
-                )}
-                style={
-                  isOS1Theme
-                    ? {
-                        fontFamily: "var(--os-font-ui)",
-                        color: "var(--os-color-text-primary)",
-                      }
-                    : undefined
-                }
-              >
-                ZiOS
-                {currentTheme === "system7"
-                  ? " 7"
-                  : currentTheme === "macosx"
-                  ? " X"
-                  : currentTheme === "win98"
-                  ? " 98"
-                  : currentTheme === "xp"
-                  ? " XP"
-                  : ""}
-              </div>
-            </div>
-
+        <div className={cn("flex-1", isOS1Theme ? "space-y-5" : "space-y-3")}>
+          {isOS1Theme ? (
+            // OS1 主题：居中布局
             <div
-              className={cn(
-                "space-y-4",
-                isXpTheme
-                  ? "font-['Pixelated_MS_Sans_Serif',Arial] text-[10px]"
-                  : isOS1Theme
-                  ? "font-os-ui text-[13px]"
-                  : "font-geneva-12 text-[10px]"
-              )}
               style={{
-                fontFamily: isXpTheme
-                  ? '"Pixelated MS Sans Serif", Arial'
-                  : isOS1Theme
-                  ? "var(--os-font-ui)"
-                  : undefined,
-                fontSize: isXpTheme ? "10px" : isOS1Theme ? "13px" : undefined,
-                color: isOS1Theme ? "var(--os-color-text-primary)" : undefined,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                width: "100%",
               }}
             >
-              <div>
-                <div>Built-in Memory: 32MB</div>
-                <div>Virtual Memory: Off</div>
-                <div>
+              {/* 图标和标题区域 - 居中 */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  marginBottom: "24px",
+                }}
+              >
+                <ThemedIcon
+                  name="mac-classic.png"
+                  alt="Happy Mac"
+                  className="w-16 h-16 mb-4"
+                />
+                <span
+                  style={{
+                    fontFamily: "var(--os-font-ui)",
+                    fontSize: "36px",
+                    fontWeight: 600,
+                    color: "var(--os-color-text-primary)",
+                    letterSpacing: "-0.02em",
+                    lineHeight: "1.2",
+                    marginBottom: "4px",
+                    display: "block",
+                  }}
+                >
+                  ZiOS
+                </span>
+              </div>
+
+              {/* 规格信息区域 - 居中 */}
+              <div
+                style={{
+                  fontFamily: "var(--os-font-ui)",
+                  fontSize: "13px",
+                  color: "var(--os-color-text-primary)",
+                  lineHeight: "1.6",
+                  letterSpacing: "-0.01em",
+                  width: "100%",
+                  marginBottom: "16px",
+                  textAlign: "center",
+                }}
+              >
+                <div style={{ marginBottom: "4px" }}>
+                  Built-in Memory: 32MB
+                </div>
+                <div style={{ marginBottom: "4px" }}>
+                  Virtual Memory: Off
+                </div>
+                <div style={{ marginBottom: "16px" }}>
                   Largest Unused Block: {(32 - totalUsedMemory).toFixed(1)}MB
                 </div>
+
+                {/* More Info 按钮 - 居中 */}
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <a
+                    href="https://bravohenry.com/about"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "inline-block",
+                      padding: "6px 16px",
+                      backgroundColor: "rgba(0, 0, 0, 0.05)",
+                      borderRadius: "6px",
+                      fontFamily: "var(--os-font-ui)",
+                      fontSize: "13px",
+                      color: "var(--os-color-text-primary)",
+                      textDecoration: "none",
+                      transition: "background-color 0.2s",
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.08)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.05)";
+                    }}
+                  >
+                    More Info...
+                  </a>
+                </div>
+              </div>
+
+              {/* 分隔线 */}
+              <hr
+                style={{
+                  borderColor: "rgba(0, 0, 0, 0.08)",
+                  borderWidth: "1px",
+                  width: "100%",
+                  margin: "0 0 16px 0",
+                }}
+              />
+            </div>
+          ) : (
+            // 其他主题：保持原有布局
+            <>
+              <div className={cn(
+                "flex flex-row items-start",
+                "space-x-2 p-2 px-4"
+              )}>
+                <div className={cn(
+                  "flex flex-col items-center",
+                  "w-1/3"
+                )}>
+                  <ThemedIcon
+                    name="mac-classic.png"
+                    alt="Happy Mac"
+                    className="w-10 h-10 mb-1 mr-0"
+                  />
+                  <div
+                    className={cn(
+                      isXpTheme
+                        ? "font-['Pixelated_MS_Sans_Serif',Arial] text-[16px]"
+                        : "font-apple-garamond text-2xl"
+                    )}
+                  >
+                    ZiOS
+                    {currentTheme === "system7"
+                      ? " 7"
+                      : currentTheme === "macosx"
+                      ? " X"
+                      : currentTheme === "win98"
+                      ? " 98"
+                      : currentTheme === "xp"
+                      ? " XP"
+                      : ""}
+                  </div>
+                </div>
+
                 <div
                   className={cn(
-                    "text-[10px] mt-2",
+                    "flex-1",
                     isXpTheme
-                      ? "font-['Pixelated_MS_Sans_Serif',Arial] text-gray-500"
-                      : isOS1Theme
-                      ? "font-os-ui text-[11px]"
-                      : "font-geneva-12 text-gray-500"
+                      ? "font-['Pixelated_MS_Sans_Serif',Arial] text-[10px] space-y-4"
+                      : "font-geneva-12 text-[10px] space-y-4"
                   )}
                   style={{
                     fontFamily: isXpTheme
                       ? '"Pixelated MS Sans Serif", Arial'
-                      : isOS1Theme
-                      ? "var(--os-font-ui)"
                       : undefined,
-                    fontSize: isOS1Theme ? "11px" : undefined,
-                    color: isOS1Theme
-                      ? "var(--os-color-text-secondary)"
-                      : undefined,
+                    fontSize: isXpTheme ? "10px" : undefined,
                   }}
                 >
-                  © Zihan. {new Date().getFullYear()}
+                  <div>
+                    <div>Built-in Memory: 32MB</div>
+                    <div>Virtual Memory: Off</div>
+                    <div>
+                      Largest Unused Block: {(32 - totalUsedMemory).toFixed(1)}MB
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-          <hr
-            className={cn(
-              isOS1Theme ? "border-gray-200" : "border-gray-300"
-            )}
-            style={
-              isOS1Theme
-                ? { borderColor: "rgba(0, 0, 0, 0.08)", borderWidth: "1px" }
-                : undefined
-            }
-          />
+              <hr
+                className={cn(
+                  "border-gray-300"
+                )}
+              />
+            </>
+          )}
 
           {/* Memory usage bars */}
           <div
             className={cn(
-              "space-y-2 p-2 px-4 pb-4",
               isXpTheme
-                ? "font-['Pixelated_MS_Sans_Serif',Arial] text-[10px]"
+                ? "font-['Pixelated_MS_Sans_Serif',Arial] text-[10px] space-y-2 p-2 px-4 pb-4"
                 : isOS1Theme
-                ? "font-os-ui text-[13px]"
-                : "font-geneva-12 text-[10px]"
+                ? "font-os-ui space-y-3 px-2 pb-2"
+                : "font-geneva-12 text-[10px] space-y-2 p-2 px-4 pb-4"
             )}
-            style={{
-              fontFamily: isXpTheme
-                ? '"Pixelated MS Sans Serif", Arial'
-                : isOS1Theme
-                ? "var(--os-font-ui)"
-                : undefined,
-              fontSize: isXpTheme ? "10px" : isOS1Theme ? "13px" : undefined,
-              color: isOS1Theme ? "var(--os-color-text-primary)" : undefined,
-            }}
-          >
-            {memoryUsage.map((app, index) => (
-              <div className="flex flex-row items-center gap-1" key={index}>
-                <div className="flex justify-between w-full">
-                  <div className="w-1/2 truncate">{app.name}</div>
-                  <div className="w-1/3">{app.memoryMB.toFixed(1)} MB</div>
-                </div>
-                <div
-                  className={cn(
-                    "h-2 w-full rounded",
-                    currentTheme === "macosx"
-                      ? "aqua-progress"
-                      : isOS1Theme
-                      ? "bg-gray-200/50"
-                      : "bg-gray-200"
-                  )}
-                  style={
-                    isOS1Theme
-                      ? {
-                          backgroundColor: "rgba(0, 0, 0, 0.08)",
-                          borderRadius: "4px",
-                        }
-                      : undefined
+            style={
+              isOS1Theme
+                ? {
+                    fontFamily: "var(--os-font-ui)",
+                    fontSize: "12px",
+                    color: "var(--os-color-text-primary)",
+                    lineHeight: "1.5",
+                    letterSpacing: "-0.01em",
+                    width: "100%",
                   }
+                : {
+                    fontFamily: isXpTheme
+                      ? '"Pixelated MS Sans Serif", Arial'
+                      : undefined,
+                    fontSize: isXpTheme ? "10px" : undefined,
+                  }
+            }
+          >
+            {memoryUsage.map((app, index) =>
+              isOS1Theme ? (
+                <div
+                  key={index}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "14px",
+                  }}
                 >
                   <div
-                    className={cn(
-                      "h-full transition-all duration-200 rounded",
-                      currentTheme === "macosx"
-                        ? "aqua-progress-fill"
-                        : isOS1Theme
-                        ? ""
-                        : "bg-blue-500"
-                    )}
                     style={{
-                      width: `${app.percentage}%`,
-                      ...(isOS1Theme
-                        ? {
-                            backgroundColor: "var(--os-color-traffic-light-close)",
-                            borderRadius: "4px",
-                          }
-                        : {}),
+                      display: "flex",
+                      alignItems: "baseline",
+                      width: "180px",
+                      gap: "8px",
                     }}
-                  />
+                  >
+                    <span
+                      style={{
+                        fontFamily: "var(--os-font-ui)",
+                        fontSize: "12px",
+                        color: "var(--os-color-text-primary)",
+                        fontWeight: 500,
+                        flex: 1,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {app.name}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: "var(--os-font-ui)",
+                        fontSize: "12px",
+                        color: "var(--os-color-text-secondary)",
+                        minWidth: "58px",
+                        textAlign: "right",
+                      }}
+                    >
+                      {app.memoryMB.toFixed(1)} MB
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      flexGrow: 1,
+                      height: "6px",
+                      borderRadius: "999px",
+                      backgroundColor: "rgba(0, 0, 0, 0.1)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${app.percentage}%`,
+                        maxWidth: "100%",
+                        height: "100%",
+                        borderRadius: "999px",
+                        backgroundColor: "var(--os-color-traffic-light-close)",
+                        transition: "width 0.2s ease",
+                      }}
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ) : (
+                <div
+                  className="flex flex-col gap-1"
+                  key={index}
+                >
+                  <div className="flex justify-between items-center w-full">
+                    <div className="w-1/2 truncate">{app.name}</div>
+                    <div className="w-1/3 text-right">
+                      {app.memoryMB.toFixed(1)} MB
+                    </div>
+                  </div>
+                  <div
+                    className={cn(
+                      "h-2 w-full rounded",
+                      currentTheme === "macosx"
+                        ? "aqua-progress"
+                        : "bg-gray-200"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "h-full transition-all duration-200 rounded",
+                        currentTheme === "macosx"
+                          ? "aqua-progress-fill"
+                          : "bg-blue-500"
+                      )}
+                      style={{
+                        width: `${app.percentage}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )
+            )}
           </div>
+
+          {/* 底部信息区域 - 仅在 OS1 主题显示 */}
+          {isOS1Theme && (
+            <div
+              style={{
+                paddingTop: "20px",
+                width: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              <span
+                data-about-finder-footer
+                style={{
+                  fontFamily: "var(--os-font-ui)",
+                  fontSize: "10px",
+                  color: "var(--os-color-text-secondary)",
+                  lineHeight: "1.4",
+                  textAlign: "center",
+                  display: "block",
+                }}
+              >
+                Open source By{" "}
+                <a
+                  href="https://github.com/ryokun6/ryos"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    textDecoration: "underline",
+                    textDecorationColor: "rgba(0, 0, 0, 0.2)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = "var(--os-color-text-primary)";
+                    e.currentTarget.style.textDecorationColor = "var(--os-color-text-primary)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = "var(--os-color-text-secondary)";
+                    e.currentTarget.style.textDecorationColor = "rgba(0, 0, 0, 0.2)";
+                  }}
+                >
+                  RyOS
+                </a>
+              </span>
+              <span
+                data-about-finder-footer
+                style={{
+                  fontFamily: "var(--os-font-ui)",
+                  fontSize: "10px",
+                  color: "var(--os-color-text-secondary)",
+                  lineHeight: "1.4",
+                  textAlign: "center",
+                  display: "block",
+                }}
+              >
+                @Zihan Huang 2025
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>
