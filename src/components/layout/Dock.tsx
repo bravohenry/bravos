@@ -521,8 +521,8 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
           marginLeft: 8,
           marginRight: 8,
           alignSelf: "center",
-          // 简单的透明灰色分隔线
-          background: "rgba(0, 0, 0, 0.2)",
+          // 简单的透明白色分隔线
+          background: "rgba(255, 255, 255, 0.3)",
         }}
       />
     )
@@ -750,6 +750,11 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
                       opacity: isDraggingOverTrash ? 0.7 : 1,
                     }}
                     transition={{ duration: 0.2 }}
+                    style={{
+                      background: "transparent",
+                      display: "flex",
+                      alignItems: "flex-end",
+                    }}
                   >
                     <IconButton
                       key="__trash__"

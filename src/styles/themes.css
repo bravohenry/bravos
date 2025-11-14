@@ -1816,7 +1816,7 @@
 }
 
 /* OS1 按钮样式 - macOS 26 现代按钮 */
-:root[data-os-theme="os1"] button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control):not(.os-switch):not([role="switch"]):not([role="tab"]) {
+:root[data-os-theme="os1"] button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control):not(.os-switch):not([role="switch"]):not([role="tab"]):not(.dock-icon-button) {
   font-size: 13px !important;
   font-weight: 500 !important;
   border-radius: 0.5rem !important;
@@ -2330,14 +2330,16 @@
   position: absolute !important;
 }
 
-/* OS1 Dock 图标容器 - 确保没有背景，并添加间距 */
+/* OS1 Dock 图标容器 - 确保所有层级的容器都没有背景 */
 :root[data-os-theme="os1"] .os1-dock [class*="dock-icon"],
-:root[data-os-theme="os1"] .os1-dock > div > div {
+:root[data-os-theme="os1"] .os1-dock > div > div,
+:root[data-os-theme="os1"] .os1-dock > div > div[style*="transformOrigin"],
+:root[data-os-theme="os1"] .os1-dock > div > div > div {
   background: transparent !important;
+  background-color: transparent !important;
   border: none !important;
-  /* 添加图标之间的上下间距 */
-  margin-top: 4px !important;
-  margin-bottom: 4px !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
 /* ============================================ */
