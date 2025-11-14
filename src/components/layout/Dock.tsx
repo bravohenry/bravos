@@ -548,7 +548,7 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
         <motion.div
           layout
           layoutRoot
-          className={`inline-flex items-end px-2 py-2 ${isOS1 ? "os1-dock" : ""}`}
+          className={`inline-flex items-end px-2 ${isOS1 ? "os1-dock" : "py-2"}`}
           style={{
             pointerEvents: "auto",
             // 根据主题选择不同的样式
@@ -565,6 +565,8 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
                     inset 0 1px 0 rgba(255, 255, 255, 0.5)
                   `,
                   height: 76, // 增加高度以在图标和指示器之间留出空间
+                  paddingTop: "8px",
+                  paddingBottom: "4px", // 减少底部 padding，让图标更靠近底部
                   borderRadius: "20px", // macOS Ventura：四个角都是圆角
                   backdropFilter: "blur(40px) saturate(180%)",
                   WebkitBackdropFilter: "blur(40px) saturate(180%)",

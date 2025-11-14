@@ -2446,20 +2446,23 @@
 }
 
 /* OS1 聊天侧边栏选中项样式 - 蓝色背景，圆角，白色文字 */
-:root[data-os-theme="os1"] .chat-room-sidebar div[class*="bg-\\[#0091FF\\]"],
-:root[data-os-theme="os1"] .chat-room-sidebar div.rounded-lg[class*="bg-\\[#0091FF\\]"],
-:root[data-os-theme="os1"] .chat-room-sidebar > div > div > div > div.rounded-lg[class*="bg-\\[#0091FF\\]"] {
+:root[data-os-theme="os1"] .chat-room-sidebar .chat-room-selected {
   background: rgba(0, 145, 255, 0.9) !important;
+  color: #ffffff !important;
   border-radius: 8px !important;
 }
 
-:root[data-os-theme="os1"] .chat-room-sidebar div[class*="bg-\\[#0091FF\\]"] span,
-:root[data-os-theme="os1"] .chat-room-sidebar div.rounded-lg[class*="bg-\\[#0091FF\\]"] span {
+:root[data-os-theme="os1"] .chat-room-sidebar .chat-room-selected span {
   color: #ffffff !important;
 }
 
-:root[data-os-theme="os1"] .chat-room-sidebar div[class*="bg-\\[#0091FF\\]"] *,
-:root[data-os-theme="os1"] .chat-room-sidebar div.rounded-lg[class*="bg-\\[#0091FF\\]"] * {
+/* OS1 聊天侧边栏选中项 hover 状态 - 保持蓝色背景和白色文字 */
+:root[data-os-theme="os1"] .chat-room-sidebar .chat-room-selected:hover {
+  background: rgba(0, 145, 255, 0.9) !important;
+  color: #ffffff !important;
+}
+
+:root[data-os-theme="os1"] .chat-room-sidebar .chat-room-selected:hover span {
   color: #ffffff !important;
 }
 
@@ -2468,18 +2471,10 @@
   border-radius: 8px !important;
 }
 
-/* OS1 聊天侧边栏 hover 状态 - 圆角和背景 */
-:root[data-os-theme="os1"] .chat-room-sidebar .rounded-lg:hover,
-:root[data-os-theme="os1"] .chat-room-sidebar > div > div > div > div.rounded-lg:hover,
-:root[data-os-theme="os1"] .chat-room-sidebar div[class*="rounded-lg"]:hover,
-:root[data-os-theme="os1"] .chat-room-sidebar div.py-2.px-3.rounded-lg:hover {
-  border-radius: 8px !important;
-  background: rgba(0, 0, 0, 0.05) !important;
-}
-
-/* 确保 hover 状态不会覆盖圆角 - 更具体的选择器 */
-:root[data-os-theme="os1"] .chat-room-sidebar .rounded-lg:hover:not([class*="bg-\\[#0091FF\\]"]),
-:root[data-os-theme="os1"] .chat-room-sidebar div.py-2.px-3.rounded-lg:hover:not([class*="bg-\\[#0091FF\\]"]) {
+/* OS1 聊天侧边栏 hover 状态 - 圆角和背景（仅对非选中项） */
+:root[data-os-theme="os1"] .chat-room-sidebar .rounded-lg:hover:not(.chat-room-selected),
+:root[data-os-theme="os1"] .chat-room-sidebar > div > div > div > div.rounded-lg:hover:not(.chat-room-selected),
+:root[data-os-theme="os1"] .chat-room-sidebar div.py-2.px-3.rounded-lg:hover:not(.chat-room-selected) {
   border-radius: 8px !important;
   background: rgba(0, 0, 0, 0.05) !important;
 }

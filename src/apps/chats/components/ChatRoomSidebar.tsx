@@ -136,6 +136,7 @@ export const ChatRoomSidebar: React.FC<ChatRoomSidebarProps> = ({
         className={cn(
           "group relative py-2 px-3 cursor-pointer transition-all",
           isOS1Theme && "rounded-lg mx-2 my-0.5",
+          isOS1Theme && isSelected && "chat-room-selected",
           isSelected 
             ? isOS1Theme 
               ? "bg-[#0091FF] text-white"
@@ -149,10 +150,6 @@ export const ChatRoomSidebar: React.FC<ChatRoomSidebarProps> = ({
             ? {
                 background: "var(--os-color-selection-bg)",
                 color: "var(--os-color-selection-text)",
-              }
-            : isOS1Theme
-            ? {
-                borderRadius: "8px",
               }
             : undefined
         }
@@ -311,6 +308,7 @@ export const ChatRoomSidebar: React.FC<ChatRoomSidebarProps> = ({
             className={cn(
               "py-2 px-3 cursor-pointer transition-all",
               isOS1Theme && "rounded-lg mx-2 my-0.5",
+              isOS1Theme && currentRoom === null && "chat-room-selected",
               currentRoom === null 
                 ? isOS1Theme 
                   ? "bg-[#0091FF] text-white"
@@ -324,10 +322,6 @@ export const ChatRoomSidebar: React.FC<ChatRoomSidebarProps> = ({
                 ? {
                     background: "var(--os-color-selection-bg)",
                     color: "var(--os-color-selection-text)",
-                  }
-                : isOS1Theme
-                ? {
-                    borderRadius: "8px",
                   }
                 : undefined
             }
