@@ -9,7 +9,7 @@ export const appMetadata = {
     url: "https://bravohenry.com",
   },
   github: "https://github.com/bravohenry/bravos",
-  icon: "/icons/mac.png",
+  icon: "mac.png",
 };
 
 export const helpItems = [
@@ -54,7 +54,7 @@ export const FinderApp: BaseApp = {
   description: "Browse and manage files",
   icon: {
     type: "image",
-    src: "/icons/mac.png",
+    src: "mac.png",
   },
   component: FinderAppComponent,
   helpItems,

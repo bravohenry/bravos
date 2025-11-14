@@ -14,11 +14,33 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-// 圆形头像组件 - macOS 26 风格，使用 Food & Drink emoji
+// 头像组件 - macOS 26 风格，直接显示 emoji（无圆框）
 const CircularAvatar: React.FC<{ name: string; className?: string }> = ({
   name,
   className,
 }) => {
+  // 检查是否是 Zi
+  const normalizedName = name.toLowerCase().trim();
+  const isZi = normalizedName === "zi" || normalizedName === "zihan" || normalizedName === "@zi";
+  
+  // 如果是 Zi，使用 🗿 emoji
+  if (isZi) {
+    return (
+      <div
+        className={cn(
+          "flex items-center justify-center flex-shrink-0 chat-avatar-emoji",
+          className
+        )}
+        style={{
+          fontSize: "32px",
+          lineHeight: "1",
+        }}
+      >
+        🗿
+      </div>
+    );
+  }
+  
   // Food & Drink emoji 列表
   const foodEmojis = [
     "🍎", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🍒",
@@ -39,9 +61,13 @@ const CircularAvatar: React.FC<{ name: string; className?: string }> = ({
   return (
     <div
       className={cn(
-        "flex items-center justify-center rounded-full bg-gradient-to-br from-gray-100 to-gray-50 flex-shrink-0 text-2xl",
+        "flex items-center justify-center flex-shrink-0 chat-avatar-emoji",
         className
       )}
+      style={{
+        fontSize: "32px",
+        lineHeight: "1",
+      }}
     >
       {emoji}
     </div>

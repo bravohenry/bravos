@@ -957,30 +957,9 @@ export function WindowFrame({
                 </button>
               </div>
               {/* 图标和标题 - 放在右侧 */}
+              {/* OS1 主题下隐藏图标和标题，标题显示在菜单栏中 */}
               <div className="flex items-center gap-2 flex-1 min-w-0">
-                <ThemedIcon
-                  name={getAppIconPath(appId)}
-                  alt={title}
-                  className={cn(
-                    "w-4 h-4",
-                    !isForeground && "opacity-70",
-                    transparentBackground && "drop-shadow-sm"
-                  )}
-                />
-                {/* OS1 主题下隐藏标题，标题显示在菜单栏中 */}
-                {currentTheme !== "os1" && (
-                  <span
-                    className={cn(
-                      "os1-title-text truncate text-sm font-medium tracking-wide",
-                      isForeground
-                        ? "text-os-titlebar-active-text"
-                        : "text-os-titlebar-inactive-text"
-                    )}
-                    onTouchMove={(e) => e.preventDefault()}
-                  >
-                    {title}
-                  </span>
-                )}
+                {/* OS1 主题下不显示任何内容 */}
               </div>
             </div>
           ) : currentTheme === "macosx" ? (

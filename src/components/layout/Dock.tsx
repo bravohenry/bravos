@@ -34,8 +34,8 @@ const DOCK_CONFIG = {
   MAX_SCALE: 2.3,
   DISTANCE: 140,
   BASE_BUTTON_SIZE: {
-    macosx: 48, // Aqua 主题默认大小
-    os1: 56,    // OS1 主题更大的图标
+    macosx: 58, // Aqua 主题默认大小
+    os1: 68,    // OS1 主题更大的图标
   },
   SPRING_CONFIG: {
     mass: 0.15,

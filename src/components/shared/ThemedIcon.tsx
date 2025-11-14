@@ -72,7 +72,7 @@ const applySafariImageStabilizer = (
   return nextStyle;
 };
 
-export const ThemedIcon: React.FC<ThemedIconProps> = ({
+export const ThemedIcon: React.FC<ThemedIconProps> = React.memo(({
   name,
   alt,
   themeOverride,
@@ -143,4 +143,21 @@ export const ThemedIcon: React.FC<ThemedIconProps> = ({
       {...restImgProps}
     />
   );
-};
+}, (prevProps, nextProps) => {
+  // 自定义比较函数，只在关键 props 改变时重新渲染
+  // 注意：不比较 src，因为 ThemedIcon 内部会计算 src
+  // 只要 name 和 themeOverride 相同，useIconPath 就会返回相同的路径
+  const styleEqual = 
+    prevProps.style === nextProps.style ||
+    (prevProps.style && nextProps.style && 
+     JSON.stringify(prevProps.style) === JSON.stringify(nextProps.style)) ||
+    (!prevProps.style && !nextProps.style);
+  
+  return (
+    prevProps.name === nextProps.name &&
+    prevProps.alt === nextProps.alt &&
+    prevProps.themeOverride === nextProps.themeOverride &&
+    prevProps.className === nextProps.className &&
+    styleEqual
+  );
+});

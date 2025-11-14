@@ -56,7 +56,7 @@ const finderMetadata = {
     url: "https://bravohenry.com",
   },
   github: "https://github.com/bravohenry/bravos",
-  icon: "/icons/mac.png",
+  icon: "mac.png",
 };
 
 interface MenuBarProps {

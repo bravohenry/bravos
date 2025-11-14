@@ -727,11 +727,14 @@ function ChatMessagesContent({
                               opacity: hoveredMessageId === messageKey ? 1 : 0,
                               scale: 1,
                             }}
-                            className="h-3 w-3 text-gray-400 hover:text-red-600 transition-colors"
+                            className={cn(
+                              "text-gray-400 hover:text-red-600 transition-colors",
+                              isOS1Theme ? "h-4 w-4" : "h-3 w-3"
+                            )}
                             onClick={() => deleteMessage(message)}
                             aria-label="Delete message"
                           >
-                            <Trash className="h-3 w-3" />
+                            <Trash className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3")} />
                           </motion.button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -746,14 +749,17 @@ function ChatMessagesContent({
                       opacity: hoveredMessageId === messageKey ? 1 : 0,
                       scale: 1,
                     }}
-                    className="h-3 w-3 text-gray-400 hover:text-gray-600 transition-colors"
+                    className={cn(
+                      "text-gray-400 hover:text-gray-600 transition-colors",
+                      isOS1Theme ? "h-4 w-4" : "h-3 w-3"
+                    )}
                     onClick={() => copyMessage(message)}
                     aria-label="Copy message"
                   >
                     {copiedMessageId === messageKey ? (
-                      <Check className="h-3 w-3" />
+                      <Check className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3")} />
                     ) : (
-                      <Copy className="h-3 w-3" />
+                      <Copy className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3")} />
                     )}
                   </motion.button>
                 </>
@@ -787,7 +793,7 @@ function ChatMessagesContent({
                         });
                   })()
                 ) : (
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <Loader2 className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3", "animate-spin")} />
                 )}
               </span>
               {message.role === "assistant" && (
@@ -798,14 +804,17 @@ function ChatMessagesContent({
                       opacity: hoveredMessageId === messageKey ? 1 : 0,
                       scale: 1,
                     }}
-                    className="h-3 w-3 text-gray-400 hover:text-gray-600 transition-colors"
+                    className={cn(
+                      "text-gray-400 hover:text-gray-600 transition-colors",
+                      isOS1Theme ? "h-4 w-4" : "h-3 w-3"
+                    )}
                     onClick={() => copyMessage(message)}
                     aria-label="Copy message"
                   >
                     {copiedMessageId === messageKey ? (
-                      <Check className="h-3 w-3" />
+                      <Check className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3")} />
                     ) : (
-                      <Copy className="h-3 w-3" />
+                      <Copy className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3")} />
                     )}
                   </motion.button>
                   {speechEnabled && (
@@ -815,7 +824,10 @@ function ChatMessagesContent({
                         opacity: hoveredMessageId === messageKey ? 1 : 0,
                         scale: 1,
                       }}
-                      className="h-3 w-3 text-gray-400 hover:text-gray-600 transition-colors"
+                      className={cn(
+                        "text-gray-400 hover:text-gray-600 transition-colors",
+                        isOS1Theme ? "h-4 w-4" : "h-3 w-3"
+                      )}
                       onClick={() => {
                         if (playingMessageId === messageKey) {
                           // Stop current playback
@@ -906,12 +918,12 @@ function ChatMessagesContent({
                     >
                       {playingMessageId === messageKey ? (
                         speechLoadingId === messageKey ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <Loader2 className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3", "animate-spin")} />
                         ) : (
-                          <Pause className="h-3 w-3" />
+                          <Pause className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3")} />
                         )
                       ) : (
-                        <Volume2 className="h-3 w-3" />
+                        <Volume2 className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3")} />
                       )}
                     </motion.button>
                   )}
@@ -930,11 +942,14 @@ function ChatMessagesContent({
                             opacity: hoveredMessageId === messageKey ? 1 : 0,
                             scale: 1,
                           }}
-                          className="h-3 w-3 text-gray-400 hover:text-blue-600 transition-colors"
+                          className={cn(
+                            "text-gray-400 hover:text-blue-600 transition-colors",
+                            isOS1Theme ? "h-4 w-4" : "h-3 w-3"
+                          )}
                           onClick={() => onSendMessage(message.username!)}
                           aria-label="Send message"
                         >
-                          <Send className="h-3 w-3" />
+                          <Send className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3")} />
                         </motion.button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -953,11 +968,14 @@ function ChatMessagesContent({
                           opacity: hoveredMessageId === messageKey ? 1 : 0,
                           scale: 1,
                         }}
-                        className="h-3 w-3 text-gray-400 hover:text-red-600 transition-colors"
+                        className={cn(
+                          "text-gray-400 hover:text-red-600 transition-colors",
+                          isOS1Theme ? "h-4 w-4" : "h-3 w-3"
+                        )}
                         onClick={() => deleteMessage(message)}
                         aria-label="Delete message"
                       >
-                        <Trash className="h-3 w-3" />
+                        <Trash className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3")} />
                       </motion.button>
                     </TooltipTrigger>
                     <TooltipContent>

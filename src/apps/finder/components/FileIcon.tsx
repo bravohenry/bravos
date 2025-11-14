@@ -1,5 +1,5 @@
 import { useSound, Sounds } from "@/hooks/useSound";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { isTouchDevice } from "@/utils/device";
 import { useLongPress } from "@/hooks/useLongPress";
 import { useThemeStore } from "@/stores/useThemeStore";
@@ -41,6 +41,7 @@ export function FileIcon({
   const isXpTheme = currentTheme === "xp";
   const isWin98Theme = currentTheme === "win98";
   const isMacOSXTheme = currentTheme === "macosx";
+  const isOS1Theme = currentTheme === "os1";
   const isFinderContext = context === "finder";
   const [imgSrc, setImgSrc] = useState<string | undefined>(contentUrl);
   const [fallbackToIcon, setFallbackToIcon] = useState(false);
@@ -107,14 +108,6 @@ export function FileIcon({
     return ["jpg", "jpeg", "png", "gif", "webp", "bmp"].includes(ext || "");
   };
 
-  const getIconPath = () => {
-    if (icon) return icon;
-    if (isDirectory) return "/icons/directory.png"; // legacy logical path
-    if (name.endsWith(".txt") || name.endsWith(".md"))
-      return "/icons/file-text.png";
-    return "/icons/file.png";
-  };
-
   // Check if the icon is an emoji (doesn't start with / or http and is short)
   const isEmojiIcon = (iconPath: string): boolean => {
     if (!iconPath) return false;
@@ -127,21 +120,21 @@ export function FileIcon({
   const sizeClasses = {
     small: {
       container: "w-[80px]",
-      icon: "w-12 h-12",
-      image: "w-[32px] h-[32px]",
+      icon: "w-[58px] h-[58px]",
+      image: "w-[40px] h-[40px]",
       text: "text-[10px] max-w-[90px]",
     },
     large: {
       container: "w-24",
-      icon: "w-16 h-16",
-      image: "w-12 h-12",
+      icon: "w-20 h-20",
+      image: "w-[60px] h-[60px]",
       text: "text-[12px] max-w-[96px]",
     },
   };
 
   const sizes = sizeClasses[size];
 
-  const handleImageError = () => {
+  const handleImageError = useCallback(() => {
     console.error(
       `Error loading thumbnail for ${name}, fallback to icon. Current imgSrc: ${imgSrc?.substring(
         0,
@@ -181,37 +174,75 @@ export function FileIcon({
     // Otherwise fall back to icon
     console.log(`[FileIcon] Falling back to icon for ${name}`);
     setFallbackToIcon(true);
-  };
+  }, [name, imgSrc, fallbackToIcon]);
 
-  const renderIcon = () => {
-    if (isImage() && imgSrc && !fallbackToIcon) {
+  // 选中状态的样式配置（仅 OS1 主题使用图标背景）
+  const isHighlighted = isSelected || (isDropTarget && isDirectory);
+  const highlightStyle = useMemo(
+    () =>
+      isHighlighted && isOS1Theme
+        ? {
+            backgroundColor: "rgba(0, 0, 0, 0.1)",
+            borderRadius: "8px",
+          }
+        : {},
+    [isHighlighted, isOS1Theme]
+  );
+
+  // 使用 useMemo 缓存图标路径，避免不必要的重新计算
+  const iconPath = useMemo(() => {
+    if (icon) return icon;
+    if (isDirectory) return "/icons/directory.png";
+    if (name.endsWith(".txt") || name.endsWith(".md"))
+      return "/icons/file-text.png";
+    return "/icons/file.png";
+  }, [icon, isDirectory, name]);
+
+  // 缓存 className，避免每次渲染都重新计算
+  const themedIconClassName = useMemo(
+    () =>
+      `no-touch-callout object-contain ${sizes.image} rounded-lg ${
+        isDirectory && isDropTarget ? "invert" : ""
+      }`,
+    [sizes.image, isDirectory, isDropTarget]
+  );
+
+  // 缓存 style 对象，避免每次渲染都创建新对象导致 ThemedIcon 重新渲染
+  // OS1 主题使用平滑渲染，其他主题使用像素化渲染
+  const themedIconStyle = useMemo(
+    () => ({
+      imageRendering: isOS1Theme ? "auto" : "pixelated",
+    } as React.CSSProperties),
+    [isOS1Theme]
+  );
+
+  // 使用 useMemo 缓存图标元素本身，避免选中状态改变时重新创建图标
+  // 注意：isDropTarget 在依赖中，但只在拖拽时改变，不影响正常选中
+  const isImageFile = isImage();
+  const iconElement = useMemo(() => {
+    if (isImageFile && imgSrc && !fallbackToIcon) {
       return (
-        <div
-          className={`relative ${sizes.icon} flex items-center justify-center`}
-        >
-          <img
-            src={imgSrc}
-            alt={name}
-            className={`no-touch-callout object-cover ${sizes.image} rounded`}
-            onError={handleImageError}
-            onContextMenu={(e) => e.preventDefault()}
-            draggable={false}
-            data-legacy-aware="true"
-          />
-        </div>
+        <img
+          src={imgSrc}
+          alt={name}
+          className={`no-touch-callout object-cover ${sizes.image} rounded-lg`}
+          style={themedIconStyle}
+          onError={handleImageError}
+          onContextMenu={(e) => e.preventDefault()}
+          draggable={false}
+          data-legacy-aware="true"
+        />
       );
     }
-
-    const iconPath = getIconPath();
 
     // Render emoji as text if it's an emoji icon
     if (icon && isEmojiIcon(icon)) {
       return (
         <span
-          className={`relative ${sizes.icon} flex items-center justify-center leading-none`}
+          className={`relative ${sizes.image} flex items-center justify-center leading-none`}
           style={{
             // Explicit font size avoids macOS theme global div/p font overrides
-            fontSize: size === "large" ? 48 : 32,
+            fontSize: size === "large" ? 60 : 40,
             lineHeight: 1,
             display: "flex",
           }}
@@ -227,15 +258,49 @@ export function FileIcon({
       <ThemedIcon
         name={iconPath}
         alt={isDirectory ? "Directory" : "File"}
-        className={`no-touch-callout object-contain ${sizes.image} ${
-          isDirectory && isDropTarget ? "invert" : ""
-        }`}
-        style={{ imageRendering: "pixelated" } as React.CSSProperties}
+        className={themedIconClassName}
+        style={themedIconStyle}
         onContextMenu={(e) => e.preventDefault()}
         draggable={false}
       />
     );
-  };
+  }, [
+    isImageFile,
+    imgSrc,
+    fallbackToIcon,
+    name,
+    icon,
+    iconPath,
+    isDirectory,
+    themedIconClassName,
+    themedIconStyle,
+    sizes.image,
+    size,
+    handleImageError,
+    isImageFile,
+  ]);
+
+  // 使用 useMemo 缓存整个图标容器，避免选中状态改变时重新创建
+  // 将 highlightStyle 和 className 的变化分离，只更新样式而不重新创建元素
+  const containerClass = useMemo(
+    () =>
+      isImageFile && imgSrc && !fallbackToIcon
+        ? `relative ${sizes.image} flex items-center justify-center overflow-hidden`
+        : `flex items-center justify-center ${sizes.image} overflow-hidden`,
+    [isImageFile, imgSrc, fallbackToIcon, sizes.image]
+  );
+
+  const iconContainer = useMemo(
+    () => (
+      <div
+        className={`${containerClass} ${isHighlighted && isOS1Theme ? "rounded-lg" : ""}`}
+        style={highlightStyle}
+      >
+        {iconElement}
+      </div>
+    ),
+    [containerClass, isHighlighted, isOS1Theme, highlightStyle, iconElement]
+  );
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     playClick();
@@ -282,35 +347,43 @@ export function FileIcon({
       {...longPressHandlers}
     >
       <div
-        className={`flex items-center justify-center ${sizes.icon} ${
-          isSelected || (isDropTarget && isDirectory)
-            ? "brightness-65 contrast-100"
-            : ""
-        }`}
+        className={`flex items-center justify-center ${sizes.icon}`}
       >
-        {renderIcon()}
+        {iconContainer}
       </div>
       <span
         className={`px-1 file-icon-label text-center truncate ${sizes.text} ${
-          isMacOSXTheme ? "rounded" : ""
-        } ${isMacOSXTheme && !isFinderContext ? "font-bold" : ""} ${
+          isMacOSXTheme || isOS1Theme ? "rounded" : ""
+        } ${(isMacOSXTheme || isOS1Theme) && !isFinderContext ? "font-bold" : ""} ${
           isSelected
             ? ""
             : isWin98Theme
             ? "bg-white text-black"
-            : (isXpTheme || isMacOSXTheme) && !isFinderContext
+            : (isXpTheme || isMacOSXTheme || isOS1Theme) && !isFinderContext
             ? "bg-transparent text-white"
             : "bg-white text-black"
         }`}
         style={{
           ...(isSelected
-            ? {
-                background: "var(--os-color-selection-bg)",
-                color: "var(--os-color-selection-text)",
-              }
+            ? isOS1Theme && !isFinderContext
+              ? {
+                  // OS1 主题选中：蓝色背景，白色文字
+                  background: "#007AFF",
+                  color: "#FFFFFF",
+                  borderRadius: "6px",
+                }
+              : {
+                  background: "var(--os-color-selection-bg)",
+                  color: "var(--os-color-selection-text)",
+                }
             : {}),
-          ...(!isSelected && (isXpTheme || isMacOSXTheme) && !isFinderContext
-            ? isMacOSXTheme
+          ...(!isSelected && (isXpTheme || isMacOSXTheme || isOS1Theme) && !isFinderContext
+            ? isOS1Theme
+              ? {
+                  // OS1 主题未选中：透明背景，白色文字，黑色阴影
+                  textShadow: "1px 1px 2px rgba(0, 0, 0, 0.8), 0px 0px 4px rgba(0, 0, 0, 0.5)",
+                }
+              : isMacOSXTheme
               ? {
                   textShadow:
                     "rgba(0, 0, 0, 0.9) 0px 1px 0px, rgba(0, 0, 0, 0.85) 0px 1px 3px, rgba(0, 0, 0, 0.45) 0px 2px 3px",

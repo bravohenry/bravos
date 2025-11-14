@@ -161,10 +161,10 @@ export const appRegistry = {
 
 // Helper function to get app icon path
 export const getAppIconPath = (appId: AppId): string => {
-  // Special handling for OS1 theme: use console icon for control-panels
+  // Special handling for OS1 theme: use control-panels icon
   const currentTheme = useThemeStore.getState().current;
   if (currentTheme === "os1" && appId === "control-panels") {
-    return "/icons/os1/console.png";
+    return "/icons/os1/control-panels.png";
   }
   
   const app = appRegistry[appId];

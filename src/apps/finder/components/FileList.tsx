@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ThemedIcon } from "@/components/shared/ThemedIcon";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
 import { useLongPress } from "@/hooks/useLongPress";
 import { isTouchDevice } from "@/utils/device";
 import { useThemeStore } from "@/stores/useThemeStore";
@@ -77,7 +77,7 @@ export function FileList({
     };
   }, []);
 
-  const handleFileOpen = (file: FileItem) => {
+  const handleFileOpen = useCallback((file: FileItem) => {
     // Clear any pending rename timeout when opening a file
     if (clickTimeoutRef.current) {
       clearTimeout(clickTimeoutRef.current);
@@ -87,9 +87,9 @@ export function FileList({
     playClick();
     onFileOpen(file);
     onFileSelect(null as unknown as FileItem); // Clear selection with proper typing
-  };
+  }, [onFileOpen, onFileSelect, playClick]);
 
-  const handleFileSelect = (file: FileItem) => {
+  const handleFileSelect = useCallback((file: FileItem) => {
     playClick();
 
     // If user clicks on already selected file
@@ -120,9 +120,9 @@ export function FileList({
 
     lastClickedPathRef.current = file.path;
     onFileSelect(file);
-  };
+  }, [selectedFile, onFileSelect, onRenameRequest, playClick]);
 
-  const handleDragStart = (e: React.DragEvent<HTMLElement>, file: FileItem) => {
+  const handleDragStart = useCallback((e: React.DragEvent<HTMLElement>, file: FileItem) => {
     // Only allow dragging files, not folders
     if (file.isDirectory) {
       e.preventDefault();
@@ -252,9 +252,9 @@ export function FileList({
         document.body.removeChild(dragImage);
       }
     }, 0);
-  };
+  }, [viewType, isMacOSXTheme, isXpTheme]);
 
-  const handleDragOver = (e: React.DragEvent<HTMLElement>, file: FileItem) => {
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLElement>, file: FileItem) => {
     // Only allow dropping onto directories and only if canDropFiles is true
     if (
       file.isDirectory &&
@@ -265,13 +265,13 @@ export function FileList({
       e.preventDefault();
       setDropTargetPath(file.path);
     }
-  };
+  }, [canDropFiles]);
 
-  const handleDragLeave = () => {
+  const handleDragLeave = useCallback(() => {
     setDropTargetPath(null);
-  };
+  }, []);
 
-  const handleDrop = (
+  const handleDrop = useCallback((
     e: React.DragEvent<HTMLElement>,
     targetFolder: FileItem
   ) => {
@@ -298,12 +298,12 @@ export function FileList({
     // Call the handler with source and target
     onFileDrop(draggedFileRef.current, targetFolder);
     draggedFileRef.current = null;
-  };
+  }, [onFileDrop]);
 
-  const handleDragEnd = () => {
+  const handleDragEnd = useCallback(() => {
     draggedFileRef.current = null;
     setDropTargetPath(null);
-  };
+  }, []);
 
   // Handlers for container-level drag events
   const handleContainerDragOver = (e: React.DragEvent<HTMLElement>) => {
@@ -519,9 +519,66 @@ export function FileList({
 
   interface GridItemProps {
     file: FileItem;
+    isSelected: boolean;
+    isDropTarget: boolean;
+    onFileOpen: (file: FileItem) => void;
+    onFileSelect: (file: FileItem) => void;
+    onDragStart: (e: React.DragEvent<HTMLElement>, file: FileItem) => void;
+    onDragOver: (e: React.DragEvent<HTMLElement>, file: FileItem) => void;
+    onDragLeave: () => void;
+    onDrop: (e: React.DragEvent<HTMLElement>, file: FileItem) => void;
+    onDragEnd: () => void;
+    onItemContextMenu?: (file: FileItem, e: React.MouseEvent) => void;
+    viewType: ViewType;
   }
 
-  const GridItem: React.FC<GridItemProps> = ({ file }) => {
+  const GridItem: React.FC<GridItemProps> = memo(({ 
+    file, 
+    isSelected, 
+    isDropTarget,
+    onFileOpen,
+    onFileSelect,
+    onDragStart,
+    onDragOver,
+    onDragLeave,
+    onDrop,
+    onDragEnd,
+    onItemContextMenu,
+    viewType,
+  }) => {
+    const handleDoubleClick = useCallback(() => {
+      onFileOpen(file);
+    }, [file, onFileOpen]);
+
+    const handleClick = useCallback(() => {
+      onFileSelect(file);
+    }, [file, onFileSelect]);
+
+    const handleMouseDown = useCallback(() => {
+      // Immediately select the file on mouse down for drag preparation
+      if (!file.isDirectory && !isSelected) {
+        onFileSelect(file);
+      }
+    }, [file, isSelected, onFileSelect]);
+
+    const handleDragStartCallback = useCallback((e: React.DragEvent<HTMLElement>) => {
+      onDragStart(e, file);
+    }, [file, onDragStart]);
+
+    const handleDragOverCallback = useCallback((e: React.DragEvent<HTMLElement>) => {
+      onDragOver(e, file);
+    }, [file, onDragOver]);
+
+    const handleDropCallback = useCallback((e: React.DragEvent<HTMLElement>) => {
+      onDrop(e, file);
+    }, [file, onDrop]);
+
+    const handleContextMenu = useCallback((e: React.MouseEvent) => {
+      if (onItemContextMenu) {
+        onItemContextMenu(file, e);
+      }
+    }, [file, onItemContextMenu]);
+
     const longPressHandlers = useLongPress((touchEvent) => {
       if (onItemContextMenu) {
         const touch = touchEvent.touches[0];
@@ -534,46 +591,51 @@ export function FileList({
       }
     });
 
+    const displayName = useMemo(() => getDisplayName(file), [file]);
+    const fileIsImage = useMemo(() => isImageFile(file), [file]);
+
     return (
       <div
         key={file.path}
-        onMouseDown={() => {
-          // Immediately select the file on mouse down for drag preparation
-          if (!file.isDirectory && selectedFile?.path !== file.path) {
-            onFileSelect(file);
-          }
-        }}
+        onMouseDown={handleMouseDown}
         draggable={!file.isDirectory}
-        onDragStart={(e) => handleDragStart(e, file)}
-        onDragOver={(e) => handleDragOver(e, file)}
-        onDragLeave={handleDragLeave}
-        onDrop={(e) => handleDrop(e, file)}
-        onDragEnd={handleDragEnd}
+        onDragStart={handleDragStartCallback}
+        onDragOver={handleDragOverCallback}
+        onDragLeave={onDragLeave}
+        onDrop={handleDropCallback}
+        onDragEnd={onDragEnd}
         className="transition-all duration-75"
-        onContextMenu={(e: React.MouseEvent) => {
-          if (onItemContextMenu) {
-            onItemContextMenu(file, e);
-          }
-        }}
+        onContextMenu={handleContextMenu}
         data-file-item="true"
         {...(isTouchDevice() ? longPressHandlers : {})}
       >
         <FileIcon
-          name={getDisplayName(file)}
+          name={displayName}
           isDirectory={file.isDirectory}
           icon={file.icon}
-          content={isImageFile(file) ? file.content : undefined}
-          contentUrl={isImageFile(file) ? file.contentUrl : undefined}
-          onDoubleClick={() => handleFileOpen(file)}
-          onClick={() => handleFileSelect(file)}
-          isSelected={selectedFile?.path === file.path}
-          isDropTarget={dropTargetPath === file.path}
+          content={fileIsImage ? file.content : undefined}
+          contentUrl={fileIsImage ? file.contentUrl : undefined}
+          onDoubleClick={handleDoubleClick}
+          onClick={handleClick}
+          isSelected={isSelected}
+          isDropTarget={isDropTarget}
           size={viewType === "large" ? "large" : "small"}
           context="finder"
         />
       </div>
     );
-  };
+  }, (prevProps, nextProps) => {
+    // 只在关键 props 改变时重新渲染
+    return (
+      prevProps.file.path === nextProps.file.path &&
+      prevProps.file.icon === nextProps.file.icon &&
+      prevProps.file.content === nextProps.file.content &&
+      prevProps.file.contentUrl === nextProps.file.contentUrl &&
+      prevProps.isSelected === nextProps.isSelected &&
+      prevProps.isDropTarget === nextProps.isDropTarget &&
+      prevProps.viewType === nextProps.viewType
+    );
+  });
 
   // ------------------- Render -------------------
 
@@ -626,7 +688,21 @@ export function FileList({
       onDrop={handleContainerDrop}
     >
       {files.map((file) => (
-        <GridItem key={file.path} file={file} />
+        <GridItem 
+          key={file.path} 
+          file={file}
+          isSelected={selectedFile?.path === file.path}
+          isDropTarget={dropTargetPath === file.path}
+          onFileOpen={handleFileOpen}
+          onFileSelect={handleFileSelect}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onDragEnd={handleDragEnd}
+          onItemContextMenu={onItemContextMenu}
+          viewType={viewType}
+        />
       ))}
     </div>
   );
