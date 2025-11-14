@@ -25,6 +25,7 @@ export function AppleMenu({ apps }: AppleMenuProps) {
   const launchApp = useLaunchApp();
   const currentTheme = useThemeStore((state) => state.current);
   const isMacOsxTheme = currentTheme === "macosx";
+  const isOS1Theme = currentTheme === "os1";
 
   const handleAppClick = (appId: string) => {
     // Simply launch the app - the instance system will handle focus if already open
@@ -47,7 +48,7 @@ export function AppleMenu({ apps }: AppleMenuProps) {
             size="default"
             className={cn(
               "h-6 px-3 py-1 border-none hover:bg-black/10 active:bg-black/20 focus-visible:ring-0",
-              isMacOsxTheme ? "text-xl px-1 flex items-center justify-center" : "text-md"
+              isMacOsxTheme ? "text-xl px-1 flex items-center justify-center" : isOS1Theme ? "text-2xl px-1 flex items-center justify-center" : "text-md"
             )}
             style={{ color: "inherit" }}
           >
@@ -58,7 +59,9 @@ export function AppleMenu({ apps }: AppleMenuProps) {
                 style={{ width: 30, height: 30, display: "block" }}
               />
             ) : (
-              "\uf8ff" // 
+              <span style={isOS1Theme ? { fontSize: "20px", lineHeight: 1 } : undefined}>
+                {"\uf8ff"} {/*  */}
+              </span>
             )}
           </Button>
         </DropdownMenuTrigger>
