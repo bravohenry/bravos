@@ -21,11 +21,34 @@ Works on all devices—including mobile, tablet, and desktop.
 
 ### Themes
 
-- **Four switchable themes:** System 7, Aqua (Mac OS X), Windows XP, Windows 98
+- **Five switchable themes:** System 7, Aqua (Mac OS X), OS1 (macOS 26), Windows XP, Windows 98
   - **Menu & chrome:** mac themes use a top menubar with traffic-light controls; Windows themes use a bottom taskbar with a Start menu and classic window buttons
   - **Fonts & icons:** theme-specific system fonts and ThemedIcon assets for authentic look
   - **Wallpapers:** theme-specific default photo/tile/video wallpapers
   - **Controls:** select, dropdowns, buttons, and resizers are styled per theme, including mobile-safe resizers for XP/98
+
+#### OS1 Theme (Default)
+
+The OS1 branch extends ryOS with a comprehensive macOS-inspired theme featuring:
+
+- **Authentic macOS System Sounds**: Real system sounds extracted from macOS, including VoiceOver and Dwell Control sounds for window interactions
+- **SF Symbols Integration**: Native Apple SF Symbols for icons throughout the interface
+- **Enhanced Window Animations**: Smooth minimize/restore animations with macOS Genie effect (350ms optimized timing)
+- **macOS 26 Design Language**: Modern frosted glass effects, refined UI components, and authentic macOS styling
+- **Theme-Aware Sound System**: Context-aware sound mapping that automatically uses macOS sounds when OS1 theme is active
+
+**Key OS1 Features:**
+- Window operations use authentic macOS sounds (`finder-invitation`, `basso`, `hero`, `vo-guideprogress`)
+- Window dragging/resizing plays `dwell-activate` sound in rapid succession (200ms intervals)
+- Dock with larger icons (56px), rounded corners, and proper spacing (macOS Ventura style)
+- Chat application with macOS 26 styling, frosted glass tooltips, and refined iconography
+- Tab styling with transparent backgrounds and blue bottom border for active tabs
+- Enhanced menu bar with larger Apple logo
+
+**Documentation:**
+- See `docs/OS1_README.md` for detailed OS1 theme documentation
+- See `docs/MACOS_SOUNDS_GUIDE.md` for macOS sound extraction guide
+- See `docs/SF_SYMBOLS_GUIDE.md` for SF Symbols integration guide
 
 ### Built-in Applications
 
@@ -172,6 +195,73 @@ The project uses:
 ## License
 
 This project is licensed under the AGPL-3.0 License - see the [LICENSE](LICENSE) file for details.
+
+## OS1 Branch Enhancements
+
+The OS1 branch (default) includes significant enhancements built on top of the base ryOS:
+
+### What's New in OS1
+
+1. **macOS System Sounds Integration**
+   - Theme-aware sound system that automatically uses macOS system sounds
+   - Extracted sounds from `/System/Library/Sounds/` and VoiceOver/Dwell Control frameworks
+   - Sound extraction script: `scripts/extract-macos-sounds.sh`
+   - 14+ authentic macOS sounds for window operations, UI interactions, and alerts
+
+2. **SF Symbols Icon System**
+   - Native Apple SF Symbols integration for authentic macOS iconography
+   - Automatic mapping from Lucide icons to SF Symbols
+   - Lazy-loaded SVG content with proper color inheritance
+   - Fallback to Lucide icons for non-OS1 themes
+
+3. **Enhanced Window Animations**
+   - macOS Genie effect for minimize/restore animations
+   - Optimized 350ms animation timing with smooth easing curves
+   - Proper state management to prevent rendering issues
+   - Window bounces back from Dock position on restore
+
+4. **UI Component Refinements**
+   - **Dock**: Larger icons (56px), rounded corners, macOS Ventura spacing
+   - **Chat**: macOS 26 design with frosted glass effects, refined iconography
+   - **Tabs**: Transparent backgrounds, blue bottom border for active tabs
+   - **Menu Bar**: Larger Apple logo, consistent macOS styling
+   - CSS variable-based styling for better maintainability
+
+5. **Code Quality Improvements**
+   - Reduced CSS selector complexity (~100+ lines removed)
+   - Enhanced TypeScript type safety
+   - Improved component organization and reusability
+   - Comprehensive documentation
+
+### Technical Implementation
+
+- **Sound System**: `src/hooks/useSound.ts` - Theme-aware sound path resolution
+- **SF Symbols**: `src/components/shared/SFSymbol.tsx` - Dynamic SVG loading
+- **Window Animations**: `src/components/layout/WindowFrame.tsx` - Genie effect implementation
+- **Theme Styles**: `src/styles/themes.css` - OS1-specific CSS variables and styles
+
+### Files Added/Modified
+
+**New Files:**
+- `src/components/shared/SFSymbol.tsx`
+- `src/utils/sfSymbolMap.ts`
+- `scripts/extract-macos-sounds.sh`
+- `docs/OS1_README.md`
+- `docs/MACOS_SOUNDS_GUIDE.md`
+- `docs/SF_SYMBOLS_GUIDE.md`
+- `public/icons/os1/sf-symbols/` (SF Symbol SVG files)
+- `public/sounds/*.mp3` and `*.m4a` (macOS system sounds)
+
+**Modified Files:**
+- `src/components/layout/WindowFrame.tsx` - Enhanced animations
+- `src/hooks/useSound.ts` - Theme-aware sound system
+- `src/components/shared/Icon.tsx` - SF Symbol support
+- `src/apps/base/AppManager.tsx` - Animation rendering fixes
+- `src/hooks/useWindowManager.ts` - Sound loop improvements
+- `src/styles/themes.css` - OS1 theme styles
+- Theme configuration - OS1 set as default
+
+For complete details, see `docs/OS1_README.md`.
 
 ## Contributing
 
