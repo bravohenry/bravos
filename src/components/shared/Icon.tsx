@@ -94,6 +94,17 @@ export const Icon = React.memo<IconProps>(
 
     // 如果有映射，使用 SF Symbol
     if (sfSymbolName) {
+      // 过滤掉 SVG 特定的属性，只保留兼容的 HTML 属性
+      const {
+        onCopy,
+        onCopyCapture,
+        onCut,
+        onCutCapture,
+        onPaste,
+        onPasteCapture,
+        ...htmlProps
+      } = props as any;
+      
       return (
         <SFSymbol
           name={sfSymbolName}
@@ -102,7 +113,7 @@ export const Icon = React.memo<IconProps>(
           className={className}
           style={style}
           os1Only={false} // Icon 组件已经处理了主题检测
-          {...props}
+          {...htmlProps}
         />
       );
     }

@@ -70,7 +70,7 @@ export const AudioInputButton = forwardRef<
           ) : isRecording ? (
             <AudioBars
               frequencies={frequencies}
-              color={isOS1Theme ? "rgb(156, 163, 175)" : "black"}
+              color={isOS1Theme ? "white" : "black"}
               isSilent={isSilent}
             />
           ) : (
