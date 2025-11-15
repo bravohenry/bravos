@@ -729,12 +729,12 @@ function ChatMessagesContent({
                             }}
                             className={cn(
                               "text-gray-400 hover:text-red-600 transition-colors",
-                              isOS1Theme ? "h-4 w-4" : "h-3 w-3"
+                              isOS1Theme ? "h-3 w-3 os1-chat-meta-icon-button" : "h-3 w-3"
                             )}
                             onClick={() => deleteMessage(message)}
                             aria-label="Delete message"
                           >
-                            <Trash className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3")} />
+                            <Trash className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3")} />
                           </motion.button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -751,15 +751,15 @@ function ChatMessagesContent({
                     }}
                     className={cn(
                       "text-gray-400 hover:text-gray-600 transition-colors",
-                      isOS1Theme ? "h-4 w-4" : "h-3 w-3"
+                      isOS1Theme ? "h-3 w-3 os1-chat-meta-icon-button" : "h-3 w-3"
                     )}
                     onClick={() => copyMessage(message)}
                     aria-label="Copy message"
                   >
                     {copiedMessageId === messageKey ? (
-                      <Check className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3")} />
+                      <Check className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3")} />
                     ) : (
-                      <Copy className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3")} />
+                      <Copy className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3")} />
                     )}
                   </motion.button>
                 </>
@@ -793,7 +793,7 @@ function ChatMessagesContent({
                         });
                   })()
                 ) : (
-                  <Loader2 className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3", "animate-spin")} />
+                  <Loader2 className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3", "animate-spin")} />
                 )}
               </span>
               {message.role === "assistant" && (
@@ -806,15 +806,15 @@ function ChatMessagesContent({
                     }}
                     className={cn(
                       "text-gray-400 hover:text-gray-600 transition-colors",
-                      isOS1Theme ? "h-4 w-4" : "h-3 w-3"
+                      isOS1Theme ? "h-3 w-3 os1-chat-meta-icon-button" : "h-3 w-3"
                     )}
                     onClick={() => copyMessage(message)}
                     aria-label="Copy message"
                   >
                     {copiedMessageId === messageKey ? (
-                      <Check className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3")} />
+                      <Check className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3")} />
                     ) : (
-                      <Copy className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3")} />
+                      <Copy className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3")} />
                     )}
                   </motion.button>
                   {speechEnabled && (
@@ -826,7 +826,7 @@ function ChatMessagesContent({
                       }}
                       className={cn(
                         "text-gray-400 hover:text-gray-600 transition-colors",
-                        isOS1Theme ? "h-4 w-4" : "h-3 w-3"
+                        isOS1Theme ? "h-3 w-3 os1-chat-meta-icon-button" : "h-3 w-3"
                       )}
                       onClick={() => {
                         if (playingMessageId === messageKey) {
@@ -918,12 +918,12 @@ function ChatMessagesContent({
                     >
                       {playingMessageId === messageKey ? (
                         speechLoadingId === messageKey ? (
-                          <Loader2 className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3", "animate-spin")} />
+                          <Loader2 className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3", "animate-spin")} />
                         ) : (
-                          <Pause className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3")} />
+                          <Pause className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3")} />
                         )
                       ) : (
-                        <Volume2 className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3")} />
+                        <Volume2 className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3")} />
                       )}
                     </motion.button>
                   )}
@@ -944,12 +944,12 @@ function ChatMessagesContent({
                           }}
                           className={cn(
                             "text-gray-400 hover:text-blue-600 transition-colors",
-                            isOS1Theme ? "h-4 w-4" : "h-3 w-3"
+                            isOS1Theme ? "h-3 w-3 os1-chat-meta-icon-button" : "h-3 w-3"
                           )}
                           onClick={() => onSendMessage(message.username!)}
                           aria-label="Send message"
                         >
-                          <Send className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3")} />
+                          <Send className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3")} />
                         </motion.button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -970,12 +970,12 @@ function ChatMessagesContent({
                         }}
                         className={cn(
                           "text-gray-400 hover:text-red-600 transition-colors",
-                          isOS1Theme ? "h-4 w-4" : "h-3 w-3"
+                          isOS1Theme ? "h-3 w-3 os1-chat-meta-icon-button" : "h-3 w-3"
                         )}
                         onClick={() => deleteMessage(message)}
                         aria-label="Delete message"
                       >
-                        <Trash className={cn(isOS1Theme ? "h-4 w-4" : "h-3 w-3")} />
+                        <Trash className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3")} />
                       </motion.button>
                     </TooltipTrigger>
                     <TooltipContent>

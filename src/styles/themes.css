@@ -418,10 +418,11 @@
   border-color: rgba(0, 0, 0, 0.12);
 }
 
+/* ============================================ */
 /* OS1 Chat Submit Button - 蓝色圆形按钮 */
-/* 继承 .os1-button 的基础样式，只覆盖需要改变的部分 */
+/* ============================================ */
 .os1-button-chat-submit {
-  background: rgba(0, 122, 255, 0.9);
+  background: var(--os1-chat-button-blue);
   color: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(10px);
@@ -430,64 +431,45 @@
 }
 
 .os1-button-chat-submit:hover {
-  background: rgba(0, 122, 255, 1);
+  background: var(--os1-chat-button-blue-hover);
   color: #ffffff;
   transform: scale(1.05);
   box-shadow: 0 3px 12px rgba(0, 122, 255, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .os1-button-chat-submit:active {
-  background: rgba(0, 122, 255, 0.85);
+  background: var(--os1-chat-button-blue-active);
   color: #ffffff;
   transform: scale(0.95);
 }
 
-/* OS1 Chat Submit Button 中的图标颜色 - 灰色，使用最高优先级 */
+/* OS1 Chat Submit Button 图标颜色 - 使用变量 */
 .os1-button-chat-submit svg,
 .os1-button-chat-submit path,
 .os1-button-chat-submit .sf-symbol,
 .os1-button-chat-submit .sf-symbol svg,
 .os1-button-chat-submit .sf-symbol path,
-.os1-button-chat-submit .sf-symbol * {
-  color: rgb(156, 163, 175) !important; /* gray-400 */
-  stroke: rgb(156, 163, 175) !important;
-  fill: rgb(156, 163, 175) !important;
+.os1-button-chat-submit .sf-symbol *,
+.os1-button-chat-submit .Icon,
+.os1-button-chat-submit .Icon svg,
+.os1-button-chat-submit .Icon path {
+  color: var(--os1-chat-icon-color) !important;
+  stroke: var(--os1-chat-icon-color) !important;
+  fill: var(--os1-chat-icon-color) !important;
 }
 
-/* OS1 主题下 chat 提交按钮内的所有元素都应该是灰色 */
-:root[data-os-theme="os1"] .os1-button-chat-submit *,
-:root[data-os-theme="os1"] .os1-button-chat-submit svg *,
-:root[data-os-theme="os1"] .os1-button-chat-submit .sf-symbol * {
-  color: rgb(156, 163, 175) !important; /* gray-400 */
-}
-
-:root[data-os-theme="os1"] .os1-button-chat-submit svg,
-:root[data-os-theme="os1"] .os1-button-chat-submit path,
-:root[data-os-theme="os1"] .os1-button-chat-submit .sf-symbol,
-:root[data-os-theme="os1"] .os1-button-chat-submit .sf-symbol svg,
-:root[data-os-theme="os1"] .os1-button-chat-submit .sf-symbol path,
-:root[data-os-theme="os1"] .os1-button-chat-submit .sf-symbol *,
-:root[data-os-theme="os1"] .os1-button-chat-submit .Icon,
-:root[data-os-theme="os1"] .os1-button-chat-submit .Icon svg,
-:root[data-os-theme="os1"] .os1-button-chat-submit .Icon path {
-  color: rgb(156, 163, 175) !important; /* gray-400 */
-  stroke: rgb(156, 163, 175) !important;
-  fill: rgb(156, 163, 175) !important;
-}
-
-/* OS1 主题下 chat 提交按钮 hover 时图标颜色 - 稍深的灰色 */
-:root[data-os-theme="os1"] .os1-button-chat-submit:hover svg,
-:root[data-os-theme="os1"] .os1-button-chat-submit:hover path,
-:root[data-os-theme="os1"] .os1-button-chat-submit:hover .sf-symbol,
-:root[data-os-theme="os1"] .os1-button-chat-submit:hover .sf-symbol svg,
-:root[data-os-theme="os1"] .os1-button-chat-submit:hover .sf-symbol path,
-:root[data-os-theme="os1"] .os1-button-chat-submit:hover .sf-symbol *,
-:root[data-os-theme="os1"] .os1-button-chat-submit:hover .Icon,
-:root[data-os-theme="os1"] .os1-button-chat-submit:hover .Icon svg,
-:root[data-os-theme="os1"] .os1-button-chat-submit:hover .Icon path {
-  color: rgb(107, 114, 128) !important; /* gray-500 */
-  stroke: rgb(107, 114, 128) !important;
-  fill: rgb(107, 114, 128) !important;
+.os1-button-chat-submit:hover svg,
+.os1-button-chat-submit:hover path,
+.os1-button-chat-submit:hover .sf-symbol,
+.os1-button-chat-submit:hover .sf-symbol svg,
+.os1-button-chat-submit:hover .sf-symbol path,
+.os1-button-chat-submit:hover .sf-symbol *,
+.os1-button-chat-submit:hover .Icon,
+.os1-button-chat-submit:hover .Icon svg,
+.os1-button-chat-submit:hover .Icon path {
+  color: var(--os1-chat-icon-color-hover) !important;
+  stroke: var(--os1-chat-icon-color-hover) !important;
+  fill: var(--os1-chat-icon-color-hover) !important;
 }
 
 /* macOS Theme Font Overrides */
@@ -1791,6 +1773,19 @@
   --os-metrics-titlebar-border-width: 1px;
   --os-metrics-menubar-height: 1.75rem; /* 28px */
   --os-window-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+  
+  /* OS1 Chat 相关变量 */
+  --os1-chat-icon-color: rgb(156, 163, 175); /* gray-400 */
+  --os1-chat-icon-color-hover: rgb(107, 114, 128); /* gray-500 */
+  --os1-chat-icon-size: 0.75rem; /* 12px = h-3 */
+  --os1-chat-button-blue: rgba(0, 122, 255, 0.9);
+  --os1-chat-button-blue-hover: rgba(0, 122, 255, 1);
+  --os1-chat-button-blue-active: rgba(0, 122, 255, 0.85);
+  --os1-chat-button-red: rgba(255, 59, 48, 0.9);
+  --os1-chat-button-red-hover: rgba(255, 59, 48, 1);
+  --os1-chat-bubble-sent: rgba(0, 122, 255, 0.9);
+  --os1-chat-bubble-received: rgba(240, 240, 240, 0.9);
+  --os1-chat-bubble-angry: rgba(254, 202, 202, 0.9);
 }
 
 /* 非活动窗口的选择颜色 */
@@ -1954,8 +1949,10 @@
  *   - .dock-icon-button: Dock 图标按钮
  *   - .minesweeper-cell: 扫雷游戏单元格
  *   - .os1-button, .os1-button-chat-submit, .os1-button-ghost: OS1 主题专用按钮类
+ *   - .os1-chat-input-icon-button: 聊天输入框内的图标按钮
+ *   - .os1-chat-meta-icon-button: 聊天消息元数据区域的图标按钮
  */
-:root[data-os-theme="os1"] button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control):not(.os-switch):not([role="switch"]):not([role="tab"]):not(.dock-icon-button):not(.minesweeper-cell):not(.os1-button):not(.os1-button-chat-submit):not(.os1-button-ghost):not(.os1-chat-input-icon-button) {
+:root[data-os-theme="os1"] button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control):not(.os-switch):not([role="switch"]):not([role="tab"]):not(.dock-icon-button):not(.minesweeper-cell):not(.os1-button):not(.os1-button-chat-submit):not(.os1-button-ghost):not(.os1-chat-input-icon-button):not(.os1-chat-meta-icon-button) {
   font-size: 13px !important;
   font-weight: 500 !important;
   border-radius: 0.5rem !important;
@@ -1968,14 +1965,14 @@
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-:root[data-os-theme="os1"] button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control):not(.os-switch):not([role="switch"]):not([role="tab"]):not(.dock-icon-button):not(.minesweeper-cell):not(.os1-button):not(.os1-button-chat-submit):not(.os1-button-ghost):not(.os1-chat-input-icon-button):hover {
+:root[data-os-theme="os1"] button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control):not(.os-switch):not([role="switch"]):not([role="tab"]):not(.dock-icon-button):not(.minesweeper-cell):not(.os1-button):not(.os1-button-chat-submit):not(.os1-button-ghost):not(.os1-chat-input-icon-button):not(.os1-chat-meta-icon-button):hover {
   background: rgba(255, 255, 255, 0.95) !important;
   border-color: rgba(0, 0, 0, 0.12) !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
   transform: translateY(-1px) !important;
 }
 
-:root[data-os-theme="os1"] button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control):not(.os-switch):not([role="switch"]):not([role="tab"]):not(.dock-icon-button):not(.minesweeper-cell):not(.os1-button):not(.os1-button-chat-submit):not(.os1-button-ghost):not(.os1-chat-input-icon-button):active {
+:root[data-os-theme="os1"] button:not(.aqua-button):not(.aqua-tab):not(.os1-window-control):not(.os-switch):not([role="switch"]):not([role="tab"]):not(.dock-icon-button):not(.minesweeper-cell):not(.os1-button):not(.os1-button-chat-submit):not(.os1-button-ghost):not(.os1-chat-input-icon-button):not(.os1-chat-meta-icon-button):active {
   background: var(--os-color-button-active-face) !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
   transform: translateY(0) !important;
@@ -2494,9 +2491,10 @@
   box-shadow: none !important;
 }
 
-/* OS1 主题下 chat 输入框内的图标按钮 - 无边框，灰色图标 */
-/* 使用高优先级选择器，确保覆盖全局按钮样式 */
-:root[data-os-theme="os1"] .chat-input button[type="button"].os1-chat-input-icon-button,
+/* ============================================ */
+/* OS1 Chat 输入框图标按钮 - 无边框，灰色图标 */
+/* ============================================ */
+/* 公共样式：透明无边框按钮基础样式 */
 :root[data-os-theme="os1"] .chat-input button[type="button"],
 :root[data-os-theme="os1"] .chat-input > form > div > div > div button[type="button"],
 :root[data-os-theme="os1"] .os1-chat-input-icon-button {
@@ -2505,6 +2503,7 @@
   border: none !important;
   border-width: 0 !important;
   border-color: transparent !important;
+  border-radius: 0 !important;
   box-shadow: none !important;
   padding: 0 !important;
   margin: 0 !important;
@@ -2512,25 +2511,11 @@
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   transform: none !important;
-  border-radius: 0 !important;
 }
 
-/* OS1 主题下 chat 输入框内的图标按钮 hover 状态 - 无边框 */
-:root[data-os-theme="os1"] .chat-input button[type="button"].os1-chat-input-icon-button:hover,
 :root[data-os-theme="os1"] .chat-input button[type="button"]:hover,
 :root[data-os-theme="os1"] .chat-input > form > div > div > div button[type="button"]:hover,
-:root[data-os-theme="os1"] .os1-chat-input-icon-button:hover {
-  background: transparent !important;
-  background-color: transparent !important;
-  border: none !important;
-  border-width: 0 !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-  transform: none !important;
-}
-
-/* OS1 主题下 chat 输入框内的图标按钮 active 状态 - 无边框 */
-:root[data-os-theme="os1"] .chat-input button[type="button"].os1-chat-input-icon-button:active,
+:root[data-os-theme="os1"] .os1-chat-input-icon-button:hover,
 :root[data-os-theme="os1"] .chat-input button[type="button"]:active,
 :root[data-os-theme="os1"] .chat-input > form > div > div > div button[type="button"]:active,
 :root[data-os-theme="os1"] .os1-chat-input-icon-button:active {
@@ -2543,37 +2528,35 @@
   transform: none !important;
 }
 
-/* OS1 主题下 chat 输入框内的图标颜色 - 灰色 */
-/* 覆盖所有可能的图标元素 */
+/* 图标颜色 - 使用变量 */
 :root[data-os-theme="os1"] .chat-input button[type="button"] svg,
+:root[data-os-theme="os1"] .chat-input button[type="button"] path,
 :root[data-os-theme="os1"] .chat-input button[type="button"] .sf-symbol,
 :root[data-os-theme="os1"] .chat-input button[type="button"] .sf-symbol svg,
 :root[data-os-theme="os1"] .chat-input button[type="button"] .sf-symbol path,
-:root[data-os-theme="os1"] .chat-input button[type="button"] path,
 :root[data-os-theme="os1"] .chat-input > form > div > div > div button[type="button"] svg,
+:root[data-os-theme="os1"] .chat-input > form > div > div > div button[type="button"] path,
 :root[data-os-theme="os1"] .chat-input > form > div > div > div button[type="button"] .sf-symbol,
 :root[data-os-theme="os1"] .chat-input > form > div > div > div button[type="button"] .sf-symbol svg,
-:root[data-os-theme="os1"] .chat-input > form > div > div > div button[type="button"] .sf-symbol path,
-:root[data-os-theme="os1"] .chat-input > form > div > div > div button[type="button"] path {
-  color: rgb(156, 163, 175) !important; /* gray-400 */
-  stroke: rgb(156, 163, 175) !important;
-  fill: rgb(156, 163, 175) !important;
+:root[data-os-theme="os1"] .chat-input > form > div > div > div button[type="button"] .sf-symbol path {
+  color: var(--os1-chat-icon-color) !important;
+  stroke: var(--os1-chat-icon-color) !important;
+  fill: var(--os1-chat-icon-color) !important;
 }
 
-/* OS1 主题下 chat 输入框内的图标 hover 颜色 - 稍深的灰色 */
 :root[data-os-theme="os1"] .chat-input button[type="button"]:hover svg,
+:root[data-os-theme="os1"] .chat-input button[type="button"]:hover path,
 :root[data-os-theme="os1"] .chat-input button[type="button"]:hover .sf-symbol,
 :root[data-os-theme="os1"] .chat-input button[type="button"]:hover .sf-symbol svg,
 :root[data-os-theme="os1"] .chat-input button[type="button"]:hover .sf-symbol path,
-:root[data-os-theme="os1"] .chat-input button[type="button"]:hover path,
 :root[data-os-theme="os1"] .chat-input > form > div > div > div button[type="button"]:hover svg,
+:root[data-os-theme="os1"] .chat-input > form > div > div > div button[type="button"]:hover path,
 :root[data-os-theme="os1"] .chat-input > form > div > div > div button[type="button"]:hover .sf-symbol,
 :root[data-os-theme="os1"] .chat-input > form > div > div > div button[type="button"]:hover .sf-symbol svg,
-:root[data-os-theme="os1"] .chat-input > form > div > div > div button[type="button"]:hover .sf-symbol path,
-:root[data-os-theme="os1"] .chat-input > form > div > div > div button[type="button"]:hover path {
-  color: rgb(107, 114, 128) !important; /* gray-500 */
-  stroke: rgb(107, 114, 128) !important;
-  fill: rgb(107, 114, 128) !important;
+:root[data-os-theme="os1"] .chat-input > form > div > div > div button[type="button"]:hover .sf-symbol path {
+  color: var(--os1-chat-icon-color-hover) !important;
+  stroke: var(--os1-chat-icon-color-hover) !important;
+  fill: var(--os1-chat-icon-color-hover) !important;
 }
 
 /* ============================================ */
@@ -2582,7 +2565,7 @@
 
 /* 发送消息气泡（右侧） - macOS 蓝色 */
 :root[data-os-theme="os1"] .os1-message-bubble-sent {
-  background: rgba(0, 122, 255, 0.9) !important;
+  background: var(--os1-chat-bubble-sent) !important;
   color: #ffffff !important;
   border: none !important;
   box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3), 0 1px 3px rgba(0, 0, 0, 0.1) !important;
@@ -2590,7 +2573,7 @@
 
 /* 接收消息气泡（左侧） - 浅灰色毛玻璃 */
 :root[data-os-theme="os1"] .os1-message-bubble-received {
-  background: rgba(240, 240, 240, 0.9) !important;
+  background: var(--os1-chat-bubble-received) !important;
   color: #1d1d1f !important;
   border: 1px solid rgba(0, 0, 0, 0.06) !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
@@ -2636,12 +2619,12 @@
 /* 聊天停止按钮（红色圆形按钮） */
 /* 保留样式，但移除 !important，因为现在使用类名机制 */
 :root[data-os-theme="os1"] .chat-input button[type="button"] {
-  background: rgba(255, 59, 48, 0.9);
+  background: var(--os1-chat-button-red);
   box-shadow: 0 2px 8px rgba(255, 59, 48, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 :root[data-os-theme="os1"] .chat-input button[type="button"]:hover {
-  background: rgba(255, 59, 48, 1);
+  background: var(--os1-chat-button-red-hover);
   transform: scale(1.05);
   box-shadow: 0 3px 12px rgba(255, 59, 48, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2);
 }
@@ -2737,104 +2720,192 @@
 
 /* Zi 生气的消息气泡（红色） - 参考 aqua 主题的红色 */
 :root[data-os-theme="os1"] .os1-message-bubble-angry {
-  background: rgba(254, 202, 202, 0.9) !important; /* red-200 参考 aqua 主题 */
+  background: var(--os1-chat-bubble-angry) !important;
   color: #b91c1c !important; /* red-700 文字颜色 */
   border: 1px solid rgba(185, 28, 28, 0.2) !important;
   box-shadow: 0 2px 8px rgba(254, 202, 202, 0.4), 0 1px 3px rgba(185, 28, 28, 0.2) !important;
 }
 
-/* OS1 主题群聊气泡颜色 - 参考 aqua 主题的颜色 */
-:root[data-os-theme="os1"] .chat-bubble.bg-pink-100 {
-  background: rgba(251, 207, 232, 0.9) !important; /* pink-200 */
+/* OS1 主题群聊气泡颜色 - 统一的样式模式 */
+:root[data-os-theme="os1"] .chat-bubble.bg-pink-100,
+:root[data-os-theme="os1"] .chat-bubble.bg-purple-100,
+:root[data-os-theme="os1"] .chat-bubble.bg-indigo-100,
+:root[data-os-theme="os1"] .chat-bubble.bg-teal-100,
+:root[data-os-theme="os1"] .chat-bubble.bg-lime-100,
+:root[data-os-theme="os1"] .chat-bubble.bg-amber-100,
+:root[data-os-theme="os1"] .chat-bubble.bg-cyan-100,
+:root[data-os-theme="os1"] .chat-bubble.bg-rose-100,
+:root[data-os-theme="os1"] .chat-bubble.bg-gray-100 {
   color: #1d1d1f !important;
   border: 1px solid rgba(0, 0, 0, 0.06) !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* 各颜色气泡背景 */
+:root[data-os-theme="os1"] .chat-bubble.bg-pink-100 {
+  background: rgba(251, 207, 232, 0.9) !important; /* pink-200 */
 }
 
 :root[data-os-theme="os1"] .chat-bubble.bg-purple-100 {
   background: rgba(233, 213, 255, 0.9) !important; /* purple-200 */
-  color: #1d1d1f !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
 :root[data-os-theme="os1"] .chat-bubble.bg-indigo-100 {
   background: rgba(199, 210, 254, 0.9) !important; /* indigo-200 */
-  color: #1d1d1f !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
 :root[data-os-theme="os1"] .chat-bubble.bg-teal-100 {
   background: rgba(153, 246, 228, 0.9) !important; /* teal-200 */
-  color: #1d1d1f !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
 :root[data-os-theme="os1"] .chat-bubble.bg-lime-100 {
   background: rgba(217, 249, 157, 0.9) !important; /* lime-200 */
-  color: #1d1d1f !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
 :root[data-os-theme="os1"] .chat-bubble.bg-amber-100 {
   background: rgba(253, 230, 138, 0.9) !important; /* amber-200 */
-  color: #1d1d1f !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
 :root[data-os-theme="os1"] .chat-bubble.bg-cyan-100 {
   background: rgba(165, 243, 252, 0.9) !important; /* cyan-200 */
-  color: #1d1d1f !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
 :root[data-os-theme="os1"] .chat-bubble.bg-rose-100 {
   background: rgba(254, 205, 211, 0.9) !important; /* rose-200 */
-  color: #1d1d1f !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
 :root[data-os-theme="os1"] .chat-bubble.bg-gray-100 {
   background: rgba(229, 231, 235, 0.9) !important; /* gray-200 */
-  color: #1d1d1f !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
 /* ============================================ */
-/* OS1 Chat 应用图标按钮样式 - macOS 26 风格 */
+/* OS1 Chat 消息元数据图标按钮 - 无边框，灰色图标 */
 /* ============================================ */
-
-/* 优化 OS1 主题下 chat 消息元数据区域的图标按钮 */
-:root[data-os-theme="os1"] .chat-messages-meta button {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  border-radius: 4px !important;
-  padding: 2px !important;
+/* 公共样式：透明无边框按钮基础样式 */
+:root[data-os-theme="os1"] .chat-messages-meta button,
+:root[data-os-theme="os1"] .chat-messages-meta > * > button,
+:root[data-os-theme="os1"] .chat-messages-meta [class*="motion"] button,
+:root[data-os-theme="os1"] .chat-messages-meta [role="button"] button,
+:root[data-os-theme="os1"] .chat-messages-meta [data-radix-tooltip-trigger] button,
+:root[data-os-theme="os1"] .os1-chat-meta-icon-button,
+:root[data-os-theme="os1"] [class*="chat-messages-meta"] button,
+:root[data-os-theme="os1"] [class*="TooltipTrigger"] button {
+  transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: var(--os1-chat-icon-size) !important;
+  height: var(--os1-chat-icon-size) !important;
+  min-width: var(--os1-chat-icon-size) !important;
+  min-height: var(--os1-chat-icon-size) !important;
+  max-width: var(--os1-chat-icon-size) !important;
+  max-height: var(--os1-chat-icon-size) !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  border-width: 0 !important;
+  border-style: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  outline-width: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  transform: none !important;
+  overflow: visible !important;
 }
 
-/* OS1 主题下图标按钮 hover 效果 */
-:root[data-os-theme="os1"] .chat-messages-meta button:hover {
-  background: rgba(0, 0, 0, 0.05) !important;
-  transform: scale(1.1) !important;
+/* Hover 和 Active 状态 - 仅变换颜色，不改变大小 */
+:root[data-os-theme="os1"] .chat-messages-meta button:hover,
+:root[data-os-theme="os1"] .chat-messages-meta > * > button:hover,
+:root[data-os-theme="os1"] .chat-messages-meta [class*="motion"] button:hover,
+:root[data-os-theme="os1"] .chat-messages-meta [role="button"] button:hover,
+:root[data-os-theme="os1"] .chat-messages-meta [data-radix-tooltip-trigger] button:hover,
+:root[data-os-theme="os1"] .os1-chat-meta-icon-button:hover,
+:root[data-os-theme="os1"] [class*="chat-messages-meta"] button:hover,
+:root[data-os-theme="os1"] [class*="TooltipTrigger"] button:hover,
+:root[data-os-theme="os1"] .chat-messages-meta button:active,
+:root[data-os-theme="os1"] .chat-messages-meta > * > button:active,
+:root[data-os-theme="os1"] .chat-messages-meta [class*="motion"] button:active,
+:root[data-os-theme="os1"] .chat-messages-meta [role="button"] button:active,
+:root[data-os-theme="os1"] .chat-messages-meta [data-radix-tooltip-trigger] button:active,
+:root[data-os-theme="os1"] .os1-chat-meta-icon-button:active,
+:root[data-os-theme="os1"] [class*="chat-messages-meta"] button:active,
+:root[data-os-theme="os1"] [class*="TooltipTrigger"] button:active {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  border-width: 0 !important;
+  border-style: none !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  width: var(--os1-chat-icon-size) !important;
+  height: var(--os1-chat-icon-size) !important;
+  max-width: var(--os1-chat-icon-size) !important;
+  max-height: var(--os1-chat-icon-size) !important;
 }
 
-/* OS1 主题下图标颜色优化 */
-:root[data-os-theme="os1"] .chat-messages-meta button svg {
+/* 伪元素 - 确保没有圆形背景 */
+:root[data-os-theme="os1"] .chat-messages-meta button::before,
+:root[data-os-theme="os1"] .chat-messages-meta button::after,
+:root[data-os-theme="os1"] .chat-messages-meta [role="button"] button::before,
+:root[data-os-theme="os1"] .chat-messages-meta [role="button"] button::after,
+:root[data-os-theme="os1"] .chat-messages-meta [data-radix-tooltip-trigger] button::before,
+:root[data-os-theme="os1"] .chat-messages-meta [data-radix-tooltip-trigger] button::after,
+:root[data-os-theme="os1"] .os1-chat-meta-icon-button::before,
+:root[data-os-theme="os1"] .os1-chat-meta-icon-button::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* TooltipTrigger 包装器 - 确保透明无边框 */
+:root[data-os-theme="os1"] .chat-messages-meta [data-radix-tooltip-trigger],
+:root[data-os-theme="os1"] .chat-messages-meta [role="button"],
+:root[data-os-theme="os1"] .chat-messages-meta [data-radix-tooltip-trigger] button,
+:root[data-os-theme="os1"] .chat-messages-meta [role="button"] button {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-width: 0 !important;
+  border-style: none !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  outline: none !important;
+  outline-width: 0 !important;
+}
+
+/* 图标 SVG 样式 - 使用变量 */
+:root[data-os-theme="os1"] .chat-messages-meta button svg,
+:root[data-os-theme="os1"] .chat-messages-meta button .sf-symbol,
+:root[data-os-theme="os1"] .chat-messages-meta button .sf-symbol svg,
+:root[data-os-theme="os1"] .os1-chat-meta-icon-button svg,
+:root[data-os-theme="os1"] .os1-chat-meta-icon-button .sf-symbol,
+:root[data-os-theme="os1"] .os1-chat-meta-icon-button .sf-symbol svg {
   stroke-width: 1.5 !important;
-}
-
-/* OS1 主题下图标按钮的激活状态 */
-:root[data-os-theme="os1"] .chat-messages-meta button:active {
-  transform: scale(0.95) !important;
+  width: var(--os1-chat-icon-size) !important;
+  height: var(--os1-chat-icon-size) !important;
+  max-width: var(--os1-chat-icon-size) !important;
+  max-height: var(--os1-chat-icon-size) !important;
+  min-width: var(--os1-chat-icon-size) !important;
+  min-height: var(--os1-chat-icon-size) !important;
 }
 
 /* OS1 主题下 chat 头像 emoji - 覆盖全局字体大小限制 */
