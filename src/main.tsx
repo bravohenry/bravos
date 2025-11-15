@@ -1,8 +1,9 @@
-import React, { Suspense, lazy } from "react";
+import React from "react";
 import ReactDOM from "react-dom/client";
 import { App } from "./App";
 import "./index.css";
 import { useThemeStore } from "./stores/useThemeStore";
+import { Analytics } from "@vercel/analytics/react";
 
 // Hydrate theme from localStorage before rendering
 try {
@@ -10,17 +11,6 @@ try {
 } catch (error) {
   console.error("主题初始化失败:", error);
 }
-
-// 动态导入 Analytics，失败时不影响主应用
-const Analytics = lazy(() =>
-  import("@vercel/analytics/react")
-    .then((module) => ({ default: module.Analytics }))
-    .catch(() => {
-      // 如果 Analytics 加载失败（通常是被广告拦截器阻止），返回一个空组件
-      console.warn("Analytics 被内容拦截器阻止，已跳过加载");
-      return { default: () => null };
-    })
-);
 
 // 检查 root 元素是否存在
 const rootElement = document.getElementById("root");
@@ -37,9 +27,7 @@ try {
   root.render(
     <React.StrictMode>
       <App />
-      <Suspense fallback={null}>
-        <Analytics />
-      </Suspense>
+      <Analytics />
     </React.StrictMode>
   );
   

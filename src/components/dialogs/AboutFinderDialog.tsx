@@ -266,104 +266,160 @@ export function AboutFinderDialog({
                   }
             }
           >
-            {memoryUsage.map((app, index) =>
-              isOS1Theme ? (
+            {memoryUsage.map((app, index) => (
+              <div
+                key={index}
+                style={
+                  isOS1Theme
+                    ? {
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "14px",
+                      }
+                    : {
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                      }
+                }
+              >
                 <div
-                  key={index}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "14px",
-                  }}
+                  style={
+                    isOS1Theme
+                      ? {
+                          display: "flex",
+                          alignItems: "baseline",
+                          width: "180px",
+                          gap: "8px",
+                        }
+                      : {
+                          display: "flex",
+                          alignItems: "baseline",
+                          width: "160px",
+                          gap: "8px",
+                        }
+                  }
+                >
+                  <span
+                    style={
+                      isOS1Theme
+                        ? {
+                            fontFamily: "var(--os-font-ui)",
+                            fontSize: "12px",
+                            color: "var(--os-color-text-primary)",
+                            fontWeight: 500,
+                            flex: 1,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }
+                        : isXpTheme
+                        ? {
+                            fontFamily: '"Pixelated MS Sans Serif", Arial',
+                            fontSize: "10px",
+                            flex: 1,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }
+                        : {
+                            fontFamily: "var(--font-geneva-12)",
+                            fontSize: "10px",
+                            flex: 1,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }
+                    }
+                  >
+                    {app.name}
+                  </span>
+                  <span
+                    style={
+                      isOS1Theme
+                        ? {
+                            fontFamily: "var(--os-font-ui)",
+                            fontSize: "12px",
+                            color: "var(--os-color-text-secondary)",
+                            minWidth: "58px",
+                            textAlign: "right",
+                          }
+                        : isXpTheme
+                        ? {
+                            fontFamily: '"Pixelated MS Sans Serif", Arial',
+                            fontSize: "10px",
+                            minWidth: "50px",
+                            textAlign: "right",
+                          }
+                        : {
+                            fontFamily: "var(--font-geneva-12)",
+                            fontSize: "10px",
+                            minWidth: "50px",
+                            textAlign: "right",
+                          }
+                    }
+                  >
+                    {app.memoryMB.toFixed(1)} MB
+                  </span>
+                </div>
+                <div
+                  className={
+                    currentTheme === "macosx" && !isOS1Theme
+                      ? "aqua-progress flex-1 h-2 rounded"
+                      : undefined
+                  }
+                  style={
+                    isOS1Theme
+                      ? {
+                          flexGrow: 1,
+                          height: "6px",
+                          borderRadius: "999px",
+                          backgroundColor: "rgba(0, 0, 0, 0.1)",
+                        }
+                      : currentTheme === "macosx"
+                      ? {
+                          flexGrow: 1,
+                        }
+                      : {
+                          flexGrow: 1,
+                          height: "8px",
+                          borderRadius: "4px",
+                          backgroundColor: "#e5e5e5",
+                        }
+                  }
                 >
                   <div
-                    style={{
-                      display: "flex",
-                      alignItems: "baseline",
-                      width: "180px",
-                      gap: "8px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontFamily: "var(--os-font-ui)",
-                        fontSize: "12px",
-                        color: "var(--os-color-text-primary)",
-                        fontWeight: 500,
-                        flex: 1,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {app.name}
-                    </span>
-                    <span
-                      style={{
-                        fontFamily: "var(--os-font-ui)",
-                        fontSize: "12px",
-                        color: "var(--os-color-text-secondary)",
-                        minWidth: "58px",
-                        textAlign: "right",
-                      }}
-                    >
-                      {app.memoryMB.toFixed(1)} MB
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      flexGrow: 1,
-                      height: "6px",
-                      borderRadius: "999px",
-                      backgroundColor: "rgba(0, 0, 0, 0.1)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: `${app.percentage}%`,
-                        maxWidth: "100%",
-                        height: "100%",
-                        borderRadius: "999px",
-                        backgroundColor: "var(--os-color-traffic-light-close)",
-                        transition: "width 0.2s ease",
-                      }}
-                    />
-                  </div>
+                    className={
+                      currentTheme === "macosx" && !isOS1Theme
+                        ? "aqua-progress-fill h-full rounded transition-all duration-200"
+                        : undefined
+                    }
+                    style={
+                      isOS1Theme
+                        ? {
+                            width: `${app.percentage}%`,
+                            maxWidth: "100%",
+                            height: "100%",
+                            borderRadius: "999px",
+                            backgroundColor: "var(--os-color-traffic-light-close)",
+                            transition: "width 0.2s ease",
+                          }
+                        : currentTheme === "macosx"
+                        ? {
+                            width: `${app.percentage}%`,
+                          }
+                        : {
+                            width: `${app.percentage}%`,
+                            height: "100%",
+                            borderRadius: "4px",
+                            backgroundColor: "#3b82f6",
+                            transition: "width 0.2s ease",
+                          }
+                    }
+                  />
                 </div>
-              ) : (
-                <div
-                  className="flex flex-col gap-1"
-                  key={index}
-                >
-                  <div className="flex justify-between items-center w-full">
-                    <div className="w-1/2 truncate">{app.name}</div>
-                    <div className="w-1/3 text-right">
-                      {app.memoryMB.toFixed(1)} MB
-                    </div>
-                  </div>
-                  <div
-                    className={cn(
-                      "h-2 w-full rounded",
-                      currentTheme === "macosx"
-                        ? "aqua-progress"
-                        : "bg-gray-200"
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "h-full transition-all duration-200 rounded",
-                        currentTheme === "macosx"
-                          ? "aqua-progress-fill"
-                          : "bg-blue-500"
-                      )}
-                      style={{
-                        width: `${app.percentage}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              )
-            )}
+              </div>
+            ))}
           </div>
 
           {/* 底部信息区域 - 仅在 OS1 主题显示 */}

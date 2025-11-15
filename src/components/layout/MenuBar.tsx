@@ -16,6 +16,7 @@ import { StartMenu } from "./StartMenu";
 import { useAppStoreShallow } from "@/stores/helpers";
 import { Slider } from "@/components/ui/slider";
 import { Volume1, Volume2, VolumeX, Settings, ChevronUp } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { useSound, Sounds } from "@/hooks/useSound";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { getAppIconPath, appRegistry } from "@/config/appRegistry";
@@ -456,12 +457,12 @@ function VolumeControl() {
 
   const getVolumeIcon = () => {
     if (masterVolume === 0) {
-      return <VolumeX className="h-5 w-5" />;
+      return <Icon icon={VolumeX} name="VolumeX" className="h-5 w-5" />;
     }
     if (masterVolume < 0.5) {
-      return <Volume1 className="h-5 w-5" />;
+      return <Icon icon={Volume1} name="Volume1" className="h-5 w-5" />;
     }
-    return <Volume2 className="h-5 w-5" />;
+    return <Icon icon={Volume2} name="Volume2" className="h-5 w-5" />;
   };
 
   return (
@@ -510,7 +511,7 @@ function VolumeControl() {
             setIsDropdownOpen(false);
           }}
         >
-          <Settings className="h-4 w-4" />
+          <Icon icon={Settings} name="Settings" className="h-4 w-4" />
         </Button>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -867,7 +868,7 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
                       }
                     }}
                   >
-                    <ChevronUp className="h-4 w-4" />
+                    <Icon icon={ChevronUp} name="ChevronUp" className="h-4 w-4" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent

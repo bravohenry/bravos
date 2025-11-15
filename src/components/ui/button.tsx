@@ -215,12 +215,49 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       );
     }
 
+    // OS1 主题：default variant 按钮使用 os1-button 类名机制
+    // 参考 macOS 主题的 .aqua-button 实现方式
+    if (isOS1Theme && variant === "default") {
+      // 检测是否为 chat 提交按钮
+      // 条件：包含 os1-chat-submit 类名，或者是 chat-input 中的 submit 按钮
+      const isChatSubmit =
+        className?.includes("os1-chat-submit") ||
+        (props.type === "submit" && className?.includes("chat-input"));
+      const os1ButtonClass = isChatSubmit
+        ? "os1-button-chat-submit"
+        : "os1-button";
+
+      return (
+        <Comp
+          className={cn(os1ButtonClass, className)}
+          ref={ref}
+          style={{ position: "relative", zIndex: 1, ...props.style }}
+          {...props}
+          onClick={handleClick}
+        />
+      );
+    }
+
+    // OS1 主题：secondary variant 按钮使用 os1-button secondary 类名
+    if (isOS1Theme && variant === "secondary") {
+      return (
+        <Comp
+          className={cn("os1-button secondary", className)}
+          ref={ref}
+          style={{ position: "relative", zIndex: 1, ...props.style }}
+          {...props}
+          onClick={handleClick}
+        />
+      );
+    }
+
     // For OS1 theme with ghost variant, ensure completely transparent
     if (isOS1Theme && variant === "ghost") {
       return (
         <Comp
           className={cn(
             buttonVariants({ variant, size }),
+            "os1-button-ghost",
             "!border-none !bg-transparent !shadow-none !outline-none",
             "focus-visible:ring-0 focus-visible:outline-none",
             "[background:transparent!important] [box-shadow:none!important] [border:none!important] [outline:none!important]",
