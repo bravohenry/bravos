@@ -73,6 +73,10 @@ export function WindowFrame({
   const [isOpen, setIsOpen] = useState(true);
   const [isVisible, setIsVisible] = useState(true);
   const [isInitialMount, setIsInitialMount] = useState(true);
+  const [isMinimizing, setIsMinimizing] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const windowRef = useRef<HTMLDivElement>(null);
+  const previousMinimizedStateRef = useRef<boolean | undefined>(undefined);
   const { bringToForeground } = useAppContext();
   const {
     bringInstanceToForeground,
@@ -154,6 +158,12 @@ export function WindowFrame({
     return () => clearTimeout(timer);
   }, []); // Play sound when component mounts
 
+  // 获取当前实例的最小化状态
+  const currentInstance = useAppStoreShallow((state) =>
+    instanceId ? state.instances[instanceId] : null
+  );
+  const isMinimized = currentInstance?.isMinimized ?? false;
+
   const handleTransitionEnd = useCallback(
     (e: React.TransitionEvent) => {
       if (
@@ -193,6 +203,170 @@ export function WindowFrame({
     playWindowClose();
     setIsOpen(false);
   }, [vibrateClose, playWindowClose, setIsOpen]);
+
+  // 处理窗口最小化动画（类似 macOS Genie 效果）
+  const handleMinimize = useCallback(() => {
+    if (!instanceId || isMinimizing) return;
+
+    setIsMinimizing(true);
+    playWindowCollapse();
+
+    // 获取窗口当前位置和大小
+    const windowRect = windowRef.current?.getBoundingClientRect();
+    if (!windowRect) {
+      // 如果无法获取位置，直接最小化
+      minimizeInstance(instanceId);
+      setIsMinimizing(false);
+      return;
+    }
+
+    // 计算 Dock 的位置
+    // OS1 主题：Dock 在底部 12px，图标大小约 68px，中心在底部 12 + 34 = 46px
+    // macOS 主题：Dock 在底部 0px，图标大小约 58px，中心在底部 29px
+    const isOS1Theme = currentTheme === "os1";
+    const dockIconSize = isOS1Theme ? 68 : 58;
+    const dockBottomOffset = isOS1Theme ? 12 : 0;
+    const dockY = window.innerHeight - dockBottomOffset - dockIconSize / 2;
+    const dockX = window.innerWidth / 2; // 屏幕中央
+
+    // 窗口中心点
+    const startX = windowRect.left + windowRect.width / 2;
+    const startY = windowRect.top + windowRect.height / 2;
+
+    // 计算需要移动的距离
+    const deltaX = dockX - startX;
+    const deltaY = dockY - startY;
+
+    // macOS Genie 效果：先稍微向上，然后向下折叠
+    const finalScale = 0.05; // 缩小到 5%
+
+    // 设置 transform origin 为窗口中心
+    const originX = windowRect.width / 2;
+    const originY = windowRect.height / 2;
+
+    // 使用 requestAnimationFrame 确保样式更新
+    requestAnimationFrame(() => {
+      if (windowRef.current) {
+        // 使用流畅的 cubic-bezier 缓动函数，模拟 macOS 的 Genie 效果
+        // cubic-bezier(0.25, 0.1, 0.25, 1) 提供流畅的加速和减速，类似 macOS 的动画曲线
+        // 缩短总时长到 350ms，让动画更快速流畅
+        const animationDuration = "0.35s";
+        const easing = "cubic-bezier(0.25, 0.1, 0.25, 1)"; // 流畅的缓动曲线，类似 macOS
+        
+        windowRef.current.style.transition = `transform ${animationDuration} ${easing}, opacity ${animationDuration} ${easing}`;
+        windowRef.current.style.transformOrigin = `${originX}px ${originY}px`;
+        
+        // 使用单步动画，直接完成整个折叠过程
+        // 通过调整 translate 的 Y 值来模拟先向上再向下的效果
+        // 使用稍微向上的偏移来模拟 Genie 效果的弹跳
+        const upwardOffset = -15; // 减少向上偏移，让动画更流畅
+        
+        // 直接设置最终状态，让 CSS transition 处理整个动画
+        requestAnimationFrame(() => {
+          if (windowRef.current) {
+            windowRef.current.style.transform = `translate(${deltaX}px, ${deltaY + upwardOffset}px) scale(${finalScale})`;
+            windowRef.current.style.opacity = "0";
+          }
+        });
+      }
+    });
+
+    // 动画完成后调用最小化（350ms + 50ms 缓冲）
+    setTimeout(() => {
+      if (windowRef.current) {
+        // 清理动画样式
+        windowRef.current.style.transition = "";
+        windowRef.current.style.transform = "";
+        windowRef.current.style.opacity = "";
+        windowRef.current.style.transformOrigin = "";
+      }
+      // 延迟一帧再调用最小化，确保样式已清理
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          minimizeInstance(instanceId);
+          setIsMinimizing(false);
+        });
+      });
+    }, 400); // 350ms 动画 + 50ms 缓冲
+  }, [instanceId, isMinimizing, playWindowCollapse, minimizeInstance, currentTheme]);
+
+  // 处理窗口恢复动画（从 Dock 弹回原位置）
+  const handleRestore = useCallback(() => {
+    if (!instanceId || isRestoring || !windowRef.current) return;
+
+    setIsRestoring(true);
+    playWindowOpen();
+
+    // 计算 Dock 的位置（与最小化时相同）
+    const isOS1Theme = currentTheme === "os1";
+    const dockIconSize = isOS1Theme ? 68 : 58;
+    const dockBottomOffset = isOS1Theme ? 12 : 0;
+    const dockY = window.innerHeight - dockBottomOffset - dockIconSize / 2;
+    const dockX = window.innerWidth / 2;
+
+    // 获取窗口目标位置和大小
+    const windowRect = windowRef.current.getBoundingClientRect();
+    const targetX = windowRect.left + windowRect.width / 2;
+    const targetY = windowRect.top + windowRect.height / 2;
+
+    // 计算从 Dock 到窗口的移动距离
+    const deltaX = targetX - dockX;
+    const deltaY = targetY - dockY;
+
+    // 设置 transform origin 为窗口中心
+    const originX = windowRect.width / 2;
+    const originY = windowRect.height / 2;
+
+    // 先设置窗口在 Dock 位置（缩小状态）
+    if (windowRef.current) {
+      windowRef.current.style.transition = "none";
+      windowRef.current.style.transformOrigin = `${originX}px ${originY}px`;
+      windowRef.current.style.transform = `translate(${-deltaX}px, ${-deltaY}px) scale(0.05)`;
+      windowRef.current.style.opacity = "0";
+    }
+
+    // 然后动画回到原位置
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (windowRef.current) {
+          // 反向动画：从 Dock 弹回，使用流畅的缓动曲线
+          // 缩短时长到 350ms，与最小化动画保持一致
+          windowRef.current.style.transition = "transform 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.35s ease-out";
+          windowRef.current.style.transform = "translate(0, 0) scale(1)";
+          windowRef.current.style.opacity = "1";
+        }
+
+        // 动画完成后清理
+        setTimeout(() => {
+          if (windowRef.current) {
+            windowRef.current.style.transition = "";
+            windowRef.current.style.transform = "";
+            windowRef.current.style.opacity = "";
+            windowRef.current.style.transformOrigin = "";
+          }
+          setIsRestoring(false);
+        }, 350);
+      });
+    });
+  }, [instanceId, isRestoring, playWindowOpen, currentTheme]);
+
+  // 检测从最小化状态恢复
+  useEffect(() => {
+    // 初始化 previousMinimizedStateRef
+    if (previousMinimizedStateRef.current === undefined) {
+      previousMinimizedStateRef.current = isMinimized;
+      return;
+    }
+    
+    // 如果之前是最小化状态，现在不是，且不在恢复动画中，则触发恢复动画
+    if (previousMinimizedStateRef.current && !isMinimized && !isRestoring && instanceId && windowRef.current) {
+      // 延迟一帧确保窗口已渲染
+      requestAnimationFrame(() => {
+        handleRestore();
+      });
+    }
+    previousMinimizedStateRef.current = isMinimized;
+  }, [isMinimized, isRestoring, instanceId, handleRestore]);
 
   // Expose performClose to parent component through a custom event (only for intercepted closes)
   useEffect(() => {
@@ -537,7 +711,9 @@ export function WindowFrame({
     };
   }, []);
 
-  if (!isVisible) return null;
+  // 如果窗口正在最小化动画中，仍然渲染（等待动画完成）
+  // 如果窗口已最小化且不在恢复动画中，不渲染
+  if (!isVisible || (isMinimized && !isMinimizing && !isRestoring)) return null;
 
   // Calculate dynamic style for swipe animation feedback
   const getSwipeStyle = () => {
@@ -555,16 +731,17 @@ export function WindowFrame({
 
   return (
     <div
+      ref={windowRef}
       className={cn(
         "absolute p-2 md:p-0 w-full md:h-full md:mt-0 select-none",
         "transition-all duration-200 ease-in-out",
         isInitialMount && "animate-in fade-in-0 zoom-in-95 duration-200",
         isShaking && "animate-shake",
-        // Disable all pointer events when window is closing
-        !isOpen && "pointer-events-none"
+        // Disable all pointer events when window is closing, minimizing, or restoring
+        (!isOpen || isMinimizing || isRestoring) && "pointer-events-none"
       )}
       onClick={() => {
-        if (!isForeground) {
+        if (!isForeground && !isMinimizing && !isRestoring) {
           if (instanceId) {
             bringInstanceToForeground(instanceId);
           } else {
@@ -583,9 +760,11 @@ export function WindowFrame({
         minHeight: mergedConstraints.minHeight,
         maxWidth: mergedConstraints.maxWidth || undefined,
         maxHeight: mergedConstraints.maxHeight || undefined,
-        transition: isDragging || resizeType ? "none" : undefined,
-        transform: !isInitialMount && !isOpen ? "scale(0.95)" : undefined,
-        opacity: !isInitialMount && !isOpen ? 0 : undefined,
+        // 在最小化或恢复动画期间，禁用默认 transition，使用动画函数中的样式
+        transition: isDragging || resizeType || isMinimizing || isRestoring ? "none" : undefined,
+        // 只有在非最小化/恢复状态下才应用关闭动画
+        transform: !isInitialMount && !isOpen && !isMinimizing && !isRestoring ? "scale(0.95)" : undefined,
+        opacity: !isInitialMount && !isOpen && !isMinimizing && !isRestoring ? 0 : undefined,
         transformOrigin: "center",
       }}
     >
@@ -821,8 +1000,7 @@ export function WindowFrame({
                   onClick={(e) => {
                     e.stopPropagation();
                     if (instanceId) {
-                      playWindowCollapse();
-                      minimizeInstance(instanceId);
+                      handleMinimize();
                     }
                   }}
                   onMouseDown={(e) => e.stopPropagation()}
@@ -933,8 +1111,7 @@ export function WindowFrame({
                   onClick={(e) => {
                     e.stopPropagation();
                     if (instanceId) {
-                      playWindowCollapse();
-                      minimizeInstance(instanceId);
+                      handleMinimize();
                     }
                   }}
                   onMouseDown={(e) => e.stopPropagation()}
@@ -1094,8 +1271,7 @@ export function WindowFrame({
                   onClick={(e) => {
                     e.stopPropagation();
                     if (instanceId) {
-                      playWindowCollapse();
-                      minimizeInstance(instanceId);
+                      handleMinimize();
                     }
                   }}
                   onMouseDown={(e) => e.stopPropagation()}

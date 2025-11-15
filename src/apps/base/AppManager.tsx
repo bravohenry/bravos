@@ -338,7 +338,9 @@ export function AppManager({ apps }: AppManagerProps) {
       <Dock />
       {/* App Instances */}
       {Object.values(instances).map((instance) => {
-        if (!instance.isOpen || instance.isMinimized) return null;
+        // 允许最小化的窗口在动画期间仍然渲染（WindowFrame 会处理动画）
+        // WindowFrame 会在动画完成后隐藏窗口
+        if (!instance.isOpen) return null;
 
         const appId = instance.appId as AppId;
         const zIndex = getZIndexForInstance(instance.instanceId);

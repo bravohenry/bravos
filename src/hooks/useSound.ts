@@ -80,17 +80,16 @@ const OS1_SOUND_OVERRIDES: Partial<Record<keyof typeof Sounds, string>> = {
   BUTTON_CLICK: "/sounds/pop.mp3",
   MENU_OPEN: "/sounds/ping.mp3",
   MENU_CLOSE: "/sounds/tink.mp3",
-  WINDOW_OPEN: "/sounds/glass.mp3",
+  WINDOW_OPEN: "/sounds/vo-guideprogress.m4a",
   WINDOW_CLOSE: "/sounds/basso.mp3",
   WINDOW_EXPAND: "/sounds/hero.mp3",
   WINDOW_COLLAPSE: "/sounds/basso.mp3",
   CLICK: "/sounds/tink.mp3",
   VOLUME_CHANGE: "/sounds/ping.mp3",
-  // 窗口移动和调整大小声音 - 使用 Dwell Control 和 VoiceOver 声音
-  WINDOW_MOVE_MOVING: "/sounds/dwell-activate.m4a",    // Dwell Control 激活声，适合每 300ms 重复播放
-  WINDOW_MOVE_STOP: "/sounds/vo-guidesuccess.m4a",     // VoiceOver 引导成功声，适合移动停止
+  // 窗口移动和调整大小声音 - 使用 Dwell Control 声音
+  WINDOW_MOVE_MOVING: "/sounds/dwell-activate.m4a",    // Dwell Control 激活声，适合重复快速播放
   WINDOW_RESIZE_RESIZING: "/sounds/dwell-activate.m4a", // 与移动中一致
-  WINDOW_RESIZE_STOP: "/sounds/vo-guidesuccess.m4a",    // 与移动停止一致
+  // 注意：WINDOW_MOVE_STOP 和 WINDOW_RESIZE_STOP 在 OS1 主题下不使用（不播放声音）
 };
 
 // 根据当前主题获取正确的声音路径

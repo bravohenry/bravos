@@ -122,9 +122,7 @@ export const useWindowManager = ({
   }, [currentTheme, isXpTheme, getSafeAreaBottomInset]);
 
   const { play: playMoveMoving } = useSound(Sounds.WINDOW_MOVE_MOVING);
-  const { play: playMoveStop } = useSound(Sounds.WINDOW_MOVE_STOP);
   const { play: playResizeResizing } = useSound(Sounds.WINDOW_RESIZE_RESIZING);
-  const { play: playResizeStop } = useSound(Sounds.WINDOW_RESIZE_STOP);
 
   const moveAudioRef = useRef<NodeJS.Timeout | null>(null);
   const resizeAudioRef = useRef<NodeJS.Timeout | null>(null);
@@ -237,7 +235,7 @@ export const useWindowManager = ({
         // Start playing move sound in a loop when actual movement starts
         if (!moveAudioRef.current && !isMobile) {
           playMoveMoving();
-          moveAudioRef.current = setInterval(playMoveMoving, 300);
+          moveAudioRef.current = setInterval(playMoveMoving, 200);
         }
 
         if (isMobile) {
@@ -336,7 +334,7 @@ export const useWindowManager = ({
           (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2)
         ) {
           playResizeResizing();
-          resizeAudioRef.current = setInterval(playResizeResizing, 300);
+          resizeAudioRef.current = setInterval(playResizeResizing, 200);
         }
       }
     };
@@ -349,11 +347,10 @@ export const useWindowManager = ({
         } else {
           updateWindowState(appId, windowPosition, windowSize);
         }
-        // Stop move sound loop and play stop sound
+        // Stop move sound loop
         if (moveAudioRef.current) {
           clearInterval(moveAudioRef.current);
           moveAudioRef.current = null;
-          playMoveStop();
         }
       }
       if (resizeType) {
@@ -363,11 +360,10 @@ export const useWindowManager = ({
         } else {
           updateWindowState(appId, windowPosition, windowSize);
         }
-        // Stop resize sound loop and play stop sound
+        // Stop resize sound loop
         if (resizeAudioRef.current) {
           clearInterval(resizeAudioRef.current);
           resizeAudioRef.current = null;
-          playResizeStop();
         }
       }
     };
@@ -401,14 +397,15 @@ export const useWindowManager = ({
     windowSize,
     appId,
     isMobile,
-    playMoveStop,
-    playResizeStop,
     config,
     getSafeAreaBottomInset,
     updateWindowState,
     updateInstanceWindowState,
     instanceId,
     isXpTheme,
+    playMoveMoving,
+    playResizeResizing,
+    computeInsets,
   ]);
 
   return {
