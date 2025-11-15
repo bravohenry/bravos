@@ -2,6 +2,8 @@ import { Mic, Loader2 } from "lucide-react";
 import { useAudioTranscription } from "@/hooks/useAudioTranscription";
 import { AudioBars } from "./audio-bars";
 import { forwardRef, useEffect } from "react";
+import { useThemeStore } from "@/stores/useThemeStore";
+import { Icon } from "@/components/shared/Icon";
 
 interface AudioInputButtonProps {
   onTranscriptionComplete: (text: string) => void;
@@ -27,6 +29,8 @@ export const AudioInputButton = forwardRef<
     },
     ref
   ) => {
+    const currentTheme = useThemeStore((state) => state.current);
+    const isOS1Theme = currentTheme === "os1";
     const {
       isRecording,
       frequencies,
@@ -62,15 +66,15 @@ export const AudioInputButton = forwardRef<
           disabled={isLoading}
         >
           {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Icon icon={Loader2} name="Loader2" className="h-4 w-4 animate-spin" />
           ) : isRecording ? (
             <AudioBars
               frequencies={frequencies}
-              color="black"
+              color={isOS1Theme ? "rgb(156, 163, 175)" : "black"}
               isSilent={isSilent}
             />
           ) : (
-            <Mic className="h-4 w-4" />
+            <Icon icon={Mic} name="Mic" className="h-4 w-4" />
           )}
         </button>
       </div>

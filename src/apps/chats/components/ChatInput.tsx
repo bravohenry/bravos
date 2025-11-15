@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ArrowUp, Square, Hand, AtSign } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { motion, AnimatePresence } from "framer-motion";
 import { AudioInputButton } from "@/components/ui/audio-input-button";
 import { useChatSynth } from "@/hooks/useChatSynth";
@@ -314,7 +315,7 @@ export function ChatInput({
             }
             onSubmit(e);
           }}
-          className={`flex ${isMacTheme || isOS1Theme ? "gap-2" : "gap-1"}`}
+          className={`chat-input flex ${isMacTheme || isOS1Theme ? "gap-2" : "gap-1"}`}
         >
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.div
@@ -391,13 +392,15 @@ export function ChatInput({
                             onClick={handleNudgeClick}
                             className={`w-[22px] h-[22px] flex items-center justify-center ${
                               isMacTheme || isOS1Theme
-                                ? "text-neutral-400 hover:text-neutral-800 transition-colors"
+                                ? isOS1Theme
+                                  ? "text-gray-400 hover:text-gray-500 transition-colors os1-chat-input-icon-button"
+                                  : "text-neutral-400 hover:text-neutral-800 transition-colors"
                                 : ""
                             }`}
                             disabled={isLoading}
                             aria-label="Send a Nudge"
                           >
-                            <Hand className="h-4 w-4 -rotate-40" />
+                            <Icon icon={Hand} name="Hand" className="h-4 w-4 -rotate-40" />
                           </button>
                         </div>
                       </TooltipTrigger>
@@ -417,13 +420,15 @@ export function ChatInput({
                             onClick={handleMentionClick}
                             className={`w-[22px] h-[22px] flex items-center justify-center ${
                               isMacTheme || isOS1Theme
-                                ? "text-neutral-400 hover:text-neutral-800 transition-colors"
+                                ? isOS1Theme
+                                  ? "text-gray-400 hover:text-gray-500 transition-colors os1-chat-input-icon-button"
+                                  : "text-neutral-400 hover:text-neutral-800 transition-colors"
                                 : ""
                             }`}
                             disabled={isLoading}
                             aria-label="Mention Zi"
                           >
-                            <AtSign className="h-4 w-4" />
+                            <Icon icon={AtSign} name="AtSign" className="h-4 w-4" />
                           </button>
                         </div>
                       </TooltipTrigger>
@@ -446,7 +451,9 @@ export function ChatInput({
                           silenceThreshold={1200}
                           className={`w-[22px] h-[22px] flex items-center justify-center ${
                             isMacTheme || isOS1Theme
-                              ? "text-neutral-400 hover:text-neutral-800 transition-colors"
+                              ? isOS1Theme
+                                ? "text-gray-400 hover:text-gray-500 transition-colors os1-chat-input-icon-button"
+                                : "text-neutral-400 hover:text-neutral-800 transition-colors"
                               : ""
                           }`}
                         />
@@ -533,7 +540,9 @@ export function ChatInput({
                       />
                     </>
                   )}
-                  <Square
+                  <Icon
+                    icon={Square}
+                    name="Square"
                     className={`h-4 w-4 ${
                       isMacTheme || isOS1Theme
                         ? isOS1Theme
@@ -566,22 +575,16 @@ export function ChatInput({
                       : isXpTheme
                       ? "text-black"
                       : "bg-black hover:bg-black/80 text-white border-2 border-gray-800"
-                  }`}
+                  } ${isOS1Theme ? "os1-chat-submit chat-input" : ""}`}
                   style={
-                    isMacTheme || isOS1Theme
-                      ? isOS1Theme
-                        ? {
-                            background: "rgba(0, 122, 255, 0.9)",
-                            boxShadow: "0 2px 8px rgba(0, 122, 255, 0.3), 0 1px 2px rgba(0,0,0,0.2)",
-                            backdropFilter: "blur(10px)",
-                          }
-                        : {
-                            background:
-                              "linear-gradient(rgba(217, 249, 157, 0.9), rgba(190, 227, 120, 0.9))",
-                            boxShadow:
-                              "0 2px 3px rgba(0,0,0,0.2), 0 1px 1px rgba(0,0,0,0.3), inset 0 0 0 0.5px rgba(0,0,0,0.3), inset 0 1px 2px rgba(0,0,0,0.4), inset 0 2px 3px 1px rgba(217, 249, 157, 0.5)",
-                            backdropFilter: "blur(2px)",
-                          }
+                    isMacTheme && !isOS1Theme
+                      ? {
+                          background:
+                            "linear-gradient(rgba(217, 249, 157, 0.9), rgba(190, 227, 120, 0.9))",
+                          boxShadow:
+                            "0 2px 3px rgba(0,0,0,0.2), 0 1px 1px rgba(0,0,0,0.3), inset 0 0 0 0.5px rgba(0,0,0,0.3), inset 0 1px 2px rgba(0,0,0,0.4), inset 0 2px 3px 1px rgba(217, 249, 157, 0.5)",
+                          backdropFilter: "blur(2px)",
+                        }
                       : {}
                   }
                   disabled={isLoading}
@@ -618,16 +621,19 @@ export function ChatInput({
                       />
                     </>
                   )}
-                  <ArrowUp
+                  <Icon
+                    icon={ArrowUp}
+                    name="ArrowUp"
                     className={`h-6 w-6 ${
                       isMacTheme || isOS1Theme
                         ? isOS1Theme
-                          ? "text-white relative z-10"
+                          ? "text-gray-400 hover:text-gray-500 relative z-10"
                           : "text-black/70 relative z-10"
                         : isXpTheme
                         ? "text-black"
                         : ""
                     }`}
+                    style={isOS1Theme ? { color: 'rgb(156, 163, 175)' } : undefined}
                   />
                 </Button>
               </motion.div>
