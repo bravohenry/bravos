@@ -129,10 +129,21 @@ const ALLOWED_ORIGINS = new Set([
 ]);
 
 // Function to validate request origin
-// Only allow explicit origins defined in ALLOWED_ORIGINS – no wildcard ports or IP fallbacks
+// Allow explicit origins defined in ALLOWED_ORIGINS, or any localhost port
 const isValidOrigin = (origin: string | null): boolean => {
   if (!origin) return false;
-  return ALLOWED_ORIGINS.has(origin);
+  // Check explicit allowed origins
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  // Allow any localhost port number
+  try {
+    const url = new URL(origin);
+    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+      return true;
+    }
+  } catch {
+    // Invalid URL, fall through to return false
+  }
+  return false;
 };
 
 // Allow streaming responses up to 60 seconds
@@ -1064,7 +1075,7 @@ export default async function handler(req: Request) {
         },
       },
       temperature: 0.7,
-      maxOutputTokens: 32000, // Increased from 6000 to prevent code generation cutoff
+      maxOutputTokens: 48000, // Increased from 6000 to prevent code generation cutoff
       stopWhen: stepCountIs(10), // Allow up to 10 steps for multi-tool workflows
       experimental_transform: smoothStream({
         chunking: /[\u4E00-\u9FFF]|\S+\s+/,

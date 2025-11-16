@@ -15,7 +15,7 @@ import { useChatsStore } from "@/stores/useChatsStore";
 import { useLaunchApp } from "@/hooks/useLaunchApp";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppletUpdates } from "../hooks/useAppletUpdates";
-import { useAppletActions } from "../utils/appletActions";
+import { useAppletActions, type Applet } from "../utils/appletActions";
 import { toast } from "sonner";
 import {
   APPLET_AUTH_BRIDGE_SCRIPT,
@@ -83,6 +83,29 @@ export function AppletViewerAppComponent({
   const { updateCount, updatesAvailable, checkForUpdates } = useAppletUpdates();
   const actions = useAppletActions();
 
+  // Check for update for a specific applet by shareId
+  const checkForAppletUpdate = useCallback(async (shareId: string) => {
+    try {
+      const response = await fetch("/api/share-applet?list=true");
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      const applet = (data.applets || []).find((a: Applet) => a.id === shareId);
+      
+      if (!applet) return null;
+      
+      // Check if update is needed using the same logic as AppStore
+      if (actions.isAppletInstalled(applet.id) && actions.needsUpdate(applet)) {
+        return applet;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("[AppletViewer] Error checking for applet update:", error);
+      return null;
+    }
+  }, [actions]);
+
   // Handler for checking updates
   const handleCheckForUpdates = useCallback(async () => {
     const result = await checkForUpdates();
@@ -120,6 +143,7 @@ export function AppletViewerAppComponent({
                     : `${updateCount} applets updated`,
                   {
                     id: loadingToastId,
+                    duration: 3000,
                   }
                 );
               } catch (error) {
@@ -166,6 +190,7 @@ export function AppletViewerAppComponent({
           : `${updateCount} applets updated`,
         {
           id: loadingToastId,
+          duration: 3000,
         }
       );
     } catch (error) {
@@ -460,6 +485,94 @@ export function AppletViewerAppComponent({
   }, [appletPath, htmlContent, loadedContent]);
 
   const fileItem = appletPath ? fileStore.getItem(appletPath) : undefined;
+
+  // Check for updates when applet window is launched (only once per applet)
+  const updateCheckedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!appletPath) return;
+    
+    // Check for updates asynchronously - wait for content to be loaded
+    const checkUpdate = async (retryCount: number = 0) => {
+      // Get fileItem directly from store to ensure we have the latest value
+      const currentFileItem = fileStore.getItem(appletPath);
+      const shareId = currentFileItem?.shareId;
+      if (!shareId) {
+        // If no shareId yet and we haven't exceeded max retries, try again
+        if (retryCount < 5) {
+          setTimeout(() => checkUpdate(retryCount + 1), 500);
+        }
+        return;
+      }
+      
+      // Skip if we've already checked for this applet in this session
+      if (updateCheckedRef.current.has(shareId)) return;
+      
+      // Mark as checked immediately to prevent duplicate checks
+      updateCheckedRef.current.add(shareId);
+      
+      const updateApplet = await checkForAppletUpdate(shareId);
+      
+      if (updateApplet) {
+        const appletName = updateApplet.title || updateApplet.name || "this applet";
+        toast.info("Applet update available", {
+          description: `${appletName} has an update available.`,
+          action: {
+            label: "Update",
+            onClick: async () => {
+              const loadingToastId = toast.loading("Updating applet...", {
+                duration: Infinity,
+              });
+
+              try {
+                await actions.handleInstall(updateApplet);
+                
+                // Reload the content after update
+                const updatedFileItem = fileStore.getItem(appletPath);
+                if (updatedFileItem?.uuid) {
+                  const contentData = await dbOperations.get<DocumentContent>(
+                    STORES.APPLETS,
+                    updatedFileItem.uuid
+                  );
+                  
+                  if (contentData?.content) {
+                    let contentStr: string;
+                    if (contentData.content instanceof Blob) {
+                      contentStr = await contentData.content.text();
+                    } else {
+                      contentStr = contentData.content;
+                    }
+                    setLoadedContent(contentStr);
+                  }
+                }
+
+                toast.success("Applet updated", {
+                  id: loadingToastId,
+                  duration: 3000,
+                });
+                
+                // Remove from checked set so we can check again if needed
+                updateCheckedRef.current.delete(shareId);
+              } catch (error) {
+                console.error("Error updating applet:", error);
+                toast.error("Failed to update applet", {
+                  description:
+                    error instanceof Error ? error.message : "Please try again later.",
+                  id: loadingToastId,
+                });
+                // Remove from checked set on error so user can retry
+                updateCheckedRef.current.delete(shareId);
+              }
+            },
+          },
+          duration: 8000,
+        });
+      }
+    };
+    
+    // Delay to ensure fileItem is loaded from store (especially when opening from Finder)
+    const timeoutId = setTimeout(() => checkUpdate(0), 1000);
+    return () => clearTimeout(timeoutId);
+  }, [appletPath, loadedContent, checkForAppletUpdate, actions, fileStore]);
   const { getAppletWindowSize, setAppletWindowSize } = useAppletStore();
   
   // Get saved size from file metadata first, fallback to applet store
@@ -1051,6 +1164,7 @@ export function AppletViewerAppComponent({
         description: data.updated 
           ? "Share link updated successfully." 
           : "Share link generated successfully.",
+        duration: 3000,
       });
     } catch (error) {
       console.error("Error sharing applet:", error);
@@ -1320,10 +1434,14 @@ export function AppletViewerAppComponent({
                   ref={iframeRef}
                   srcDoc={injectAppletAuthScript(ensureMacFonts(htmlContent))}
                   title={windowTitle}
-                  className="w-full h-full border-0"
+                  className="border-0"
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation allow-modals allow-pointer-lock allow-downloads allow-storage-access-by-user-activation"
                   style={{
                     display: "block",
+                    margin: 0,
+                    padding: 0,
+                    width: "calc(100% + 1px)",
+                    height: "calc(100% + 1px)",
                   }}
                   onLoad={() =>
                     sendAuthPayload(iframeRef.current?.contentWindow || null)

@@ -26,6 +26,15 @@
       "icon": "🧮",
       "status": "active",
       "shareId": "7bd837678200f4d81a7b79fcb9093b6a"
+    },
+    {
+      "name": "AI SimCity.app",
+      "path": "/Applets/AI SimCity.app",
+      "isDirectory": false,
+      "type": "html",
+      "icon": "🏙️",
+      "status": "active",
+      "shareId":"6ae75066f460730949db8221d5b27272"
     }
   ]
 }

@@ -167,8 +167,10 @@ const isZiOSHost = (hostHeader: string | null): boolean => {
   if (!hostHeader) return false;
   const normalized = hostHeader.toLowerCase();
   if (ALLOWED_HOSTS.has(normalized)) return true;
-  // Allow localhost without explicit port for some browsers/environments.
+  // Allow localhost with any port number
   if (normalized === "localhost" || normalized === "127.0.0.1") return true;
+  if (/^localhost:\d+$/.test(normalized)) return true;
+  if (/^127\.0\.0\.1:\d+$/.test(normalized)) return true;
   return false;
 };
 
