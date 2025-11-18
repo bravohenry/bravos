@@ -487,14 +487,6 @@ function TextEditContent({
     }
   };
 
-  const showUnsavedIndicator =
-    hasUnsavedChanges ||
-    (!currentFilePath &&
-      editor &&
-      (!editor.isEmpty ||
-        editor.getText().trim().length > 0 ||
-        editor.getHTML() !== "<p></p>"));
-
   const menuBar = (
     <TextEditMenuBar
       editor={editor}
