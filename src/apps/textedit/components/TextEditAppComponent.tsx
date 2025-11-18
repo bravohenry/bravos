@@ -532,7 +532,7 @@ function TextEditContent({
             ? `${removeFileExtension(currentFilePath.split("/").pop() || "")}${
                 hasUnsavedChanges ? " •" : ""
               }`
-            : `Untitled${showUnsavedIndicator ? " •" : ""}`)
+            : `Untitled${hasUnsavedChanges ? " •" : ""}`)
         }
         onClose={handleClose}
         isForeground={isForeground}
