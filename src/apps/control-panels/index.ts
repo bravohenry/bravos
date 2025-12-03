@@ -1,6 +1,3 @@
-import { BaseApp, ControlPanelsInitialData } from "../base/types";
-import { ControlPanelsAppComponent } from "./components/ControlPanelsAppComponent";
-
 export const helpItems = [
   {
     icon: "🎨",
@@ -29,6 +26,11 @@ export const helpItems = [
     description: "Export or restore all settings and files",
   },
   {
+    icon: "🌐",
+    title: "Language",
+    description: "Select your preferred language for ryOS interface",
+  },
+  {
     icon: "⚙️",
     title: "System",
     description: "Reset preferences or format the virtual file system",
@@ -45,18 +47,3 @@ export const appMetadata = {
   github: "https://github.com/bravohenry/bravos",
   icon: "/icons/control-panels/appearance-manager/app.png",
 };
-
-const app: BaseApp<ControlPanelsInitialData> = {
-  id: "control-panels",
-  name: "Control Panels",
-  icon: {
-    type: "image",
-    src: "/icons/control-panels/appearance-manager/app.png",
-  },
-  description: "System settings and configuration",
-  component: ControlPanelsAppComponent,
-  helpItems,
-  metadata: appMetadata,
-};
-
-export default app;

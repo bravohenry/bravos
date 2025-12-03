@@ -84,7 +84,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
       style={{
         fontFamily:
           currentTheme === "xp" || currentTheme === "win98"
-            ? '"Pixelated MS Sans Serif", Arial'
+            ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
             : currentTheme === "macosx"
             ? '"LucidaGrande", "Lucida Grande", "Hiragino Sans", "Hiragino Sans GB", "Heiti SC", "Lucida Sans Unicode", sans-serif'
             : undefined,
@@ -231,7 +231,7 @@ const DropdownMenuItem = React.forwardRef<
       )}
       style={{
         fontFamily: isXpTheme
-          ? '"Pixelated MS Sans Serif", Arial'
+          ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
           : isMacOSTheme
           ? '"LucidaGrande", "Lucida Grande", "Hiragino Sans", "Hiragino Sans GB", "Heiti SC", "Lucida Sans Unicode", sans-serif'
           : isOS1Theme
@@ -286,7 +286,7 @@ const DropdownMenuCheckboxItem = React.forwardRef<
       )}
       style={{
         fontFamily: isXpTheme
-          ? '"Pixelated MS Sans Serif", Arial'
+          ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
           : isMacOSTheme
           ? '"LucidaGrande", "Lucida Grande", "Hiragino Sans", "Hiragino Sans GB", "Heiti SC", "Lucida Sans Unicode", sans-serif'
           : undefined,
@@ -335,7 +335,7 @@ const DropdownMenuRadioItem = React.forwardRef<
       style={{
         fontFamily:
           currentTheme === "xp" || currentTheme === "win98"
-            ? '"Pixelated MS Sans Serif", Arial'
+            ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
             : currentTheme === "macosx"
             ? '"LucidaGrande", "Lucida Grande", "Hiragino Sans", "Hiragino Sans GB", "Heiti SC", "Lucida Sans Unicode", sans-serif'
             : undefined,
@@ -376,7 +376,7 @@ const DropdownMenuLabel = React.forwardRef<
       style={{
         fontFamily:
           currentTheme === "xp" || currentTheme === "win98"
-            ? '"Pixelated MS Sans Serif", Arial'
+            ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
             : currentTheme === "macosx"
             ? '"LucidaGrande", "Lucida Grande", "Hiragino Sans", "Hiragino Sans GB", "Heiti SC", "Lucida Sans Unicode", sans-serif'
             : undefined,

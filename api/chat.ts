@@ -12,7 +12,7 @@ import {
 } from "./utils/aiModels.js";
 import {
   CORE_PRIORITY_INSTRUCTIONS,
-  ZI_PERSONA_INSTRUCTIONS,
+  RYO_PERSONA_INSTRUCTIONS,
   ANSWER_STYLE_INSTRUCTIONS,
   CODE_GENERATION_INSTRUCTIONS,
   CHAT_INSTRUCTIONS,
@@ -28,6 +28,7 @@ import {
   AI_LIMIT_PER_5_HOURS,
   } from "./utils/rate-limit.js";
 import { Redis } from "@upstash/redis";
+import { getEffectiveOrigin, isAllowedOrigin } from "./utils/cors.js";
 
 // Central list of supported theme IDs for tool validation
 const themeIds = ["system7", "macosx", "xp", "win98"] as const;
@@ -35,6 +36,10 @@ const themeIds = ["system7", "macosx", "xp", "win98"] as const;
 // Update SystemState type to match new store structure
 interface SystemState {
   username?: string | null;
+  /** User's operating system (e.g., "iOS", "Android", "macOS", "Windows", "Linux") */
+  userOS?: string;
+  /** User's system locale (e.g., "en", "zh-TW", "ja", "ko", "fr", "de", "es", "pt", "it", "ru") */
+  locale?: string;
   internetExplorer: {
     url: string;
     year: string;
@@ -102,11 +107,15 @@ interface SystemState {
       instanceId: string;
       appId: string;
       title?: string;
+      appletPath?: string;
+      appletId?: string;
     } | null;
     background: Array<{
       instanceId: string;
       appId: string;
       title?: string;
+      appletPath?: string;
+      appletId?: string;
     }>;
     instanceWindowOrder: string[];
   };
@@ -121,30 +130,6 @@ interface SystemState {
   };
 }
 
-// Allowed origins for API requests
-const ALLOWED_ORIGINS = new Set([
-  "https://os.bravohenry.com",
-  "http://localhost:3000",
-  "http://localhost:5173", // Vite dev server 默认端口
-]);
-
-// Function to validate request origin
-// Allow explicit origins defined in ALLOWED_ORIGINS, or any localhost port
-const isValidOrigin = (origin: string | null): boolean => {
-  if (!origin) return false;
-  // Check explicit allowed origins
-  if (ALLOWED_ORIGINS.has(origin)) return true;
-  // Allow any localhost port number
-  try {
-    const url = new URL(origin);
-    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
-      return true;
-    }
-  } catch {
-    // Invalid URL, fall through to return false
-  }
-  return false;
-};
 
 // Allow streaming responses up to 60 seconds
 export const maxDuration = 80;
@@ -159,7 +144,7 @@ export const config = {
 const STATIC_SYSTEM_PROMPT = [
   CORE_PRIORITY_INSTRUCTIONS,
   ANSWER_STYLE_INSTRUCTIONS,
-  ZI_PERSONA_INSTRUCTIONS,
+  RYO_PERSONA_INSTRUCTIONS,
   CHAT_INSTRUCTIONS,
   TOOL_USAGE_INSTRUCTIONS,
   CODE_GENERATION_INSTRUCTIONS,
@@ -189,7 +174,7 @@ const generateDynamicSystemPrompt = (systemState?: SystemState) => {
     day: "numeric",
   });
 
-  const ziTimeZone = "America/Los_Angeles";
+  const ryoTimeZone = "America/Los_Angeles";
 
   if (!systemState) return "";
 
@@ -198,11 +183,21 @@ const generateDynamicSystemPrompt = (systemState?: SystemState) => {
 Current User: ${systemState.username || "you"}
 
 ## TIME & LOCATION
-Zi Time: ${timeString} on ${dateString} (${ziTimeZone})`;
+Ryo Time: ${timeString} on ${dateString} (${ryoTimeZone})`;
 
   if (systemState.userLocalTime) {
     prompt += `
 User Time: ${systemState.userLocalTime.timeString} on ${systemState.userLocalTime.dateString} (${systemState.userLocalTime.timeZone})`;
+  }
+
+  if (systemState.userOS) {
+    prompt += `
+User OS: ${systemState.userOS}`;
+  }
+
+  if (systemState.locale) {
+    prompt += `
+User Locale: ${systemState.locale}`;
   }
 
   if (systemState.requestGeo) {
@@ -219,12 +214,21 @@ User Location: ${location} (inferred from IP, may be inaccurate)`;
   // Applications Section
   prompt += `\n\n## RUNNING APPLICATIONS`;
 
+  // Helper to format app instance info
+  const formatAppInstance = (inst: { appId: string; title?: string; appletPath?: string; appletId?: string }) => {
+    let info = inst.appId;
+    if (inst.title) info += ` (${inst.title})`;
+    // For applet-viewer, include applet path and/or ID
+    if (inst.appId === "applet-viewer") {
+      if (inst.appletPath) info += ` [path: ${inst.appletPath}]`;
+      if (inst.appletId) info += ` [appletId: ${inst.appletId}]`;
+    }
+    return info;
+  };
+
   if (systemState.runningApps?.foreground) {
-    const foregroundTitle = systemState.runningApps.foreground.title
-      ? ` (${systemState.runningApps.foreground.title})`
-      : "";
     prompt += `
-Foreground: ${systemState.runningApps.foreground.appId}${foregroundTitle}`;
+Foreground: ${formatAppInstance(systemState.runningApps.foreground)}`;
   } else {
     prompt += `
 Foreground: None`;
@@ -235,7 +239,7 @@ Foreground: None`;
     systemState.runningApps.background.length > 0
   ) {
     const backgroundApps = systemState.runningApps.background
-      .map((inst) => inst.appId + (inst.title ? ` (${inst.title})` : ""))
+      .map((inst) => formatAppInstance(inst))
       .join(", ");
     prompt += `
 Background: ${backgroundApps}`;
@@ -317,8 +321,9 @@ ${htmlMd}`;
 
     systemState.textEdit.instances.forEach((instance, index) => {
       const unsavedMark = instance.hasUnsavedChanges ? " *" : "";
+      const pathInfo = instance.filePath ? ` [${instance.filePath}]` : "";
       prompt += `
-${index + 1}. ${instance.title}${unsavedMark} (ID: ${instance.instanceId})`;
+${index + 1}. ${instance.title}${unsavedMark}${pathInfo} (instanceId: ${instance.instanceId})`;
 
       if (instance.contentMarkdown) {
         // Limit content preview to avoid overly long prompts
@@ -339,7 +344,7 @@ ${index + 1}. ${instance.title}${unsavedMark} (ID: ${instance.instanceId})`;
     prompt += `\n\n<chat_room_reply_instructions>
 ## CHAT ROOM CONTEXT
 Room ID: ${systemState.chatRoomContext.roomId}
-Your Role: Respond as 'zi' in this IRC-style chat room
+Your Role: Respond as 'ryo' in this IRC-style chat room
 Response Style: Use extremely concise responses
 
 Recent Conversation:
@@ -447,13 +452,13 @@ async function validateAuthToken(
 
 export default async function handler(req: Request) {
   // Check origin before processing request
-  const origin = req.headers.get("origin");
-  if (!isValidOrigin(origin)) {
+  const effectiveOrigin = getEffectiveOrigin(req);
+  if (!isAllowedOrigin(effectiveOrigin)) {
     return new Response("Unauthorized", { status: 403 });
   }
 
-  // At this point origin is guaranteed to be a valid string from ALLOWED_ORIGINS
-  const validOrigin = origin as string;
+  // At this point origin is guaranteed to be a valid string
+  const validOrigin = effectiveOrigin as string;
 
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -503,12 +508,12 @@ export default async function handler(req: Request) {
 
     // Get IP address for rate limiting anonymous users
     // For Vercel deployments, use x-vercel-forwarded-for (won't be overwritten by proxies)
-    // For localhost, use a fixed identifier
-    const isLocalhost = origin === "http://localhost:3000" || origin === "http://localhost:5173";
+    // For localhost/local dev, use a fixed identifier
+    const isLocalDev = validOrigin?.startsWith("http://localhost") || validOrigin?.startsWith("http://127.0.0.1") || validOrigin?.includes("100.110.251.60");
     let ip: string;
 
-    if (isLocalhost) {
-      // For localhost development, use a fixed identifier
+    if (isLocalDev) {
+      // For local development, use a fixed identifier
       ip = "localhost-dev";
     } else {
       // For Vercel deployments, prefer x-vercel-forwarded-for which is more reliable
@@ -519,7 +524,7 @@ export default async function handler(req: Request) {
         "unknown-ip";
     }
 
-    log(`Request origin: ${origin}, IP: ${ip}`);
+    log(`Request origin: ${validOrigin}, IP: ${ip}`);
 
     // ---------------------------
     // Authentication extraction
@@ -536,7 +541,7 @@ export default async function handler(req: Request) {
     // ---------------------------
     // Rate-limit & auth checks
     // ---------------------------
-    // Validate authentication (all users, including "zi", must present a valid token)
+    // Validate authentication (all users, including "ryo", must present a valid token)
     const validationResult = await validateAuthToken(username, authToken);
 
     // If a username was provided but the token is missing/invalid, reject the request early
@@ -689,7 +694,7 @@ export default async function handler(req: Request) {
       tools: {
         launchApp: {
           description:
-            "Launch an application in the ZiOS interface when the user explicitly requests it. If the id is 'internet-explorer', you must provide BOTH a real 'url' and a 'year' for time-travel; otherwise provide neither.",
+            "Launch an application in the ryOS interface when the user explicitly requests it. If the id is 'internet-explorer', you must provide BOTH a real 'url' and a 'year' for time-travel; otherwise provide neither.",
           inputSchema: z
             .object({
               id: z.enum(appIds).describe("The app id to launch"),
@@ -762,83 +767,15 @@ export default async function handler(req: Request) {
         },
         closeApp: {
           description:
-            "Close an application in the ZiOS interface—but only when the user explicitly asks you to close that specific app.",
+            "Close an application in the ryOS interface—but only when the user explicitly asks you to close that specific app.",
           inputSchema: z.object({
             id: z.enum(appIds).describe("The app id to close"),
-          }),
-        },
-        switchTheme: {
-          description:
-            "Switch the ZiOS UI theme to a specific OS style when the user explicitly requests it.",
-          inputSchema: z.object({
-            theme: z
-              .enum(themeIds)
-              .describe(
-                'The theme to switch to. One of "system7", "macosx", "xp", "win98".'
-              ),
-          }),
-        },
-        textEditSearchReplace: {
-          description:
-            "Search and replace text in a specific TextEdit document. You MUST always provide 'search', 'replace', and 'instanceId'. Set 'isRegex: true' ONLY if the user explicitly mentions using a regular expression. Use the instanceId from the tool result of textEditNewFile or from the system state TextEdit Windows list. If the specified instanceId doesn't exist, the system will fall back to the most recently created TextEdit instance.",
-          inputSchema: z.object({
-            search: z
-              .string()
-              .describe(
-                "REQUIRED: The text or regular expression to search for"
-              ),
-            replace: z
-              .string()
-              .describe(
-                "REQUIRED: The text that will replace each match of 'search'"
-              ),
-            isRegex: z
-              .boolean()
-              .optional()
-              .describe(
-                "Set to true if the 'search' field should be treated as a JavaScript regular expression (without flags). Defaults to false."
-              ),
-            instanceId: z
-              .string()
-              .describe(
-                "REQUIRED: The specific TextEdit instance ID to modify (e.g., '15'). Get this from the system state TextEdit Windows list."
-              ),
-          }),
-        },
-        textEditInsertText: {
-          description:
-            "Insert plain text into a specific TextEdit document. You MUST always provide 'text' and 'instanceId'. Appends to the end by default; use position 'start' to prepend. Use the instanceId from the tool result of textEditNewFile or from the system state TextEdit Windows list. If the specified instanceId doesn't exist, the system will fall back to the most recently created TextEdit instance.",
-          inputSchema: z.object({
-            text: z.string().describe("REQUIRED: The text to insert"),
-            position: z
-              .enum(["start", "end"])
-              .optional()
-              .describe(
-                "Where to insert the text: 'start' to prepend, 'end' to append. Default is 'end'."
-              ),
-            instanceId: z
-              .string()
-              .describe(
-                "REQUIRED: The specific TextEdit instance ID to modify (e.g., '15'). Get this from the system state TextEdit Windows list."
-              ),
-          }),
-        },
-        textEditNewFile: {
-          description:
-            "Create a new blank document in a new TextEdit instance. Returns an instanceId that MUST be used in subsequent textEditInsertText or textEditSearchReplace calls to modify this document. Use when the user explicitly requests a new or untitled file.",
-          inputSchema: z.object({
-            title: z
-              .string()
-              .optional()
-              .describe(
-                "Optional title for the new TextEdit window. If not provided, defaults to 'Untitled'."
-              ),
           }),
         },
         // Add iPod control tools
         ipodControl: {
           description:
-            "Control playback in the iPod app. Launches the iPod automatically if needed. Use action 'toggle' (default), 'play', or 'pause' for playback state; 'playKnown' to play an existing library track by id/title/artist; 'addAndPlay' to add a track from a YouTube ID or URL and start playback; 'next' or 'previous' to navigate the playlist.",
+            "Control playback in the iPod app. Launches the iPod automatically if needed. Use action 'toggle' (default), 'play', or 'pause' for playback state; 'playKnown' to play an existing library track by id/title/artist; 'addAndPlay' to add a track from a YouTube ID or URL and start playback; 'next' or 'previous' to navigate the playlist. Optionally enable video, lyric translations, or fullscreen mode with enableVideo, enableTranslation, or enableFullscreen. IMPORTANT: If the user's OS is iOS, do NOT automatically start playback – instead, inform the user that due to iOS browser restrictions they need to press the center button or play button on the iPod themselves to start playing.",
           inputSchema: z
             .object({
               action: z
@@ -872,6 +809,24 @@ export default async function handler(req: Request) {
                 .optional()
                 .describe(
                   "For 'playKnown': The artist name (or part of it) of the song to play."
+                ),
+              enableVideo: z
+                .boolean()
+                .optional()
+                .describe(
+                  "Enable video playback in the iPod. Can be combined with any action."
+                ),
+              enableTranslation: z
+                .string()
+                .optional()
+                .describe(
+                  "Enable lyric translations in the specified language code (e.g., 'en', 'zh-TW', 'ja', 'ko', 'es', 'fr', 'de', 'pt', 'it', 'ru'). Can be combined with any action. To disable/turn off translations and show original lyrics, set to 'off' or 'original'."
+                ),
+              enableFullscreen: z
+                .boolean()
+                .optional()
+                .describe(
+                  "Enable fullscreen mode for the iPod player. Can be combined with any action."
                 ),
             })
             .superRefine((data, ctx) => {
@@ -945,7 +900,7 @@ export default async function handler(req: Request) {
         // --- HTML generation & preview ---
         generateHtml: {
           description:
-            "Generate an HTML snippet for a ZiOS Applet: a small windowed app (default ~320px wide) that runs inside ZiOS, not the full page. Design mobile-first for ~320px width but keep layouts responsive to expand gracefully. Provide markup in 'html', a short 'title', and an 'icon' (emoji). DO NOT wrap it in markdown fences; the client will handle scaffolding.",
+            "Generate an HTML snippet for an ryOS Applet: a small windowed app (default ~320px wide) that runs inside ryOS, not the full page. Design mobile-first for ~320px width but keep layouts responsive to expand gracefully. Provide markup in 'html', a short 'title', and an 'icon' (emoji). DO NOT wrap it in markdown fences; the client will handle scaffolding.",
           inputSchema: z.object({
             html: z
               .string()
@@ -987,89 +942,164 @@ export default async function handler(req: Request) {
             "Render a playful emoji aquarium inside the chat bubble. Use when the user asks for an aquarium / fish tank / fishes / sam's aquarium.",
           inputSchema: z.object({}),
         },
-        // --- File Management ---
-        listFiles: {
+        // --- Unified Virtual File System Tools ---
+        list: {
           description:
-            "List files from a specific directory (/Applets, /Documents, or /Applications). Returns a JSON array with metadata for each item. CRITICAL: You MUST ONLY reference items that are explicitly returned in the tool result. DO NOT suggest, mention, or hallucinate items that are not in the returned list. If the list is empty or contains only one item, you must acknowledge that reality - do not make up additional items.",
+            "List items from the ryOS virtual file system. Returns a JSON array with metadata for each item. CRITICAL: You MUST ONLY reference items that are explicitly returned in the tool result. DO NOT suggest, mention, or hallucinate items that are not in the returned list.",
           inputSchema: z.object({
-            directory: z
-              .enum(["/Applets", "/Documents", "/Applications"])
+            path: z
+              .enum(["/Applets", "/Documents", "/Applications", "/Music", "/Applets Store"])
               .describe(
-                "The directory to list files from. Use '/Applets' for applets, '/Documents' for documents, or '/Applications' for installed applications."
+                "The directory path to list: '/Applets' for local applets, '/Documents' for documents, '/Applications' for apps, '/Music' for iPod songs, '/Applets Store' for shared applets"
+              ),
+            query: z
+              .string()
+              .max(200)
+              .optional()
+              .describe(
+                "Optional search query to filter results (only used for '/Applets Store' path). Case-insensitive substring match on title, name, or creator."
+              ),
+            limit: z
+              .number()
+              .int()
+              .min(1)
+              .max(50)
+              .optional()
+              .describe(
+                "Optional maximum number of results to return (default 25, only used for '/Applets Store' path)."
               ),
           }),
         },
-          listSharedApplets: {
-            description:
-              "List shared applets that are published to the Applet Store but may not be installed locally. Use this to discover reusable applets before generating new code.",
-            inputSchema: z.object({
-              query: z
-                .string()
-                .min(1)
-                .max(200)
-                .optional()
-                .describe(
-                  "Optional case-insensitive substring to filter by title, name, or creator. Omit to list the latest shared applets."
-                ),
-              limit: z
-                .number()
-                .int()
-                .min(1)
-                .max(50)
-                .optional()
-                .describe(
-                  "Optional maximum number of results to return (default 25)."
-                ),
-            }),
-          },
-          fetchSharedApplet: {
-            description:
-              "Fetch the HTML content and metadata for a shared applet by id (returned from listSharedApplets). Use to inspect or reuse an existing shared applet.",
-            inputSchema: z.object({
-              id: z
-                .string()
-                .min(1)
-                .describe(
-                  "The shared applet id returned from listSharedApplets."
-                ),
-            }),
-          },
-          openSharedApplet: {
-            description:
-              "Open the Applet Viewer detail view for a shared applet so the user can preview or install it. Provide the id from listSharedApplets.",
-            inputSchema: z.object({
-              id: z
-                .string()
-                .min(1)
-                .describe(
-                  "The shared applet id returned from listSharedApplets."
-                ),
-            }),
-          },
-        listIpodLibrary: {
+        open: {
           description:
-            "List all songs in the iPod library. Returns a JSON array with each song's id, title, and artist. CRITICAL: You MUST ONLY reference songs that are explicitly returned in the tool result. DO NOT suggest, mention, or hallucinate songs that are not in the returned list. If the library is empty, acknowledge that reality.",
-          inputSchema: z.object({}),
-        },
-        openFile: {
-          description:
-            "Open a specific file or application. Applets open in applet-viewer, documents open in TextEdit, applications launch as apps. CRITICAL: You MUST use the exact path returned from listFiles - do not modify or guess paths. Always call listFiles first to get the exact available items.",
+            "Open a file, application, or media item from the virtual file system. Routes to the appropriate app based on path:\n" +
+            "- Applets → applet-viewer\n" +
+            "- Documents → TextEdit\n" +
+            "- Applications → launches the app\n" +
+            "- Music → plays in iPod\n" +
+            "- Applets Store → opens preview\n" +
+            "CRITICAL: Use exact paths from 'list' results. Always call 'list' first.",
           inputSchema: z.object({
             path: z
               .string()
               .describe(
-                "The EXACT full path from the listFiles result (e.g., '/Applets/Calculator.app', '/Documents/notes.md', or '/Applications/internet-explorer'). Must be copied exactly as returned by listFiles."
+                "The EXACT path from list results. Examples:\n" +
+                "- '/Applets/Calculator.app' - Open local applet\n" +
+                "- '/Documents/notes.md' - Open document in TextEdit\n" +
+                "- '/Applications/internet-explorer' - Launch app\n" +
+                "- '/Music/{id}' - Play song by ID\n" +
+                "- '/Applets Store/{id}' - Preview shared applet"
               ),
           }),
         },
-        readFile: {
+        read: {
           description:
-            "Read the full contents of a saved document or applet. MUST be used only with paths returned from listFiles. Returns the complete text content for AI processing. Do NOT use on applications.",
+            "Read the full contents of a file from the virtual file system. Returns the complete text content for AI processing. Supports:\n" +
+            "- '/Applets/*' - Read applet HTML content\n" +
+            "- '/Documents/*' - Read document markdown content\n" +
+            "- '/Applets Store/{id}' - Fetch shared applet content and metadata",
           inputSchema: z.object({
             path: z
               .string()
               .describe(
-                "The EXACT file path from listFiles (e.g., '/Applets/Calculator.app' or '/Documents/notes.md'). Only supports paths within /Applets or /Documents."
+                "The file path to read. Must be from /Applets, /Documents, or /Applets Store. Use exact path from list results or store applet ID for shared applets."
+              ),
+          }),
+        },
+        write: {
+          description:
+            "Create or modify markdown documents. Saves to disk and opens in TextEdit. " +
+            "IMPORTANT: For applets, use generateHtml (create/overwrite) or edit (small changes).",
+          inputSchema: z.object({
+            path: z
+              .string()
+              .describe(
+                "Full file path including .md extension. Example: '/Documents/my-notes.md' or '/Documents/Meeting Notes.md'"
+              ),
+            content: z.string().describe("The markdown content to write."),
+            mode: z
+              .enum(["overwrite", "append", "prepend"])
+              .optional()
+              .describe(
+                "Write mode: 'overwrite' replaces content (default), 'append' adds to end, 'prepend' adds to start."
+              ),
+          }),
+        },
+        edit: {
+          description:
+            "Edit existing files in the ryOS virtual file system. For creating new files, use the write tool (documents) or generateHtml tool (applets). For larger rewrites, use write with mode 'overwrite'.\n\n" +
+            "Before using this tool:\n" +
+            "1. Use the read tool to understand the file's contents and context\n" +
+            "2. Verify the file exists using list\n\n" +
+            "To make a file edit, provide the following:\n" +
+            "1. path: The file path to modify (e.g., '/Documents/notes.md' or '/Applets/MyApp.app')\n" +
+            "2. old_string: The text to replace (must be unique within the file, and must match exactly including whitespace)\n" +
+            "3. new_string: The edited text to replace the old_string\n\n" +
+            "The tool will replace ONE occurrence of old_string with new_string in the specified file.\n\n" +
+            "CRITICAL REQUIREMENTS:\n" +
+            "1. UNIQUENESS: The old_string MUST uniquely identify the specific instance you want to change. Include context lines before and after if needed.\n" +
+            "2. SINGLE INSTANCE: This tool changes ONE instance at a time. Make separate calls for multiple changes.\n" +
+            "3. VERIFICATION: Before using, check how many instances of the target text exist. If multiple exist, include enough context to uniquely identify each one.\n\n" +
+            "WARNING: If you do not follow these requirements:\n" +
+            "- The tool will fail if old_string matches multiple locations\n" +
+            "- The tool will fail if old_string doesn't match exactly (including whitespace)\n\n" +
+            "Supported paths:\n" +
+            "- '/Documents/*' - Edit markdown documents\n" +
+            "- '/Applets/*' - Edit applet HTML files",
+          inputSchema: z.object({
+            path: z
+              .string()
+              .describe(
+                "The file path to edit. Must be in /Documents or /Applets."
+              ),
+            old_string: z
+              .string()
+              .describe(
+                "The text to replace (must be unique within the file, and must match exactly including whitespace and indentation)."
+              ),
+            new_string: z
+              .string()
+              .describe(
+                "The edited text to replace the old_string."
+              ),
+          }),
+        },
+        // --- System Settings Tool ---
+        settings: {
+          description:
+            "Change system settings in ryOS. Use this tool when the user asks to change language, theme, volume, enable/disable speech, or check for updates. Multiple settings can be changed in a single call.",
+          inputSchema: z.object({
+            language: z
+              .enum(["en", "zh-TW", "ja", "ko", "fr", "de", "es", "pt", "it", "ru"])
+              .optional()
+              .describe(
+                "Change the system language. Supported: 'en' (English), 'zh-TW' (Traditional Chinese), 'ja' (Japanese), 'ko' (Korean), 'fr' (French), 'de' (German), 'es' (Spanish), 'pt' (Portuguese), 'it' (Italian), 'ru' (Russian)."
+              ),
+            theme: z
+              .enum(themeIds)
+              .optional()
+              .describe(
+                'Change the OS theme. One of "system7" (Mac OS 7), "macosx" (Mac OS X), "xp" (Windows XP), "win98" (Windows 98).'
+              ),
+            masterVolume: z
+              .number()
+              .min(0)
+              .max(1)
+              .optional()
+              .describe(
+                "Set the master volume (0-1). Affects all system sounds including UI sounds, speech, and music. Use 0 to mute."
+              ),
+            speechEnabled: z
+              .boolean()
+              .optional()
+              .describe(
+                "Enable or disable text-to-speech for AI responses. When enabled, the AI's responses will be read aloud."
+              ),
+            checkForUpdates: z
+              .boolean()
+              .optional()
+              .describe(
+                "When true, triggers a check for ryOS updates. Will notify the user if an update is available."
               ),
           }),
         },
@@ -1088,7 +1118,7 @@ export default async function handler(req: Request) {
       },
       providerOptions: {
         openai: {
-          reasoningEffort: "minimal", // Turn off reasoning for GPT-5 and other reasoning models
+          reasoningEffort: "none", // Turn off reasoning for GPT-5 and other reasoning models
         },
       },
     });

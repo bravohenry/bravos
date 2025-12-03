@@ -10,9 +10,11 @@ import { cn } from "@/lib/utils";
 import { AppProps } from "../../base/types";
 import { MenuBar } from "@/components/layout/MenuBar";
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
 import { generateAppShareUrl } from "@/utils/sharedUrl";
 import { useThemeStore } from "@/stores/useThemeStore";
+import { ShareItemDialog } from "@/components/dialogs/ShareItemDialog";
+import { appRegistry } from "@/config/appRegistry";
+import { useTranslation } from "react-i18next";
 
 interface SoundboardMenuBarProps extends Omit<AppProps, "onClose"> {
   onClose: () => void;
@@ -49,6 +51,10 @@ export function SoundboardMenuBar({
   onToggleEmojis,
   onClose,
 }: SoundboardMenuBarProps) {
+  const { t } = useTranslation();
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const appId = "soundboard";
+  const appName = appRegistry[appId as keyof typeof appRegistry]?.name || appId;
   const [isOptionPressed, setIsOptionPressed] = useState(false);
   const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
@@ -84,7 +90,7 @@ export function SoundboardMenuBar({
             size="default"
             className="h-6 text-md px-2 py-1 border-none hover:bg-gray-200 active:bg-gray-900 active:text-white focus-visible:ring-0"
           >
-            File
+            {t("common.menu.file")}
           </Button>
         </DropdownMenuTrigger>
           <DropdownMenuContent align="start" sideOffset={1} className="px-0">
@@ -92,33 +98,33 @@ export function SoundboardMenuBar({
             onClick={onNewBoard}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            New Soundboard
+            {t("apps.soundboard.menu.newSoundboard")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
           <DropdownMenuItem
             onClick={onImportBoard}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Import Soundboards...
+            {t("apps.soundboard.menu.importSoundboards")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={onExportBoard}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Export Soundboards...
+            {t("apps.soundboard.menu.exportSoundboards")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={onReloadBoard}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Reset Soundboards
+            {t("apps.soundboard.menu.resetSoundboards")}
           </DropdownMenuItem>
           {isOptionPressed && (
             <DropdownMenuItem
               onClick={onReloadAllSounds}
               className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
             >
-              Load Special Soundboards
+              {t("apps.soundboard.menu.loadSpecialSoundboards")}
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
@@ -126,7 +132,7 @@ export function SoundboardMenuBar({
             onClick={onClose}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Close
+            {t("common.menu.close")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -139,7 +145,7 @@ export function SoundboardMenuBar({
             size="default"
             className="h-6 px-2 py-1 text-md focus-visible:ring-0 hover:bg-gray-200 active:bg-gray-900 active:text-white"
           >
-            Edit
+            {t("common.menu.edit")}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={1} className="px-0">
@@ -147,7 +153,7 @@ export function SoundboardMenuBar({
             onClick={onRenameBoard}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Rename Soundboard
+            {t("apps.soundboard.menu.renameSoundboard")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={onDeleteBoard}
@@ -158,7 +164,7 @@ export function SoundboardMenuBar({
                 : "text-md h-6 px-3 active:bg-gray-900 active:text-white"
             }
           >
-            Delete Soundboard
+            {t("apps.soundboard.menu.deleteSoundboard")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -171,7 +177,7 @@ export function SoundboardMenuBar({
             size="default"
             className="h-6 px-2 py-1 text-md focus-visible:ring-0 hover:bg-gray-200 active:bg-gray-900 active:text-white"
           >
-            View
+            {t("common.menu.view")}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={1} className="px-0">
@@ -180,7 +186,7 @@ export function SoundboardMenuBar({
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
             <span className={cn(!showWaveforms && "pl-4")}>
-              {showWaveforms ? "✓ Waveforms" : "Waveforms"}
+              {showWaveforms ? `✓ ${t("apps.soundboard.menu.waveforms")}` : t("apps.soundboard.menu.waveforms")}
             </span>
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -188,7 +194,7 @@ export function SoundboardMenuBar({
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
             <span className={cn(!showEmojis && "pl-4")}>
-              {showEmojis ? "✓ Emojis" : "Emojis"}
+              {showEmojis ? `✓ ${t("apps.soundboard.menu.emojis")}` : t("apps.soundboard.menu.emojis")}
             </span>
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -202,7 +208,7 @@ export function SoundboardMenuBar({
             size="default"
             className="h-6 px-2 py-1 text-md focus-visible:ring-0 hover:bg-gray-200 active:bg-gray-900 active:text-white"
           >
-            Help
+            {t("common.menu.help")}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={1} className="px-0">
@@ -210,38 +216,31 @@ export function SoundboardMenuBar({
             onClick={onShowHelp}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Soundboard Help
+            {t("apps.soundboard.menu.soundboardHelp")}
           </DropdownMenuItem>
           <DropdownMenuItem
-            onSelect={async () => {
-              const appId = "soundboard";
-              const shareUrl = generateAppShareUrl(appId);
-              if (!shareUrl) return;
-              try {
-                await navigator.clipboard.writeText(shareUrl);
-                toast.success("App link copied!", {
-                  description: `Link to ${appId} copied to clipboard.`,
-                });
-              } catch (err) {
-                console.error("Failed to copy app link: ", err);
-                toast.error("Failed to copy link", {
-                  description: "Could not copy link to clipboard.",
-                });
-              }
-            }}
+            onSelect={() => setIsShareDialogOpen(true)}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Share App...
+            {t("common.menu.shareApp")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
           <DropdownMenuItem
             onClick={onShowAbout}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            About Soundboard
+            {t("apps.soundboard.menu.aboutSoundboard")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <ShareItemDialog
+        isOpen={isShareDialogOpen}
+        onClose={() => setIsShareDialogOpen(false)}
+        itemType="App"
+        itemIdentifier={appId}
+        title={appName}
+        generateShareUrl={generateAppShareUrl}
+      />
     </MenuBar>
   );
 }

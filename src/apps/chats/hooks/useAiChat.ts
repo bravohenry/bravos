@@ -15,6 +15,7 @@ import { toast } from "@/hooks/useToast";
 import { useLaunchApp, type LaunchAppOptions } from "@/hooks/useLaunchApp";
 import { AppId } from "@/config/appIds";
 import { appRegistry } from "@/config/appRegistry";
+import { requestCloseWindow } from "@/utils/windowUtils";
 import {
   useFileSystem,
   dbOperations,
@@ -24,6 +25,7 @@ import {
 import { useTtsQueue } from "@/hooks/useTtsQueue";
 import { useTextEditStore } from "@/stores/useTextEditStore";
 import { useFilesStore } from "@/stores/useFilesStore";
+import { useLanguageStore } from "@/stores/useLanguageStore";
 import { generateHTML, generateJSON } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -31,9 +33,11 @@ import TextAlign from "@tiptap/extension-text-align";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import { htmlToMarkdown, markdownToHtml } from "@/utils/markdown";
-import { AnyExtension, JSONContent } from "@tiptap/core";
+import { AnyExtension } from "@tiptap/core";
 import { themes } from "@/themes";
 import type { OsThemeId } from "@/themes/types";
+import i18n from "@/lib/i18n";
+import { useTranslation } from "react-i18next";
 
 // TODO: Move relevant state and logic from ChatsAppComponent here
 // - AI chat state (useChat hook)
@@ -62,16 +66,6 @@ const trackNewTextEditInstance = (instanceId: string) => {
   }
 };
 
-// Helper to get the most recently created TextEdit instance
-const getMostRecentTextEditInstance = (): string | null => {
-  let mostRecent: { instanceId: string; timestamp: number } | null = null;
-  for (const data of recentlyCreatedTextEditInstances.values()) {
-    if (!mostRecent || data.timestamp > mostRecent.timestamp) {
-      mostRecent = data;
-    }
-  }
-  return mostRecent?.instanceId || null;
-};
 
 const stripDiacritics = (value: string): string =>
   value.normalize("NFKD").replace(/\p{Diacritic}/gu, "");
@@ -227,6 +221,42 @@ const deriveScoreThreshold = (queryLength: number): number => {
   return 0.4;
 };
 
+// Helper function to detect user's operating system
+const detectUserOS = (): string => {
+  if (typeof navigator === "undefined") return "Unknown";
+  
+  const userAgent = navigator.userAgent;
+  const platform = navigator.platform || "";
+  
+  // Check for iOS (iPhone, iPad, iPod)
+  if (/iPad|iPhone|iPod/.test(userAgent) || 
+      (platform === "MacIntel" && navigator.maxTouchPoints > 1)) {
+    return "iOS";
+  }
+  
+  // Check for Android
+  if (/Android/.test(userAgent)) {
+    return "Android";
+  }
+  
+  // Check for Windows
+  if (/Win/.test(platform)) {
+    return "Windows";
+  }
+  
+  // Check for macOS (not iOS)
+  if (/Mac/.test(platform)) {
+    return "macOS";
+  }
+  
+  // Check for Linux
+  if (/Linux/.test(platform)) {
+    return "Linux";
+  }
+  
+  return "Unknown";
+};
+
 // Replace or update the getSystemState function to use stores
 const getSystemState = () => {
   const appStore = useAppStore.getState();
@@ -236,6 +266,7 @@ const getSystemState = () => {
   const textEditStore = useTextEditStore.getState();
   const chatsStore = useChatsStore.getState();
   const themeStore = useThemeStore.getState();
+  const languageStore = useLanguageStore.getState();
 
   const currentVideo = videoStore.getCurrentVideo();
   const currentTrack =
@@ -245,15 +276,30 @@ const getSystemState = () => {
       ? ipodStore.tracks[ipodStore.currentIndex]
       : null;
 
+  // Detect user's operating system
+  const userOS = detectUserOS();
+
   // Use new instance-based model instead of legacy apps
   const runningInstances = Object.entries(appStore.instances)
     .filter(([, instance]) => instance.isOpen)
-    .map(([instanceId, instance]) => ({
-      instanceId,
-      appId: instance.appId,
-      isForeground: instance.isForeground || false,
-      title: instance.title,
-    }));
+    .map(([instanceId, instance]) => {
+      const base = {
+        instanceId,
+        appId: instance.appId,
+        isForeground: instance.isForeground || false,
+        title: instance.title,
+      };
+      // For applet-viewer instances, include the applet path
+      if (instance.appId === "applet-viewer" && instance.initialData) {
+        const appletData = instance.initialData as { path?: string; shareCode?: string };
+        return {
+          ...base,
+          appletPath: appletData.path || undefined,
+          appletId: appletData.shareCode || undefined,
+        };
+      }
+      return base;
+    });
 
   const foregroundInstance =
     runningInstances.find((inst) => inst.isForeground) || null;
@@ -330,6 +376,8 @@ const getSystemState = () => {
 
   return {
     username: chatsStore.username,
+    userOS,
+    locale: languageStore.current,
     userLocalTime: {
       timeString: userTimeString,
       dateString: userDateString,
@@ -386,25 +434,6 @@ const getSystemState = () => {
   };
 };
 
-// --- Utility: Debounced updater for insertText ---
-// We want to avoid spamming TextEdit with many rapid updates while the assistant is
-// streaming a long insertText payload. Instead, we debounce the store update so the
-// UI only refreshes after a short idle period.
-
-function createDebouncedAction(delay = 150) {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  return (action: () => void) => {
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => {
-      action();
-      timer = null;
-    }, delay);
-  };
-}
-
-// Singleton debounced executor reused across insertText tool calls
-const debouncedInsertTextUpdate = createDebouncedAction(150);
-
 // Helper function to extract visible text from message parts
 const getAssistantVisibleText = (message: UIMessage): string => {
   // Define type for message parts
@@ -439,6 +468,7 @@ export function useAiChat(onPromptSetUsername?: () => void) {
   const { saveFile } = useFileSystem("/Documents", { skipLoad: true });
 
   // Local input state (SDK v5 no longer provides this)
+  const { t } = useTranslation();
   const [input, setInput] = useState("");
   const handleInputChange = useCallback(
     (
@@ -480,14 +510,13 @@ export function useAiChat(onPromptSetUsername?: () => void) {
     });
   }, [aiMessages]);
 
-  // Ensure auth token exists when username is present
-  useEffect(() => {
-    if (username && !authToken) {
-      ensureAuthToken().catch((err) => {
-        console.error("[useAiChat] Failed to generate auth token", err);
-      });
-    }
-  }, [username, authToken, ensureAuthToken]);
+  // Note: We no longer auto-call ensureAuthToken here.
+  // Tokens are obtained via:
+  // 1. createUser (new account registration)
+  // 2. authenticateWithPassword (password login)
+  // 3. Token login (user provides existing token)
+  // The ensureAuthToken function is only called explicitly before sending
+  // messages as a fallback for legacy users without tokens.
 
   // Queue-based TTS – speaks chunks as they arrive
   const { speak, stop: stopTts, isSpeaking } = useTtsQueue();
@@ -588,33 +617,6 @@ export function useAiChat(onPromptSetUsername?: () => void) {
             result = "Aquarium displayed";
             break;
           }
-          case "switchTheme": {
-            const { theme } = toolCall.input as { theme?: OsThemeId };
-            if (!theme) {
-              console.error(
-                "[ToolCall] switchTheme: Missing required 'theme' parameter",
-              );
-              addToolResult({
-                tool: toolCall.toolName,
-                toolCallId: toolCall.toolCallId,
-                state: "output-error",
-                errorText: "No theme provided",
-              });
-              break;
-            }
-
-            const { current, setTheme } = useThemeStore.getState();
-            if (current === theme) {
-              const name = themes[theme]?.name || theme;
-              result = `${name} theme is already active`;
-            } else {
-              setTheme(theme);
-              const name = themes[theme]?.name || theme;
-              result = `Switched theme to ${name}`;
-            }
-            console.log("[ToolCall] switchTheme:", theme, result);
-            break;
-          }
           case "launchApp": {
             const { id, url, year } = toolCall.input as {
               id: string;
@@ -679,9 +681,9 @@ export function useAiChat(onPromptSetUsername?: () => void) {
               break;
             }
 
-            // Close all open instances of this app
+            // Close all open instances of this app (with animation and sound)
             openInstances.forEach((instance) => {
-              appStore.closeAppInstance(instance.instanceId);
+              requestCloseWindow(instance.instanceId);
             });
 
             // Also close the legacy app state for backward compatibility
@@ -694,439 +696,15 @@ export function useAiChat(onPromptSetUsername?: () => void) {
             );
             break;
           }
-          case "textEditSearchReplace": {
-            const { search, replace, isRegex, instanceId } = toolCall.input as {
-              search: string;
-              replace: string;
-              isRegex?: boolean;
-              instanceId?: string;
-            };
-
-            // Validate required parameters
-            if (typeof search !== "string") {
-              console.error(
-                "[ToolCall] textEditSearchReplace: Missing required 'search' parameter",
-              );
-              addToolResult({
-                tool: toolCall.toolName,
-                toolCallId: toolCall.toolCallId,
-                output: "Error: Missing required 'search' parameter",
-              });
-              break;
-            }
-            if (typeof replace !== "string") {
-              console.error(
-                "[ToolCall] textEditSearchReplace: Missing required 'replace' parameter",
-              );
-              addToolResult({
-                tool: toolCall.toolName,
-                toolCallId: toolCall.toolCallId,
-                output: "Error: Missing required 'replace' parameter",
-              });
-              break;
-            }
-
-            // Normalize line endings to avoid mismatches between CRLF / LF
-            const normalizedSearch = search.replace(/\r\n?/g, "\n");
-            const normalizedReplace = replace.replace(/\r\n?/g, "\n");
-
-            // Helper to escape special regex chars when doing literal replacement
-            const escapeRegExp = (str: string) =>
-              str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-            console.log("[ToolCall] searchReplace:", {
-              search: normalizedSearch,
-              replace: normalizedReplace,
-              isRegex,
-              instanceId,
-            });
-
-            const textEditState = useTextEditStore.getState();
-
-            // Determine the target instance ID with fallback mechanism
-            let targetInstanceId = instanceId;
-            let usedFallback = false;
-
-            // If no instanceId provided or instance doesn't exist, try fallback
-            if (
-              !targetInstanceId ||
-              !textEditState.instances[targetInstanceId]
-            ) {
-              console.warn(
-                `[ToolCall] TextEdit instance ${
-                  targetInstanceId || "(not provided)"
-                } not found. Available instances: ${
-                  Object.keys(textEditState.instances).join(", ") || "none"
-                }.`,
-              );
-
-              // Fallback: Try to use the most recently created TextEdit instance
-              const recentInstanceId = getMostRecentTextEditInstance();
-              if (
-                recentInstanceId &&
-                textEditState.instances[recentInstanceId]
-              ) {
-                targetInstanceId = recentInstanceId;
-                usedFallback = true;
-                console.log(
-                  `[ToolCall] Using fallback: most recently created TextEdit instance ${targetInstanceId}`,
-                );
-              } else {
-                console.error(
-                  "[ToolCall] No valid TextEdit instance found for search/replace",
-                );
-                addToolResult({
-                  tool: toolCall.toolName,
-                  toolCallId: toolCall.toolCallId,
-                  output: `Error: TextEdit instance ${
-                    instanceId || "(not provided)"
-                  } not found and no fallback instance available. Available instances: ${
-                    Object.keys(textEditState.instances).join(", ") || "none"
-                  }`,
-                });
-                break;
-              }
-            }
-
-            // Use specific instance
-            const targetInstance = textEditState.instances[targetInstanceId];
-            if (!targetInstance) {
-              console.error(
-                `[ToolCall] TextEdit instance ${targetInstanceId} not found after fallback attempt.`,
-              );
-              addToolResult({
-                tool: toolCall.toolName,
-                toolCallId: toolCall.toolCallId,
-                output: `Error: TextEdit instance ${targetInstanceId} not found`,
-              });
-              break;
-            }
-
-            const { updateInstance } = textEditState;
-
-            try {
-              // Handle empty documents by creating a default structure
-              const currentContentJson = targetInstance.contentJson || {
-                type: "doc",
-                content: [{ type: "paragraph", content: [] }],
-              };
-
-              // 1. Convert current JSON document to HTML
-              const htmlStr = generateHTML(currentContentJson, [
-                StarterKit,
-                Underline,
-                TextAlign.configure({ types: ["heading", "paragraph"] }),
-                TaskList,
-                TaskItem.configure({ nested: true }),
-              ] as AnyExtension[]);
-
-              // 2. Convert HTML to Markdown for regex/text replacement
-              const markdownStr = htmlToMarkdown(htmlStr);
-
-              // 3. Perform the replacement on the markdown text
-              const updatedMarkdown = (() => {
-                try {
-                  const pattern = isRegex
-                    ? normalizedSearch
-                    : escapeRegExp(normalizedSearch);
-                  const regex = new RegExp(pattern, "gm");
-                  return markdownStr.replace(regex, normalizedReplace);
-                } catch (err) {
-                  console.error("Error while building/applying regex:", err);
-                  throw err;
-                }
-              })();
-
-              if (updatedMarkdown === markdownStr) {
-                console.log("[ToolCall] Nothing found to replace.");
-                break;
-              }
-
-              // 4. Convert updated markdown back to HTML and then to JSON
-              const updatedHtml = markdownToHtml(updatedMarkdown);
-              const updatedJson = generateJSON(updatedHtml, [
-                StarterKit,
-                Underline,
-                TextAlign.configure({ types: ["heading", "paragraph"] }),
-                TaskList,
-                TaskItem.configure({ nested: true }),
-              ] as AnyExtension[]);
-
-              // 5. Apply the updated JSON to the specific instance
-              updateInstance(targetInstanceId, {
-                contentJson: updatedJson,
-                hasUnsavedChanges: true,
-              });
-
-              // Bring the target instance to foreground so user can see the changes
-              const appStore = useAppStore.getState();
-              appStore.bringInstanceToForeground(targetInstanceId);
-
-              // Get the display title from the app store instance
-              const appInstance = appStore.instances[targetInstanceId];
-              const displayName = appInstance?.title || "Untitled";
-
-              const resultMessage = `Successfully replaced text in "${displayName}" (instanceId: ${targetInstanceId})${
-                usedFallback
-                  ? ` [Note: Used fallback to most recent instance as specified instance ${instanceId} was not found]`
-                  : ""
-              }`;
-              console.log(
-                `[ToolCall] Replaced "${search}" with "${replace}" in ${displayName}${
-                  usedFallback ? " using fallback mechanism" : ""
-                }.`,
-              );
-
-              // Add tool result back to messages
-              addToolResult({
-                tool: toolCall.toolName,
-                toolCallId: toolCall.toolCallId,
-                output: resultMessage,
-              });
-              break;
-            } catch (err) {
-              console.error("searchReplace error:", err);
-              addToolResult({
-                tool: toolCall.toolName,
-                toolCallId: toolCall.toolCallId,
-                state: "output-error",
-                errorText:
-                  err instanceof Error ? err.message : "Failed to replace text",
-              });
-              break;
-            }
-          }
-          case "textEditInsertText": {
-            const { text, position, instanceId } = toolCall.input as {
-              text: string;
-              position?: "start" | "end";
-              instanceId?: string;
-            };
-
-            // Validate required parameters
-            if (!text) {
-              console.error(
-                "[ToolCall] textEditInsertText: Missing required 'text' parameter",
-              );
-              addToolResult({
-                tool: toolCall.toolName,
-                toolCallId: toolCall.toolCallId,
-                output: "Error: Missing required 'text' parameter",
-              });
-              break;
-            }
-
-            console.log("[ToolCall] insertText:", {
-              text,
-              position,
-              instanceId,
-            });
-
-            const textEditState = useTextEditStore.getState();
-
-            // Determine the target instance ID with fallback mechanism
-            let targetInstanceId = instanceId;
-            let usedFallback = false;
-
-            // If no instanceId provided or instance doesn't exist, try fallback
-            if (
-              !targetInstanceId ||
-              !textEditState.instances[targetInstanceId]
-            ) {
-              console.warn(
-                `[ToolCall] TextEdit instance ${
-                  targetInstanceId || "(not provided)"
-                } not found. Available instances: ${
-                  Object.keys(textEditState.instances).join(", ") || "none"
-                }.`,
-              );
-
-              // Fallback: Try to use the most recently created TextEdit instance
-              const recentInstanceId = getMostRecentTextEditInstance();
-              if (
-                recentInstanceId &&
-                textEditState.instances[recentInstanceId]
-              ) {
-                targetInstanceId = recentInstanceId;
-                usedFallback = true;
-                console.log(
-                  `[ToolCall] Using fallback: most recently created TextEdit instance ${targetInstanceId}`,
-                );
-              } else {
-                console.error(
-                  "[ToolCall] No valid TextEdit instance found for insertion",
-                );
-                addToolResult({
-                  tool: toolCall.toolName,
-                  toolCallId: toolCall.toolCallId,
-                  output: `Error: TextEdit instance ${
-                    instanceId || "(not provided)"
-                  } not found and no fallback instance available. Available instances: ${
-                    Object.keys(textEditState.instances).join(", ") || "none"
-                  }`,
-                });
-                break;
-              }
-            }
-
-            // Use specific instance
-            const targetInstance = textEditState.instances[targetInstanceId];
-            if (!targetInstance) {
-              console.error(
-                `[ToolCall] TextEdit instance ${targetInstanceId} not found after fallback attempt.`,
-              );
-              addToolResult({
-                tool: toolCall.toolName,
-                toolCallId: toolCall.toolCallId,
-                output: `Error: TextEdit instance ${targetInstanceId} not found`,
-              });
-              break;
-            }
-
-            try {
-              // Insert text into the specific instance
-              const { updateInstance } = textEditState;
-
-              // Step 1: Convert incoming markdown snippet to HTML
-              const htmlFragment = markdownToHtml(text);
-
-              // Step 2: Generate TipTap-compatible JSON from the HTML fragment
-              const parsedJson = generateJSON(htmlFragment, [
-                StarterKit,
-                Underline,
-                TextAlign.configure({ types: ["heading", "paragraph"] }),
-                TaskList,
-                TaskItem.configure({ nested: true }),
-              ] as AnyExtension[]);
-
-              // parsedJson is a full doc – we want just its content array
-              const nodesToInsert = Array.isArray(parsedJson.content)
-                ? parsedJson.content
-                : [];
-
-              let newDocJson: JSONContent;
-
-              if (
-                targetInstance.contentJson &&
-                Array.isArray(targetInstance.contentJson.content)
-              ) {
-                // Clone existing document JSON to avoid direct mutation
-                const cloned = JSON.parse(
-                  JSON.stringify(targetInstance.contentJson),
-                );
-                if (position === "start") {
-                  cloned.content = [...nodesToInsert, ...cloned.content];
-                } else {
-                  cloned.content = [...cloned.content, ...nodesToInsert];
-                }
-                newDocJson = cloned;
-              } else {
-                // No existing document – use the parsed JSON directly
-                newDocJson = parsedJson;
-              }
-
-              // Use a small debounce so rapid successive insertText calls (if any)
-              // don't overwhelm the store/UI
-              debouncedInsertTextUpdate(() =>
-                updateInstance(targetInstanceId, {
-                  contentJson: newDocJson,
-                  hasUnsavedChanges: true,
-                }),
-              );
-
-              // Bring the target instance to foreground so user can see the changes
-              const appStore = useAppStore.getState();
-              appStore.bringInstanceToForeground(targetInstanceId);
-
-              // Get the display title from the app store instance
-              const appInstance = appStore.instances[targetInstanceId];
-              const displayName = appInstance?.title || "Untitled";
-
-              const resultMessage = `Successfully inserted text at ${
-                position === "start" ? "start" : "end"
-              } of "${displayName}" (instanceId: ${targetInstanceId})${
-                usedFallback
-                  ? ` [Note: Used fallback to most recent instance as specified instance ${instanceId} was not found]`
-                  : ""
-              }`;
-              console.log(
-                `[ToolCall] Successfully inserted text into TextEdit instance ${targetInstanceId} (${displayName})${
-                  usedFallback ? " using fallback mechanism" : ""
-                }`,
-              );
-
-              // Add tool result back to messages
-              addToolResult({
-                tool: toolCall.toolName,
-                toolCallId: toolCall.toolCallId,
-                output: resultMessage,
-              });
-              break;
-            } catch (err) {
-              console.error("textEditInsertText error:", err);
-              addToolResult({
-                tool: toolCall.toolName,
-                toolCallId: toolCall.toolCallId,
-                state: "output-error",
-                errorText:
-                  err instanceof Error ? err.message : "Failed to insert text",
-              });
-              break;
-            }
-          }
-          case "textEditNewFile": {
-            const { title } = toolCall.input as {
-              title?: string;
-            };
-
-            console.log("[ToolCall] newFile:", { title });
-
-            // Create a new TextEdit instance with multi-window support
-            const appStore = useAppStore.getState();
-            const instanceId = appStore.launchApp(
-              "textedit",
-              undefined,
-              title,
-              true,
-            );
-
-            // Track this newly created instance for fallback mechanism
-            trackNewTextEditInstance(instanceId);
-
-            // Wait a bit for the app to initialize
-            await new Promise((resolve) => setTimeout(resolve, 200));
-
-            // Bring the new instance to foreground so user can see it
-            appStore.bringInstanceToForeground(instanceId);
-
-            // Return structured data for easier parsing by AI
-            const resultData = {
-              success: true,
-              instanceId: instanceId,
-              title: title || "Untitled",
-            };
-            const resultMessage = `Successfully created new TextEdit document "${resultData.title}" with instanceId: ${instanceId}. Use this instanceId for any subsequent insertText or searchReplace operations.`;
-
-            console.log(
-              `[ToolCall] Created a new TextEdit document (instanceId: ${instanceId})${
-                title ? ` titled "${title}"` : ""
-              }.`,
-            );
-
-            // Add tool result back to messages
-            addToolResult({
-              tool: toolCall.toolName,
-              toolCallId: toolCall.toolCallId,
-              output: resultMessage,
-            });
-            break;
-          }
           case "ipodControl": {
             const {
               action = "toggle",
               id,
               title,
               artist,
+              enableVideo,
+              enableTranslation,
+              enableFullscreen,
             } = toolCall.input as {
               action?:
                 | "toggle"
@@ -1139,6 +717,9 @@ export function useAiChat(onPromptSetUsername?: () => void) {
               id?: string;
               title?: string;
               artist?: string;
+              enableVideo?: boolean;
+              enableTranslation?: string | null;
+              enableFullscreen?: boolean;
             };
 
             console.log("[ToolCall] ipodControl:", {
@@ -1146,7 +727,13 @@ export function useAiChat(onPromptSetUsername?: () => void) {
               id,
               title,
               artist,
+              enableVideo,
+              enableTranslation,
+              enableFullscreen,
             });
+
+            // Check if user is on iOS (cannot auto-play due to browser restrictions)
+            const isIOS = detectUserOS() === "iOS";
 
             const ensureIpodIsOpen = () => {
               const appState = useAppStore.getState();
@@ -1162,6 +749,76 @@ export function useAiChat(onPromptSetUsername?: () => void) {
 
             ensureIpodIsOpen();
 
+            // Helper function to apply video, translation, and fullscreen settings
+            // Returns an array of state change messages
+            const applyIpodSettings = (): string[] => {
+              const ipod = useIpodStore.getState();
+              const stateChanges: string[] = [];
+              
+              if (enableVideo !== undefined) {
+                if (enableVideo && !ipod.showVideo) {
+                  ipod.setShowVideo(true);
+                  stateChanges.push(i18n.t("apps.chats.toolCalls.ipodTurnedOnVideo"));
+                  console.log("[ToolCall] Video enabled.");
+                } else if (!enableVideo && ipod.showVideo) {
+                  ipod.setShowVideo(false);
+                  stateChanges.push(i18n.t("apps.chats.toolCalls.ipodTurnedOffVideo"));
+                  console.log("[ToolCall] Video disabled.");
+                }
+              }
+
+              if (enableTranslation !== undefined) {
+                // Check for values that should disable translation
+                const disableValues = ['original', 'off', 'none', 'disable', 'disabled', 'null'];
+                const shouldDisable = enableTranslation === null || 
+                  enableTranslation === "" || 
+                  (typeof enableTranslation === 'string' && disableValues.includes(enableTranslation.toLowerCase()));
+                
+                if (shouldDisable) {
+                  ipod.setLyricsTranslationLanguage(null);
+                  stateChanges.push(i18n.t("apps.chats.toolCalls.ipodTurnedOffLyricsTranslation"));
+                  console.log("[ToolCall] Lyrics translation disabled.");
+                } else {
+                  ipod.setLyricsTranslationLanguage(enableTranslation);
+                  const currentTrack = ipod.tracks[ipod.currentIndex];
+                  if (currentTrack?.id) {
+                    ipod.setLyricsTranslationRequest(enableTranslation, currentTrack.id);
+                  }
+                  // Map language codes to readable names
+                  const languageNames: Record<string, string> = {
+                    'en': 'English',
+                    'zh-TW': 'Traditional Chinese',
+                    'zh-CN': 'Simplified Chinese',
+                    'ja': 'Japanese',
+                    'ko': 'Korean',
+                    'es': 'Spanish',
+                    'fr': 'French',
+                    'de': 'German',
+                    'pt': 'Portuguese',
+                    'it': 'Italian',
+                    'ru': 'Russian',
+                  };
+                  const langName = languageNames[enableTranslation] || enableTranslation;
+                  stateChanges.push(i18n.t("apps.chats.toolCalls.ipodTranslatedLyricsTo", { langName }));
+                  console.log(`[ToolCall] Lyrics translation enabled for language: ${enableTranslation}.`);
+                }
+              }
+
+              if (enableFullscreen !== undefined) {
+                if (enableFullscreen && !ipod.isFullScreen) {
+                  ipod.toggleFullScreen();
+                  stateChanges.push(i18n.t("apps.chats.toolCalls.ipodTurnedOnFullScreen"));
+                  console.log("[ToolCall] Fullscreen enabled.");
+                } else if (!enableFullscreen && ipod.isFullScreen) {
+                  ipod.toggleFullScreen();
+                  stateChanges.push(i18n.t("apps.chats.toolCalls.ipodTurnedOffFullScreen"));
+                  console.log("[ToolCall] Fullscreen disabled.");
+                }
+              }
+
+              return stateChanges;
+            };
+
             const normalizedAction = action ?? "toggle";
 
             if (
@@ -1170,6 +827,28 @@ export function useAiChat(onPromptSetUsername?: () => void) {
               normalizedAction === "pause"
             ) {
               const ipod = useIpodStore.getState();
+
+              // On iOS, don't auto-play - inform user to press play manually
+              if (isIOS && (normalizedAction === "play" || normalizedAction === "toggle")) {
+                const stateChanges = applyIpodSettings();
+                const resultParts = [i18n.t("apps.chats.toolCalls.ipodReady")];
+                if (stateChanges.length > 0) {
+                  resultParts.push(...stateChanges);
+                }
+                
+                // Only add periods when joining multiple sentences
+                const resultMessage = resultParts.length > 1 
+                  ? resultParts.join(". ") + "."
+                  : resultParts[0];
+                addToolResult({
+                  tool: toolCall.toolName,
+                  toolCallId: toolCall.toolCallId,
+                  output: resultMessage,
+                });
+                result = "";
+                console.log("[ToolCall] iOS detected - user must manually start playback.");
+                break;
+              }
 
               switch (normalizedAction) {
                 case "play":
@@ -1183,7 +862,38 @@ export function useAiChat(onPromptSetUsername?: () => void) {
                   break;
               }
 
-              const nowPlaying = useIpodStore.getState().isPlaying;
+              const stateChanges = applyIpodSettings();
+              const updatedIpod = useIpodStore.getState();
+              const nowPlaying = updatedIpod.isPlaying;
+              const track = updatedIpod.tracks[updatedIpod.currentIndex];
+              
+              let playbackState: string;
+              if (track) {
+                const trackDesc = `${track.title}${track.artist ? ` by ${track.artist}` : ""}`;
+                playbackState = nowPlaying 
+                  ? i18n.t("apps.chats.toolCalls.ipodPlayingTrack", { trackDesc })
+                  : i18n.t("apps.chats.toolCalls.ipodPausedTrack", { trackDesc });
+              } else {
+                playbackState = nowPlaying 
+                  ? i18n.t("apps.chats.toolCalls.ipodPlaying")
+                  : i18n.t("apps.chats.toolCalls.ipodPaused");
+              }
+              const resultParts = [playbackState];
+              if (stateChanges.length > 0) {
+                resultParts.push(...stateChanges);
+              }
+              
+              // Only add periods when joining multiple sentences
+              const resultMessage = resultParts.length > 1 
+                ? resultParts.join(". ") + "."
+                : resultParts[0];
+              addToolResult({
+                tool: toolCall.toolName,
+                toolCallId: toolCall.toolCallId,
+                output: resultMessage,
+              });
+              result = ""; // Clear result to prevent duplicate
+              
               console.log(
                 `[ToolCall] iPod is now ${nowPlaying ? "playing" : "paused"}.`,
               );
@@ -1254,7 +964,14 @@ export function useAiChat(onPromptSetUsername?: () => void) {
               }
 
               if (finalCandidateIndices.length === 0) {
-                console.log("[ToolCall] Song not found in iPod library.");
+                const errorMsg = i18n.t("apps.chats.toolCalls.ipodSongNotFound");
+                addToolResult({
+                  tool: toolCall.toolName,
+                  toolCallId: toolCall.toolCallId,
+                  output: errorMsg,
+                });
+                result = ""; // Clear result to prevent duplicate
+                console.log(`[ToolCall] ${errorMsg}`);
                 break;
               }
 
@@ -1265,36 +982,124 @@ export function useAiChat(onPromptSetUsername?: () => void) {
 
               const { setCurrentIndex, setIsPlaying } = useIpodStore.getState();
               setCurrentIndex(randomIndexFromArray);
-              setIsPlaying(true);
-
+              
               const track = tracks[randomIndexFromArray];
-              const trackDesc = `${track.title}${
+              const trackDescForLog = `${track.title}${
                 track.artist ? ` by ${track.artist}` : ""
               }`;
-              console.log(`[ToolCall] Playing ${trackDesc}.`);
+
+              // On iOS, don't auto-play - just select the track
+              if (isIOS) {
+                const stateChanges = applyIpodSettings();
+                // Build track description for translation
+                const trackDescForMsg = track.artist 
+                  ? `${track.title} by ${track.artist}`
+                  : track.title;
+                const resultParts = [i18n.t("apps.chats.toolCalls.ipodSelected", { trackDesc: trackDescForMsg })];
+                if (stateChanges.length > 0) {
+                  resultParts.push(...stateChanges);
+                }
+                
+                // Only add periods when joining multiple sentences
+                const resultMessage = resultParts.length > 1 
+                  ? resultParts.join(". ") + "."
+                  : resultParts[0];
+                addToolResult({
+                  tool: toolCall.toolName,
+                  toolCallId: toolCall.toolCallId,
+                  output: resultMessage,
+                });
+                result = "";
+                console.log(`[ToolCall] iOS detected - selected ${trackDescForLog}, user must manually start playback.`);
+                break;
+              }
+
+              setIsPlaying(true);
+
+              const stateChanges = applyIpodSettings();
+              
+              // Build track description for translation
+              const trackDescForMsg = track.artist 
+                ? i18n.t("apps.chats.toolCalls.playingByArtist", { title: track.title, artist: track.artist })
+                : i18n.t("apps.chats.toolCalls.playing", { title: track.title });
+              
+              const resultParts = [trackDescForMsg];
+              if (stateChanges.length > 0) {
+                resultParts.push(...stateChanges);
+              }
+              
+              // Only add periods when joining multiple sentences
+              const resultMessage = resultParts.length > 1 
+                ? resultParts.join(". ") + "."
+                : resultParts[0];
+              addToolResult({
+                tool: toolCall.toolName,
+                toolCallId: toolCall.toolCallId,
+                output: resultMessage,
+              });
+              result = ""; // Clear result to prevent duplicate
+              
+              console.log(`[ToolCall] Playing ${trackDescForLog}.`);
               break;
             }
 
             if (normalizedAction === "addAndPlay") {
               if (!id) {
-                console.error(
-                  "[ToolCall] ipodControl: 'addAndPlay' action requires 'id'.",
-                );
+                const errorMsg = "The 'addAndPlay' action requires the 'id' parameter (YouTube ID or URL).";
+                addToolResult({
+                  tool: toolCall.toolName,
+                  toolCallId: toolCall.toolCallId,
+                  output: errorMsg,
+                });
+                result = ""; // Clear result to prevent duplicate
+                console.error(`[ToolCall] ${errorMsg}`);
                 break;
               }
 
               try {
+                // On iOS, use addTrackFromVideoId with autoPlay=false
                 const addedTrack = await useIpodStore
                   .getState()
-                  .addTrackFromVideoId(id);
+                  .addTrackFromVideoId(id, !isIOS); // autoPlay = true for non-iOS, false for iOS
 
                 if (addedTrack) {
+                  const stateChanges = applyIpodSettings();
+                  
+                  // Different message for iOS vs other platforms
+                  const resultParts = isIOS
+                    ? [i18n.t("apps.chats.toolCalls.ipodAdded", { title: addedTrack.title })]
+                    : [i18n.t("apps.chats.toolCalls.ipodAddedAndPlaying", { title: addedTrack.title })];
+                  
+                  if (stateChanges.length > 0) {
+                    resultParts.push(...stateChanges);
+                  }
+                  
+                  // Only add periods when joining multiple sentences
+                  const resultMessage = resultParts.length > 1 
+                    ? resultParts.join(". ") + "."
+                    : resultParts[0];
+                  addToolResult({
+                    tool: toolCall.toolName,
+                    toolCallId: toolCall.toolCallId,
+                    output: resultMessage,
+                  });
+                  result = ""; // Clear result to prevent duplicate
+                  
                   console.log(
-                    `[ToolCall] Added '${addedTrack.title}' to iPod and started playing.`,
+                    isIOS
+                      ? `[ToolCall] iOS detected - added '${addedTrack.title}' to iPod, user must manually start playback.`
+                      : `[ToolCall] Added '${addedTrack.title}' to iPod and started playing.`,
                   );
                   break;
                 } else {
-                  console.error(`[ToolCall] Failed to add ${id} to iPod.`);
+                  const errorMsg = i18n.t("apps.chats.toolCalls.ipodFailedToAdd", { id });
+                  addToolResult({
+                    tool: toolCall.toolName,
+                    toolCallId: toolCall.toolCallId,
+                    output: errorMsg,
+                  });
+                  result = ""; // Clear result to prevent duplicate
+                  console.error(`[ToolCall] ${errorMsg}`);
                   break;
                 }
               } catch (error) {
@@ -1302,16 +1107,21 @@ export function useAiChat(onPromptSetUsername?: () => void) {
                   error instanceof Error ? error.message : "Unknown error";
                 console.error(`[iPod] Error adding ${id}:`, error);
 
+                let errorMsg: string;
                 if (errorMessage.includes("Failed to fetch video info")) {
-                  console.error(
-                    `[ToolCall] Cannot add ${id}: Video unavailable or invalid.`,
-                  );
-                  break;
+                  errorMsg = i18n.t("apps.chats.toolCalls.ipodCannotAdd", { id });
+                } else {
+                  errorMsg = i18n.t("apps.chats.toolCalls.ipodFailedToAddWithError", { id, error: errorMessage });
                 }
-
-                console.error(
-                  `[ToolCall] Failed to add ${id}: ${errorMessage}`,
-                );
+                
+                addToolResult({
+                  tool: toolCall.toolName,
+                  toolCallId: toolCall.toolCallId,
+                  output: errorMsg,
+                });
+                result = ""; // Clear result to prevent duplicate
+                
+                console.error(`[ToolCall] ${errorMsg}`);
                 break;
               }
             }
@@ -1327,18 +1137,58 @@ export function useAiChat(onPromptSetUsername?: () => void) {
                 navigate();
               }
 
+              const stateChanges = applyIpodSettings();
+
               const updatedIpod = useIpodStore.getState();
               const track = updatedIpod.tracks[updatedIpod.currentIndex];
               if (track) {
                 const desc = `${track.title}${
                   track.artist ? ` by ${track.artist}` : ""
                 }`;
-                const verb =
-                  normalizedAction === "next" ? "Skipped to" : "Went back to";
-                console.log(`[ToolCall] ${verb} ${desc}.`);
+                const resultParts = [
+                  normalizedAction === "next"
+                    ? i18n.t("apps.chats.toolCalls.ipodSkippedTo", { trackDesc: desc })
+                    : i18n.t("apps.chats.toolCalls.ipodWentBackTo", { trackDesc: desc })
+                ];
+                if (stateChanges.length > 0) {
+                  resultParts.push(...stateChanges);
+                }
+                
+                // Only add periods when joining multiple sentences
+                const resultMessage = resultParts.length > 1 
+                  ? resultParts.join(". ") + "."
+                  : resultParts[0];
+                addToolResult({
+                  tool: toolCall.toolName,
+                  toolCallId: toolCall.toolCallId,
+                  output: resultMessage,
+                });
+                result = ""; // Clear result to prevent duplicate
+                
+                console.log(`[ToolCall] ${normalizedAction === "next" ? "Skipped to" : "Went back to"} ${desc}.`);
                 break;
               }
 
+              const resultParts = [
+                normalizedAction === "next"
+                  ? i18n.t("apps.chats.toolCalls.ipodSkippedToNext")
+                  : i18n.t("apps.chats.toolCalls.ipodWentBackToPrevious")
+              ];
+              if (stateChanges.length > 0) {
+                resultParts.push(...stateChanges);
+              }
+              
+              // Only add periods when joining multiple sentences
+              const resultMessage = resultParts.length > 1 
+                ? resultParts.join(". ") + "."
+                : resultParts[0];
+              addToolResult({
+                tool: toolCall.toolName,
+                toolCallId: toolCall.toolCallId,
+                output: resultMessage,
+              });
+              result = ""; // Clear result to prevent duplicate
+              
               console.log(
                 `[ToolCall] ${
                   normalizedAction === "next"
@@ -1349,6 +1199,22 @@ export function useAiChat(onPromptSetUsername?: () => void) {
               break;
             }
 
+            // Apply settings even if action is unhandled
+            const stateChanges = applyIpodSettings();
+            
+            if (stateChanges.length > 0) {
+              // Only add periods when joining multiple sentences
+              const resultMessage = stateChanges.length > 1 
+                ? stateChanges.join(". ") + "."
+                : stateChanges[0];
+              addToolResult({
+                tool: toolCall.toolName,
+                toolCallId: toolCall.toolCallId,
+                output: resultMessage,
+              });
+              result = ""; // Clear result to prevent duplicate
+            }
+            
             console.warn(
               `[ToolCall] ipodControl: Unhandled action "${normalizedAction}".`,
             );
@@ -1376,160 +1242,68 @@ export function useAiChat(onPromptSetUsername?: () => void) {
             );
             break;
           }
-          case "listFiles": {
-            const { directory } = toolCall.input as {
-              directory: "/Applets" | "/Documents" | "/Applications";
+          // === Unified VFS Tools ===
+          case "list": {
+            const { path, query, limit } = toolCall.input as {
+              path: string;
+              query?: string;
+              limit?: number;
             };
 
-            // Validate required parameter
-            if (!directory) {
-              console.error(
-                "[ToolCall] listFiles: Missing required 'directory' parameter",
-              );
+            if (!path) {
               addToolResult({
                 tool: toolCall.toolName,
                 toolCallId: toolCall.toolCallId,
                 state: "output-error",
-                errorText: "No directory provided",
+                errorText: "No path provided",
               });
-              result = ""; // Clear result to prevent duplicate
+              result = "";
               break;
             }
 
-            console.log("[ToolCall] listFiles:", { directory });
+            console.log("[ToolCall] list:", { path, query, limit });
 
             try {
-              let fileList: Array<{
-                path: string;
-                name: string;
-                type?: string;
-              }> = [];
-              let fileType = "";
-
-              if (directory === "/Applications") {
-                // List installed applications from appRegistry
-                const apps = Object.entries(appRegistry)
-                  .filter(([id]) => id !== "finder") // Exclude Finder from list
-                  .map(([id, app]) => ({
-                    path: `/Applications/${id}`,
-                    name: app.name,
-                  }));
-
-                fileList = apps;
-                fileType = "application";
-              } else {
-                // List files from file system
-                const filesStore = useFilesStore.getState();
-                const allItems = Object.values(filesStore.items);
-
-                // Filter for active items in specified directory that are not directories
-                const files = allItems.filter(
-                  (item) =>
-                    item.status === "active" &&
-                    item.path.startsWith(`${directory}/`) &&
-                    !item.isDirectory &&
-                    item.path !== `${directory}/`, // Exclude the directory itself
-                );
-
-                // Map to return relevant metadata
-                fileList = files.map((file) => ({
-                  path: file.path,
-                  name: file.name,
-                  type: file.type,
+              // Route based on path
+              if (path === "/Music") {
+                // List iPod library
+                const ipodStore = useIpodStore.getState();
+                const library = ipodStore.tracks.map((track) => ({
+                  path: `/Music/${track.id}`,
+                  id: track.id,
+                  title: track.title,
+                  artist: track.artist,
                 }));
 
-                fileType = directory === "/Applets" ? "applet" : "document";
-              }
+                const resultMessage =
+                  library.length > 0
+                    ? `${library.length === 1 
+                        ? i18n.t("apps.chats.toolCalls.foundSongsInMusic", { count: library.length })
+                        : i18n.t("apps.chats.toolCalls.foundSongsInMusicPlural", { count: library.length })}:\n${JSON.stringify(library, null, 2)}`
+                    : i18n.t("apps.chats.toolCalls.musicLibraryEmpty");
 
-              const resultMessage =
-                fileList.length > 0
-                  ? `Found ${fileList.length} ${fileType}${
-                      fileList.length === 1 ? "" : "s"
-                    }:\n${JSON.stringify(fileList, null, 2)}`
-                  : `No ${fileType}s found in ${directory} directory`;
-
-              console.log(`[ToolCall] ${resultMessage}`);
-
-              addToolResult({
-                tool: toolCall.toolName,
-                toolCallId: toolCall.toolCallId,
-                output: resultMessage,
-              });
-              result = ""; // Clear result to prevent duplicate
-            } catch (err) {
-              console.error("listFiles error:", err);
-              addToolResult({
-                tool: toolCall.toolName,
-                toolCallId: toolCall.toolCallId,
-                state: "output-error",
-                errorText:
-                  err instanceof Error ? err.message : "Failed to list files",
-                });
-                result = ""; // Clear result to prevent duplicate
-              }
-              break;
-            }
-            case "listSharedApplets": {
-              const {
-                listAll = true,
-                keyword,
-                limit,
-                query,
-              } = toolCall.input as {
-                listAll?: boolean;
-                keyword?: string;
-                limit?: number;
-                query?: string;
-              };
-
-              const rawKeyword =
-                typeof keyword === "string" && keyword.trim().length > 0
-                  ? keyword.trim()
-                  : typeof query === "string" && query.trim().length > 0
-                    ? query.trim()
-                    : "";
-
-              const normalizedKeyword = rawKeyword
-                ? normalizeSearchText(rawKeyword)
-                : "";
-              const keywordTokens = normalizedKeyword
-                ? normalizedKeyword.split(/\s+/).filter(Boolean)
-                : [];
-              const hasKeyword = normalizedKeyword.length > 0;
-
-              if (!hasKeyword && listAll === false) {
                 addToolResult({
                   tool: toolCall.toolName,
                   toolCallId: toolCall.toolCallId,
-                  state: "output-error",
-                  errorText:
-                    "Set listAll to true or provide a keyword to search.",
+                  output: resultMessage,
                 });
                 result = "";
-                break;
-              }
-
-              const parsedLimit =
-                typeof limit === "number" && Number.isFinite(limit)
-                  ? Math.floor(limit)
-                  : undefined;
-              const maxResults =
-                parsedLimit !== undefined
-                  ? Math.min(Math.max(parsedLimit, 1), 100)
+              } else if (path === "/Applets Store") {
+                // List shared applets from store
+                const normalizedKeyword = query
+                  ? normalizeSearchText(query.trim())
+                  : "";
+                const keywordTokens = normalizedKeyword
+                  ? normalizedKeyword.split(/\s+/).filter(Boolean)
+                  : [];
+                const hasKeyword = normalizedKeyword.length > 0;
+                const maxResults = limit
+                  ? Math.min(Math.max(limit, 1), 100)
                   : 50;
 
-              console.log(`[ToolCall] ${toolCall.toolName}:`, {
-                listAll,
-                keyword: normalizedKeyword,
-                limit: maxResults,
-              });
-
-              try {
                 const response = await fetch("/api/share-applet?list=true");
                 if (!response.ok) {
-                  throw new Error(
-                    `Failed to list shared applets (HTTP ${response.status})`,
-                  );
+                  throw new Error(`Failed to list shared applets (HTTP ${response.status})`);
                 }
 
                 const data = await response.json();
@@ -1542,31 +1316,20 @@ export function useAiChat(onPromptSetUsername?: () => void) {
                   createdBy?: string;
                 }> = Array.isArray(data?.applets) ? data.applets : [];
 
-                const useFuzzyMatching = hasKeyword;
-                const scoreThreshold = useFuzzyMatching
+                const scoreThreshold = hasKeyword
                   ? deriveScoreThreshold(normalizedKeyword.length)
                   : 0;
 
                 const scoredApplets = allApplets.map((applet) => {
                   const normalizedFields = [
-                    typeof applet.title === "string"
-                      ? normalizeSearchText(applet.title)
-                      : "",
-                    typeof applet.name === "string"
-                      ? normalizeSearchText(applet.name)
-                      : "",
-                    typeof applet.createdBy === "string"
-                      ? normalizeSearchText(applet.createdBy)
-                      : "",
+                    typeof applet.title === "string" ? normalizeSearchText(applet.title) : "",
+                    typeof applet.name === "string" ? normalizeSearchText(applet.name) : "",
+                    typeof applet.createdBy === "string" ? normalizeSearchText(applet.createdBy) : "",
                   ].filter((value) => value.length > 0);
 
-                  const score = useFuzzyMatching
+                  const score = hasKeyword
                     ? normalizedFields.reduce((best, field) => {
-                        const fieldScore = computeMatchScore(
-                          field,
-                          normalizedKeyword,
-                          keywordTokens,
-                        );
+                        const fieldScore = computeMatchScore(field, normalizedKeyword, keywordTokens);
                         return fieldScore > best ? fieldScore : best;
                       }, 0)
                     : 1;
@@ -1574,130 +1337,333 @@ export function useAiChat(onPromptSetUsername?: () => void) {
                   return { applet, score };
                 });
 
-                const filteredScoredApplets = useFuzzyMatching
-                  ? scoredApplets.filter(
-                      ({ score }) => score >= scoreThreshold,
-                    )
+                const filteredApplets = hasKeyword
+                  ? scoredApplets.filter(({ score }) => score >= scoreThreshold)
                   : scoredApplets;
 
-                const totalMatches = filteredScoredApplets.length;
-
-                filteredScoredApplets.sort((a, b) => {
-                  if (useFuzzyMatching && b.score !== a.score) {
-                    return b.score - a.score;
-                  }
+                filteredApplets.sort((a, b) => {
+                  if (hasKeyword && b.score !== a.score) return b.score - a.score;
                   return (b.applet.createdAt ?? 0) - (a.applet.createdAt ?? 0);
                 });
 
-                const limitedApplets = filteredScoredApplets
-                  .slice(0, maxResults)
-                  .map(({ applet, score }) => ({
-                    id: String(applet.id ?? ""),
-                    title: applet.title ?? null,
-                    name: applet.name ?? null,
-                    score,
-                  }));
+                const limitedApplets = filteredApplets.slice(0, maxResults).map(({ applet }) => ({
+                  path: `/Applets Store/${applet.id}`,
+                  id: applet.id,
+                  title: applet.title ?? applet.name ?? "Untitled",
+                  name: applet.name,
+                }));
 
-                const header = hasKeyword
-                  ? `Shared applets matching "${rawKeyword}" (${limitedApplets.length}/${totalMatches} shown):`
-                  : `Shared applets (${limitedApplets.length}${
-                      totalMatches > limitedApplets.length
-                        ? ` of ${totalMatches}`
-                        : ""
-                    } shown):`;
+                const resultMessage = limitedApplets.length > 0
+                  ? `${limitedApplets.length === 1
+                      ? i18n.t("apps.chats.toolCalls.foundSharedApplets", { count: limitedApplets.length })
+                      : i18n.t("apps.chats.toolCalls.foundSharedAppletsPlural", { count: limitedApplets.length })}:\n${JSON.stringify(limitedApplets, null, 2)}`
+                  : hasKeyword
+                    ? i18n.t("apps.chats.toolCalls.noSharedAppletsMatched", { query })
+                    : i18n.t("apps.chats.toolCalls.noSharedAppletsAvailable");
 
-                const lines: string[] = [header];
-                let summaryMessage: string;
-
-                if (limitedApplets.length === 0) {
-                  const emptyLine = hasKeyword
-                    ? "• No shared applets matched that keyword."
-                    : "• No shared applets available.";
-                  lines.push(emptyLine);
-                  summaryMessage = hasKeyword
-                    ? `No shared applets matched "${rawKeyword}".`
-                    : "No shared applets available.";
-                } else {
-                  limitedApplets.forEach((item) => {
-                    const displayName =
-                      item.title || item.name || "Untitled Applet";
-                    const suffix =
-                      useFuzzyMatching && hasKeyword
-                        ? ` • ${Math.round(item.score * 100)}% match`
-                        : "";
-                    lines.push(`• ${displayName} (id: ${item.id})${suffix}`);
-                  });
-
-                  if (totalMatches > limitedApplets.length) {
-                    lines.push(
-                      `• …and ${totalMatches - limitedApplets.length} more not shown (increase limit to view).`,
-                    );
-                  }
-
-                  summaryMessage = hasKeyword
-                    ? `Found ${limitedApplets.length} shared applet${
-                        limitedApplets.length === 1 ? "" : "s"
-                      } matching "${rawKeyword}".`
-                    : `Found ${limitedApplets.length}${
-                        totalMatches > limitedApplets.length
-                          ? ` of ${totalMatches}`
-                          : ""
-                      } shared applet${
-                        limitedApplets.length === 1 ? "" : "s"
-                      }.`;
-                }
-
-                const toolOutput = lines.join("\n");
                 addToolResult({
                   tool: toolCall.toolName,
                   toolCallId: toolCall.toolCallId,
-                  output: toolOutput,
-                });
-                console.log(`[ToolCall] ${summaryMessage}`);
-                result = ""; // Clear result to prevent duplicate
-              } catch (err) {
-                console.error(`${toolCall.toolName} error:`, err);
-                addToolResult({
-                  tool: toolCall.toolName,
-                  toolCallId: toolCall.toolCallId,
-                  state: "output-error",
-                  errorText:
-                    err instanceof Error
-                      ? err.message
-                      : "Failed to list shared applets",
-                });
-                result = ""; // Clear result to prevent duplicate
-              }
-              break;
-            }
-          case "fetchSharedApplet": {
-              const { id } = toolCall.input as { id?: string };
-              const shareId = id?.trim();
-
-              if (!shareId) {
-                console.error(
-                  "[ToolCall] fetchSharedApplet: Missing required 'id' parameter",
-                );
-                addToolResult({
-                  tool: toolCall.toolName,
-                  toolCallId: toolCall.toolCallId,
-                  state: "output-error",
-                  errorText: "No id provided",
+                  output: resultMessage,
                 });
                 result = "";
-                break;
-              }
+              } else if (path === "/Applications") {
+                // List installed applications
+                const apps = Object.entries(appRegistry)
+                  .filter(([id]) => id !== "finder")
+                  .map(([id, app]) => ({
+                    path: `/Applications/${id}`,
+                    name: app.name,
+                  }));
 
-              console.log("[ToolCall] fetchSharedApplet:", { id: shareId });
+                const appsMessage = apps.length === 1
+                  ? i18n.t("apps.chats.toolCalls.foundApplicationsList", { count: apps.length })
+                  : i18n.t("apps.chats.toolCalls.foundApplicationsListPlural", { count: apps.length });
+                addToolResult({
+                  tool: toolCall.toolName,
+                  toolCallId: toolCall.toolCallId,
+                  output: `${appsMessage}:\n${JSON.stringify(apps, null, 2)}`,
+                });
+                result = "";
+              } else if (path === "/Applets" || path === "/Documents") {
+                // List files from file system
+                const filesStore = useFilesStore.getState();
+                const allItems = Object.values(filesStore.items);
 
-              try {
-                const response = await fetch(
-                  `/api/share-applet?id=${encodeURIComponent(shareId)}`,
+                const files = allItems.filter(
+                  (item) =>
+                    item.status === "active" &&
+                    item.path.startsWith(`${path}/`) &&
+                    !item.isDirectory &&
+                    item.path !== `${path}/`,
                 );
+
+                const fileList = files.map((file) => ({
+                  path: file.path,
+                  name: file.name,
+                  type: file.type,
+                }));
+
+                const fileType = path === "/Applets" ? "applet" : "document";
+                const resultMessage = fileList.length > 0
+                  ? `${fileList.length === 1
+                      ? i18n.t("apps.chats.toolCalls.foundFileType", { count: fileList.length, fileType })
+                      : i18n.t("apps.chats.toolCalls.foundFileTypePlural", { count: fileList.length, fileType })}:\n${JSON.stringify(fileList, null, 2)}`
+                  : i18n.t("apps.chats.toolCalls.noFileTypeFound", { fileType, path });
+
+                addToolResult({
+                  tool: toolCall.toolName,
+                  toolCallId: toolCall.toolCallId,
+                  output: resultMessage,
+                });
+                result = "";
+              } else {
+                addToolResult({
+                  tool: toolCall.toolName,
+                  toolCallId: toolCall.toolCallId,
+                  state: "output-error",
+                  errorText: `Invalid path: ${path}. Supported paths: /Applets, /Documents, /Applications, /Music, /Applets Store`,
+                });
+                result = "";
+              }
+            } catch (err) {
+              console.error("list error:", err);
+              addToolResult({
+                tool: toolCall.toolName,
+                toolCallId: toolCall.toolCallId,
+                state: "output-error",
+                errorText: err instanceof Error ? err.message : "Failed to list items",
+              });
+              result = "";
+            }
+            break;
+          }
+          case "open": {
+            const { path } = toolCall.input as { path: string };
+
+            if (!path) {
+              addToolResult({
+                tool: toolCall.toolName,
+                toolCallId: toolCall.toolCallId,
+                state: "output-error",
+                errorText: "No path provided",
+              });
+              result = "";
+              break;
+            }
+
+            console.log("[ToolCall] open:", { path });
+
+            try {
+              // Route based on path prefix
+              if (path.startsWith("/Music/")) {
+                // Play iPod song by ID
+                const songId = path.replace("/Music/", "");
+                const ipodState = useIpodStore.getState();
+                const trackIndex = ipodState.tracks.findIndex((t) => t.id === songId);
+
+                if (trackIndex === -1) {
+                  throw new Error(`Song not found: ${songId}`);
+                }
+
+                // Ensure iPod is open
+                const appState = useAppStore.getState();
+                const ipodInstances = appState.getInstancesByAppId("ipod");
+                if (!ipodInstances.some((inst) => inst.isOpen)) {
+                  launchApp("ipod");
+                }
+
+                ipodState.setCurrentIndex(trackIndex);
+                ipodState.setIsPlaying(true);
+
+                const track = ipodState.tracks[trackIndex];
+                const playingMessage = track.artist
+                  ? i18n.t("apps.chats.toolCalls.playingTrackByArtist", { title: track.title, artist: track.artist })
+                  : i18n.t("apps.chats.toolCalls.playingTrack", { title: track.title });
+                addToolResult({
+                  tool: toolCall.toolName,
+                  toolCallId: toolCall.toolCallId,
+                  output: playingMessage,
+                });
+                result = "";
+              } else if (path.startsWith("/Applets Store/")) {
+                // Open shared applet preview
+                const shareId = path.replace("/Applets Store/", "");
+                
+                // Fetch applet metadata to get the name
+                let appletName = shareId;
+                try {
+                  const response = await fetch(`/api/share-applet?id=${encodeURIComponent(shareId)}`);
+                  if (response.ok) {
+                    const data = await response.json();
+                    appletName = data.title || data.name || shareId;
+                  }
+                } catch {
+                  // Fall back to shareId if fetch fails
+                }
+                
+                launchApp("applet-viewer", {
+                  initialData: { path: "", content: "", shareCode: shareId },
+                });
+
+                addToolResult({
+                  tool: toolCall.toolName,
+                  toolCallId: toolCall.toolCallId,
+                  output: i18n.t("apps.chats.toolCalls.openedApplet", { appletName }),
+                });
+                result = "";
+              } else if (path.startsWith("/Applications/")) {
+                // Launch application
+                const appId = path.replace("/Applications/", "") as AppId;
+                if (!appRegistry[appId]) {
+                  throw new Error(`Application not found: ${appId}`);
+                }
+
+                launchApp(appId);
+                addToolResult({
+                  tool: toolCall.toolName,
+                  toolCallId: toolCall.toolCallId,
+                  output: `Launched ${appRegistry[appId].name}`,
+                });
+                result = "";
+              } else if (path.startsWith("/Applets/")) {
+                // Open applet in viewer
+                const filesStore = useFilesStore.getState();
+                const fileItem = filesStore.items[path];
+
+                if (!fileItem || fileItem.status !== "active") {
+                  throw new Error(`Applet not found: ${path}`);
+                }
+
+                if (!fileItem.uuid) {
+                  throw new Error(`Applet missing content: ${path}`);
+                }
+
+                const contentData = await dbOperations.get<DocumentContent>(
+                  STORES.APPLETS,
+                  fileItem.uuid,
+                );
+
+                if (!contentData || !contentData.content) {
+                  throw new Error(`Failed to read applet content: ${path}`);
+                }
+
+                let content: string;
+                if (contentData.content instanceof Blob) {
+                  content = await contentData.content.text();
+                } else {
+                  content = contentData.content;
+                }
+
+                launchApp("applet-viewer", {
+                  initialData: { path, content },
+                });
+
+                addToolResult({
+                  tool: toolCall.toolName,
+                  toolCallId: toolCall.toolCallId,
+                  output: i18n.t("apps.chats.toolCalls.openedFile", { fileName: fileItem.name }),
+                });
+                result = "";
+              } else if (path.startsWith("/Documents/")) {
+                // Open document in TextEdit
+                const filesStore = useFilesStore.getState();
+                const fileItem = filesStore.items[path];
+
+                if (!fileItem || fileItem.status !== "active") {
+                  throw new Error(`Document not found: ${path}`);
+                }
+
+                if (!fileItem.uuid) {
+                  throw new Error(`Document missing content: ${path}`);
+                }
+
+                const contentData = await dbOperations.get<DocumentContent>(
+                  STORES.DOCUMENTS,
+                  fileItem.uuid,
+                );
+
+                if (!contentData || !contentData.content) {
+                  throw new Error(`Failed to read document content: ${path}`);
+                }
+
+                let content: string;
+                if (contentData.content instanceof Blob) {
+                  content = await contentData.content.text();
+                } else {
+                  content = contentData.content;
+                }
+
+                const htmlContent = markdownToHtml(content);
+                const contentJson = generateJSON(htmlContent, [
+                  StarterKit,
+                  Underline,
+                  TextAlign.configure({ types: ["heading", "paragraph"] }),
+                  TaskList,
+                  TaskItem.configure({ nested: true }),
+                ] as AnyExtension[]);
+
+                const instanceId = launchApp("textedit", { multiWindow: true });
+                await new Promise((resolve) => setTimeout(resolve, 100));
+
+                const textEditStore = useTextEditStore.getState();
+                textEditStore.updateInstance(instanceId, {
+                  filePath: path,
+                  contentJson,
+                  hasUnsavedChanges: false,
+                });
+
+                addToolResult({
+                  tool: toolCall.toolName,
+                  toolCallId: toolCall.toolCallId,
+                  output: i18n.t("apps.chats.toolCalls.openedDocument", { fileName: fileItem.name }),
+                });
+                result = "";
+              } else {
+                addToolResult({
+                  tool: toolCall.toolName,
+                  toolCallId: toolCall.toolCallId,
+                  state: "output-error",
+                  errorText: `Invalid path: ${path}`,
+                });
+                result = "";
+              }
+            } catch (err) {
+              console.error("open error:", err);
+              addToolResult({
+                tool: toolCall.toolName,
+                toolCallId: toolCall.toolCallId,
+                state: "output-error",
+                errorText: err instanceof Error ? err.message : "Failed to open",
+              });
+              result = "";
+            }
+            break;
+          }
+          case "read": {
+            const { path } = toolCall.input as { path: string };
+
+            if (!path) {
+              addToolResult({
+                tool: toolCall.toolName,
+                toolCallId: toolCall.toolCallId,
+                state: "output-error",
+                errorText: "No path provided",
+              });
+              result = "";
+              break;
+            }
+
+            console.log("[ToolCall] read:", { path });
+
+            try {
+              if (path.startsWith("/Applets Store/")) {
+                // Fetch shared applet content
+                const shareId = path.replace("/Applets Store/", "");
+                const response = await fetch(`/api/share-applet?id=${encodeURIComponent(shareId)}`);
+
                 if (!response.ok) {
-                  throw new Error(
-                    `Failed to fetch shared applet (HTTP ${response.status})`,
-                  );
+                  throw new Error(`Failed to fetch shared applet (HTTP ${response.status})`);
                 }
 
                 const data = await response.json();
@@ -1715,13 +1681,8 @@ export function useAiChat(onPromptSetUsername?: () => void) {
                   name: data?.name ?? null,
                   icon: data?.icon ?? null,
                   createdBy: data?.createdBy ?? null,
-                  createdAt: data?.createdAt ?? null,
-                  windowWidth: data?.windowWidth ?? null,
-                  windowHeight: data?.windowHeight ?? null,
-                  featured: data?.featured ?? null,
                   installedPath: installedEntry?.path ?? null,
-                  content:
-                    typeof data?.content === "string" ? data.content : "",
+                  content: typeof data?.content === "string" ? data.content : "",
                 };
 
                 addToolResult({
@@ -1730,368 +1691,541 @@ export function useAiChat(onPromptSetUsername?: () => void) {
                   output: JSON.stringify(payload, null, 2),
                 });
                 result = "";
-              } catch (err) {
-                console.error("fetchSharedApplet error:", err);
-                addToolResult({
-                  tool: toolCall.toolName,
-                  toolCallId: toolCall.toolCallId,
-                  state: "output-error",
-                  errorText:
-                    err instanceof Error
-                      ? err.message
-                      : "Failed to fetch shared applet",
-                });
-                result = "";
-              }
-              break;
-            }
-          case "openSharedApplet": {
-              const { id } = toolCall.input as { id?: string };
-              const shareId = id?.trim();
+              } else if (path.startsWith("/Applets/") || path.startsWith("/Documents/")) {
+                // Read local file content
+                const isApplet = path.startsWith("/Applets/");
+                const filesStore = useFilesStore.getState();
+                const fileItem = filesStore.items[path];
 
-              if (!shareId) {
-                console.error(
-                  "[ToolCall] openSharedApplet: Missing required 'id' parameter",
-                );
-                addToolResult({
-                  tool: toolCall.toolName,
-                  toolCallId: toolCall.toolCallId,
-                  state: "output-error",
-                  errorText: "No id provided",
-                });
-                result = "";
-                break;
-              }
+                if (!fileItem || fileItem.status !== "active") {
+                  throw new Error(`File not found: ${path}`);
+                }
 
-              console.log("[ToolCall] openSharedApplet:", { id: shareId });
-
-              launchApp("applet-viewer", {
-                initialData: {
-                  path: "",
-                  content: "",
-                  shareCode: shareId,
-                },
-              });
-
-              result = `Opened applet preview`;
-              break;
-            }
-          case "listIpodLibrary": {
-            console.log("[ToolCall] listIpodLibrary");
-
-            try {
-              const ipodStore = useIpodStore.getState();
-              const library = ipodStore.tracks.map((track) => ({
-                id: track.id,
-                title: track.title,
-                artist: track.artist,
-              }));
-
-              const resultMessage =
-                library.length > 0
-                  ? `Found ${library.length} song${
-                      library.length === 1 ? "" : "s"
-                    } in iPod library:\n${JSON.stringify(library, null, 2)}`
-                  : "iPod library is empty";
-
-              console.log(`[ToolCall] ${resultMessage}`);
-
-              addToolResult({
-                tool: toolCall.toolName,
-                toolCallId: toolCall.toolCallId,
-                output: resultMessage,
-              });
-              result = ""; // Clear result to prevent duplicate
-            } catch (err) {
-              console.error("listIpodLibrary error:", err);
-              addToolResult({
-                tool: toolCall.toolName,
-                toolCallId: toolCall.toolCallId,
-                state: "output-error",
-                errorText:
-                  err instanceof Error
-                    ? err.message
-                    : "Failed to list iPod library",
-              });
-              result = ""; // Clear result to prevent duplicate
-            }
-            break;
-          }
-          case "readFile": {
-            const { path } = toolCall.input as { path: string };
-
-            if (!path) {
-              console.error(
-                "[ToolCall] readFile: Missing required 'path' parameter",
-              );
-              addToolResult({
-                tool: toolCall.toolName,
-                toolCallId: toolCall.toolCallId,
-                state: "output-error",
-                errorText: "No path provided",
-              });
-              result = "";
-              break;
-            }
-
-            console.log("[ToolCall] readFile:", { path });
-
-            try {
-              const isApplet = path.startsWith("/Applets/");
-              const isDocument = path.startsWith("/Documents/");
-
-              if (!isApplet && !isDocument) {
-                throw new Error(
-                  "Invalid path: readFile only supports items in /Applets or /Documents",
-                );
-              }
-
-              const filesStore = useFilesStore.getState();
-              const fileItem = filesStore.items[path];
-
-              if (!fileItem) {
-                throw new Error(`File not found: ${path}`);
-              }
-
-              if (fileItem.status !== "active") {
-                throw new Error(`File is not active: ${path}`);
-              }
-
-              if (fileItem.isDirectory) {
-                throw new Error(`Path is a directory, not a file: ${path}`);
-              }
-
-              if (!fileItem.uuid) {
-                throw new Error(
-                  `File missing UUID for content lookup: ${path}`,
-                );
-              }
-
-              const storeName = isApplet ? STORES.APPLETS : STORES.DOCUMENTS;
-              const contentData = await dbOperations.get<DocumentContent>(
-                storeName,
-                fileItem.uuid,
-              );
-
-              if (!contentData || contentData.content == null) {
-                throw new Error(`Failed to read file content: ${path}`);
-              }
-
-              let content: string;
-              if (typeof contentData.content === "string") {
-                content = contentData.content;
-              } else if (contentData.content instanceof Blob) {
-                content = await contentData.content.text();
-              } else {
-                throw new Error("Unsupported content type for file");
-              }
-
-              const fileLabel = isApplet ? "Applet" : "Document";
-              const charCount = content.length;
-              const resultMessage = `${fileLabel} content: ${fileItem.name} (${charCount} characters)\n\n${content}`;
-
-              addToolResult({
-                tool: toolCall.toolName,
-                toolCallId: toolCall.toolCallId,
-                output: resultMessage,
-              });
-              result = "";
-            } catch (err) {
-              console.error("readFile error:", err);
-              addToolResult({
-                tool: toolCall.toolName,
-                toolCallId: toolCall.toolCallId,
-                state: "output-error",
-                errorText:
-                  err instanceof Error
-                    ? err.message
-                    : "Failed to read file content",
-              });
-              result = "";
-            }
-
-            break;
-          }
-          case "openFile": {
-            const { path } = toolCall.input as { path: string };
-
-            // Validate required parameter
-            if (!path) {
-              console.error(
-                "[ToolCall] openFile: Missing required 'path' parameter",
-              );
-              addToolResult({
-                tool: toolCall.toolName,
-                toolCallId: toolCall.toolCallId,
-                state: "output-error",
-                errorText: "No path provided",
-              });
-              result = ""; // Clear result to prevent duplicate
-              break;
-            }
-
-            console.log("[ToolCall] openFile:", { path });
-
-            try {
-              // Validate path is in supported directories
-              const isApplet = path.startsWith("/Applets/");
-              const isDocument = path.startsWith("/Documents/");
-              const isApplication = path.startsWith("/Applications/");
-
-              if (!isApplet && !isDocument && !isApplication) {
-                throw new Error(
-                  "Invalid path: Must be in /Applets, /Documents, or /Applications directory",
-                );
-              }
-
-              // Check if file exists in the files store
-              const filesStore = useFilesStore.getState();
-              const fileItem = filesStore.items[path];
-
-              if (!fileItem) {
-                throw new Error(`File not found: ${path}`);
-              }
-
-              if (fileItem.status !== "active") {
-                throw new Error(`File is not active: ${path}`);
-              }
-
-              if (fileItem.isDirectory) {
-                throw new Error(`Path is a directory, not a file: ${path}`);
-              }
-
-              if (isApplet) {
-                // Handle applet opening
                 if (!fileItem.uuid) {
-                  throw new Error(
-                    `Applet missing UUID for content lookup: ${path}`,
-                  );
+                  throw new Error(`File missing content: ${path}`);
                 }
 
-                const contentData = await dbOperations.get<DocumentContent>(
-                  STORES.APPLETS,
-                  fileItem.uuid,
-                );
+                const storeName = isApplet ? STORES.APPLETS : STORES.DOCUMENTS;
+                const contentData = await dbOperations.get<DocumentContent>(storeName, fileItem.uuid);
 
-                if (!contentData || !contentData.content) {
-                  throw new Error(`Failed to read applet content: ${path}`);
+                if (!contentData || contentData.content == null) {
+                  throw new Error(`Failed to read file content: ${path}`);
                 }
 
-                // Convert content to string if it's a Blob
                 let content: string;
-                if (contentData.content instanceof Blob) {
+                if (typeof contentData.content === "string") {
+                  content = contentData.content;
+                } else if (contentData.content instanceof Blob) {
                   content = await contentData.content.text();
                 } else {
-                  content = contentData.content;
+                  throw new Error("Unsupported content type");
                 }
 
-                // Launch applet-viewer with the content
-                launchApp("applet-viewer", {
-                  initialData: {
-                    path: path,
-                    content: content,
-                  },
-                });
-
-                const resultMessage = `Successfully opened applet: ${fileItem.name}`;
-                console.log(`[ToolCall] ${resultMessage}`);
-
+                const fileLabel = isApplet ? "Applet" : "Document";
                 addToolResult({
                   tool: toolCall.toolName,
                   toolCallId: toolCall.toolCallId,
-                  output: resultMessage,
+                  output: `${fileLabel} content: ${fileItem.name} (${content.length} characters)\n\n${content}`,
                 });
-              } else if (isDocument) {
-                // Handle document opening
-                if (!fileItem.uuid) {
-                  throw new Error(
-                    `Document missing UUID for content lookup: ${path}`,
-                  );
+                result = "";
+              } else {
+                addToolResult({
+                  tool: toolCall.toolName,
+                  toolCallId: toolCall.toolCallId,
+                  state: "output-error",
+                  errorText: `Invalid path for read: ${path}. Use /Applets/*, /Documents/*, or /Applets Store/*`,
+                });
+                result = "";
+              }
+            } catch (err) {
+              console.error("read error:", err);
+              addToolResult({
+                tool: toolCall.toolName,
+                toolCallId: toolCall.toolCallId,
+                state: "output-error",
+                errorText: err instanceof Error ? err.message : "Failed to read file",
+              });
+              result = "";
+            }
+            break;
+          }
+          case "write": {
+            const { path, content, mode = "overwrite" } = toolCall.input as {
+              path: string;
+              content: string;
+              mode?: "overwrite" | "append" | "prepend";
+            };
+
+            if (!path) {
+              addToolResult({
+                tool: toolCall.toolName,
+                toolCallId: toolCall.toolCallId,
+                state: "output-error",
+                errorText: "No path provided",
+              });
+              result = "";
+              break;
+            }
+
+            // Validate path format for documents
+            if (!path.startsWith("/Documents/")) {
+              addToolResult({
+                tool: toolCall.toolName,
+                toolCallId: toolCall.toolCallId,
+                state: "output-error",
+                errorText: `Invalid path: ${path}. Use /Documents/filename.md for documents. For applets, use generateHtml (new) or edit (small changes).`,
+              });
+              result = "";
+              break;
+            }
+
+            // Validate filename has .md extension
+            const fileName = path.split("/").pop() || "";
+            if (!fileName.endsWith(".md")) {
+              addToolResult({
+                tool: toolCall.toolName,
+                toolCallId: toolCall.toolCallId,
+                state: "output-error",
+                errorText: `Invalid filename: ${fileName}. Document files must end with .md extension (e.g., /Documents/my-notes.md)`,
+              });
+              result = "";
+              break;
+            }
+
+            if (!content && mode === "overwrite") {
+              addToolResult({
+                tool: toolCall.toolName,
+                toolCallId: toolCall.toolCallId,
+                state: "output-error",
+                errorText: "No content provided",
+              });
+              result = "";
+              break;
+            }
+
+            console.log("[ToolCall] write:", { path, mode, contentLength: content?.length });
+
+            try {
+              const appStore = useAppStore.getState();
+              const textEditStore = useTextEditStore.getState();
+
+              // Check if file exists for append/prepend modes
+              const existingItem = useFilesStore.getState().items[path];
+              const isNewFile = !existingItem || existingItem.status !== "active";
+
+              // Determine final content based on mode
+              let finalContent = content || "";
+              if (!isNewFile && mode !== "overwrite" && existingItem?.uuid) {
+                const existingData = await dbOperations.get<DocumentContent>(STORES.DOCUMENTS, existingItem.uuid);
+                if (existingData?.content) {
+                  const existingContent = typeof existingData.content === "string"
+                    ? existingData.content
+                    : await existingData.content.text();
+                  finalContent = mode === "prepend"
+                    ? content + existingContent
+                    : existingContent + content;
+                }
+              }
+
+              // Save metadata to file store (addItem generates UUID for new files, preserves for existing)
+              useFilesStore.getState().addItem({
+                path,
+                name: fileName,
+                isDirectory: false,
+                type: "markdown",
+                size: new Blob([finalContent]).size,
+                icon: "📄",
+              });
+
+              // Get the saved item with UUID
+              const savedItem = useFilesStore.getState().items[path];
+              if (!savedItem?.uuid) {
+                throw new Error("Failed to save document metadata");
+              }
+
+              // Save content to IndexedDB
+              await dbOperations.put<DocumentContent>(
+                STORES.DOCUMENTS,
+                { name: fileName, content: finalContent },
+                savedItem.uuid,
+              );
+
+              // Find or create TextEdit instance for this file
+              let targetInstanceId: string | null = null;
+              for (const [instanceId, instance] of Object.entries(textEditStore.instances)) {
+                if (instance.filePath === path) {
+                  targetInstanceId = instanceId;
+                  break;
+                }
+              }
+
+              // Create new TextEdit instance if not found
+              if (!targetInstanceId) {
+                const windowTitle = fileName.replace(/\.md$/, "") || "Untitled";
+                targetInstanceId = appStore.launchApp("textedit", undefined, windowTitle, true);
+                trackNewTextEditInstance(targetInstanceId);
+                await new Promise((resolve) => setTimeout(resolve, 200));
+              }
+
+              // Update TextEdit instance with content
+              const htmlFragment = markdownToHtml(finalContent);
+              const contentJson = generateJSON(htmlFragment, [
+                StarterKit,
+                Underline,
+                TextAlign.configure({ types: ["heading", "paragraph"] }),
+                TaskList,
+                TaskItem.configure({ nested: true }),
+              ] as AnyExtension[]);
+
+              textEditStore.updateInstance(targetInstanceId, {
+                filePath: path,
+                contentJson,
+                hasUnsavedChanges: false, // Already saved to disk
+              });
+
+              appStore.bringInstanceToForeground(targetInstanceId);
+
+              const actionVerb = isNewFile ? "Created" : "Updated";
+              addToolResult({
+                tool: toolCall.toolName,
+                toolCallId: toolCall.toolCallId,
+                output: `${actionVerb} document: ${path}`,
+              });
+              result = "";
+            } catch (err) {
+              console.error("write error:", err);
+              addToolResult({
+                tool: toolCall.toolName,
+                toolCallId: toolCall.toolCallId,
+                state: "output-error",
+                errorText: err instanceof Error ? err.message : "Failed to write file",
+              });
+              result = "";
+            }
+            break;
+          }
+          case "edit": {
+            const { path, old_string, new_string } = toolCall.input as {
+              path: string;
+              old_string: string;
+              new_string: string;
+            };
+
+            if (!path || typeof old_string !== "string" || typeof new_string !== "string") {
+              addToolResult({
+                tool: toolCall.toolName,
+                toolCallId: toolCall.toolCallId,
+                state: "output-error",
+                errorText: "Missing required parameters: path, old_string, and new_string",
+              });
+              result = "";
+              break;
+            }
+
+            console.log("[ToolCall] edit:", { path, old_string: old_string.substring(0, 50) + "...", new_string: new_string.substring(0, 50) + "..." });
+
+            // Normalize line endings
+            const normalizedOldString = old_string.replace(/\r\n?/g, "\n");
+            const normalizedNewString = new_string.replace(/\r\n?/g, "\n");
+
+            try {
+              if (path.startsWith("/Documents/")) {
+                // Edit document - read directly from file system (independent of TextEdit instances)
+                const filesStore = useFilesStore.getState();
+                const fileItem = filesStore.items[path];
+
+                if (!fileItem || fileItem.status !== "active" || !fileItem.uuid) {
+                  throw new Error(`Document not found: ${path}. Use write tool to create new documents, or list({ path: "/Documents" }) to see available files.`);
                 }
 
-                const contentData = await dbOperations.get<DocumentContent>(
-                  STORES.DOCUMENTS,
-                  fileItem.uuid,
-                );
-
-                if (!contentData || !contentData.content) {
+                // Read existing content from IndexedDB
+                const contentData = await dbOperations.get<DocumentContent>(STORES.DOCUMENTS, fileItem.uuid);
+                if (!contentData?.content) {
                   throw new Error(`Failed to read document content: ${path}`);
                 }
 
-                // Convert content to string if it's a Blob
-                let content: string;
-                if (contentData.content instanceof Blob) {
-                  content = await contentData.content.text();
-                } else {
-                  content = contentData.content;
+                const existingContent = typeof contentData.content === "string"
+                  ? contentData.content
+                  : await contentData.content.text();
+
+                // Normalize existing content
+                const normalizedExisting = existingContent.replace(/\r\n?/g, "\n");
+
+                // Check for uniqueness - count occurrences
+                const occurrences = normalizedExisting.split(normalizedOldString).length - 1;
+                
+                if (occurrences === 0) {
+                  addToolResult({
+                    tool: toolCall.toolName,
+                    toolCallId: toolCall.toolCallId,
+                    state: "output-error",
+                    errorText: "old_string not found in file. Use read tool to verify current content.",
+                  });
+                  result = "";
+                  break;
                 }
 
-                // Parse markdown content to JSON for TextEdit
-                const htmlContent = markdownToHtml(content);
-                const contentJson = generateJSON(htmlContent, [
-                  StarterKit,
-                  Underline,
-                  TextAlign.configure({ types: ["heading", "paragraph"] }),
-                  TaskList,
-                  TaskItem.configure({ nested: true }),
-                ] as AnyExtension[]);
+                if (occurrences > 1) {
+                  addToolResult({
+                    tool: toolCall.toolName,
+                    toolCallId: toolCall.toolCallId,
+                    state: "output-error",
+                    errorText: `old_string matches ${occurrences} locations. Include more context to make it unique.`,
+                  });
+                  result = "";
+                  break;
+                }
 
-                // Launch TextEdit with the document
-                const instanceId = launchApp("textedit", { multiWindow: true });
+                // Replace exactly one occurrence
+                const updatedContent = normalizedExisting.replace(normalizedOldString, normalizedNewString);
 
-                // Wait for the instance to be created
-                await new Promise((resolve) => setTimeout(resolve, 100));
+                // Save updated content to IndexedDB
+                await dbOperations.put<DocumentContent>(
+                  STORES.DOCUMENTS,
+                  { name: fileItem.name, content: updatedContent },
+                  fileItem.uuid,
+                );
 
-                // Set the document content
-                const textEditStore = useTextEditStore.getState();
-                textEditStore.updateInstance(instanceId, {
-                  filePath: path,
-                  contentJson: contentJson,
-                  hasUnsavedChanges: false,
+                // Update file size in metadata
+                filesStore.addItem({
+                  ...fileItem,
+                  size: new Blob([updatedContent]).size,
                 });
 
-                const resultMessage = `Successfully opened document: ${fileItem.name}`;
-                console.log(`[ToolCall] ${resultMessage}`);
+                // Also update any open TextEdit instance showing this file
+                const textEditState = useTextEditStore.getState();
+                for (const [instanceId, instance] of Object.entries(textEditState.instances)) {
+                  if (instance.filePath === path) {
+                    const updatedHtml = markdownToHtml(updatedContent);
+                    const updatedJson = generateJSON(updatedHtml, [
+                      StarterKit,
+                      Underline,
+                      TextAlign.configure({ types: ["heading", "paragraph"] }),
+                      TaskList,
+                      TaskItem.configure({ nested: true }),
+                    ] as AnyExtension[]);
+
+                    textEditState.updateInstance(instanceId, {
+                      contentJson: updatedJson,
+                      hasUnsavedChanges: false, // Already saved to disk
+                    });
+                    break;
+                  }
+                }
 
                 addToolResult({
                   tool: toolCall.toolName,
                   toolCallId: toolCall.toolCallId,
-                  output: resultMessage,
+                  output: `Successfully edited document: ${path}`,
                 });
-              } else if (isApplication) {
-                // Handle application launching
-                const appId = path.replace("/Applications/", "") as AppId;
+                result = "";
+              } else if (path.startsWith("/Applets/")) {
+                // Edit applet HTML
+                const filesStore = useFilesStore.getState();
+                const fileItem = filesStore.items[path];
 
-                // Validate app exists in registry
-                if (!appRegistry[appId]) {
-                  throw new Error(`Application not found: ${appId}`);
+                if (!fileItem || fileItem.status !== "active" || !fileItem.uuid) {
+                  throw new Error(`Applet not found: ${path}. Use generateHtml tool to create new applets, or list({ path: "/Applets" }) to see available files.`);
                 }
 
-                // Launch the application
-                launchApp(appId);
+                const contentData = await dbOperations.get<DocumentContent>(STORES.APPLETS, fileItem.uuid);
+                if (!contentData?.content) {
+                  throw new Error(`Failed to read applet content: ${path}`);
+                }
 
-                const appName = appRegistry[appId].name;
-                const resultMessage = `Successfully launched application: ${appName}`;
-                console.log(`[ToolCall] ${resultMessage}`);
+                const existingContent = typeof contentData.content === "string"
+                  ? contentData.content
+                  : await contentData.content.text();
+
+                // Normalize existing content
+                const normalizedExisting = existingContent.replace(/\r\n?/g, "\n");
+
+                // Check for uniqueness - count occurrences
+                const occurrences = normalizedExisting.split(normalizedOldString).length - 1;
+                
+                if (occurrences === 0) {
+                  addToolResult({
+                    tool: toolCall.toolName,
+                    toolCallId: toolCall.toolCallId,
+                    state: "output-error",
+                    errorText: "old_string not found in file. Use read tool to verify current content.",
+                  });
+                  result = "";
+                  break;
+                }
+
+                if (occurrences > 1) {
+                  addToolResult({
+                    tool: toolCall.toolName,
+                    toolCallId: toolCall.toolCallId,
+                    state: "output-error",
+                    errorText: `old_string matches ${occurrences} locations. Include more context to make it unique.`,
+                  });
+                  result = "";
+                  break;
+                }
+
+                // Replace exactly one occurrence
+                const updatedContent = normalizedExisting.replace(normalizedOldString, normalizedNewString);
+
+                // Save to IndexedDB
+                await dbOperations.put<DocumentContent>(
+                  STORES.APPLETS,
+                  { name: fileItem.uuid, content: updatedContent },
+                  fileItem.uuid,
+                );
+
+                // Update file size in metadata
+                filesStore.addItem({
+                  ...fileItem,
+                  size: new Blob([updatedContent]).size,
+                });
 
                 addToolResult({
                   tool: toolCall.toolName,
                   toolCallId: toolCall.toolCallId,
-                  output: resultMessage,
+                  output: `Successfully edited applet: ${path}`,
                 });
+                result = "";
+              } else {
+                addToolResult({
+                  tool: toolCall.toolName,
+                  toolCallId: toolCall.toolCallId,
+                  state: "output-error",
+                  errorText: `Invalid path for edit: ${path}. Use /Documents/* or /Applets/*`,
+                });
+                result = "";
               }
-
-              result = ""; // Clear result to prevent duplicate
             } catch (err) {
-              console.error("openFile error:", err);
+              console.error("edit error:", err);
               addToolResult({
                 tool: toolCall.toolName,
                 toolCallId: toolCall.toolCallId,
                 state: "output-error",
-                errorText:
-                  err instanceof Error ? err.message : "Failed to open file",
+                errorText: err instanceof Error ? err.message : "Failed to edit file",
               });
-              result = ""; // Clear result to prevent duplicate
+              result = "";
+            }
+            break;
+          }
+          case "settings": {
+            const {
+              language,
+              theme,
+              masterVolume,
+              speechEnabled,
+              checkForUpdates,
+            } = toolCall.input as {
+              language?: string;
+              theme?: OsThemeId;
+              masterVolume?: number;
+              speechEnabled?: boolean;
+              checkForUpdates?: boolean;
+            };
+
+            const changes: string[] = [];
+            const appStore = useAppStore.getState();
+            const langStore = useLanguageStore.getState();
+            const themeStore = useThemeStore.getState();
+
+            // Language change
+            if (language !== undefined) {
+              // Use translation keys for language names (reuse iPod translation keys)
+              const getLanguageDisplayName = (langCode: string): string => {
+                const langMap: Record<string, string> = {
+                  en: "apps.ipod.translationLanguages.english",
+                  "zh-TW": "apps.ipod.translationLanguages.chinese",
+                  ja: "apps.ipod.translationLanguages.japanese",
+                  ko: "apps.ipod.translationLanguages.korean",
+                  fr: "apps.ipod.translationLanguages.french",
+                  de: "apps.ipod.translationLanguages.german",
+                  es: "apps.ipod.translationLanguages.spanish",
+                  pt: "apps.ipod.translationLanguages.portuguese",
+                  it: "apps.ipod.translationLanguages.italian",
+                  ru: "apps.ipod.translationLanguages.russian",
+                };
+                const key = langMap[langCode];
+                if (key) {
+                  const translated = i18n.t(key);
+                  // If translation doesn't exist, fall back to code
+                  return translated !== key ? translated : langCode;
+                }
+                return langCode;
+              };
+              langStore.setLanguage(language as "en" | "zh-TW" | "ja" | "ko" | "fr" | "de" | "es" | "pt" | "it" | "ru");
+              changes.push(
+                i18n.t("apps.chats.toolCalls.settingsLanguageChanged", {
+                  language: getLanguageDisplayName(language),
+                })
+              );
+              console.log(`[ToolCall] Language changed to: ${language}`);
+            }
+
+            // Theme change
+            if (theme !== undefined) {
+              if (themeStore.current !== theme) {
+                themeStore.setTheme(theme);
+                const themeName = themes[theme]?.name || theme;
+                changes.push(
+                  i18n.t("apps.chats.toolCalls.settingsThemeChanged", {
+                    theme: themeName,
+                  })
+                );
+                console.log(`[ToolCall] Theme changed to: ${theme}`);
+              }
+            }
+
+            // Master volume
+            if (masterVolume !== undefined) {
+              appStore.setMasterVolume(masterVolume);
+              const volumePercent = Math.round(masterVolume * 100);
+              changes.push(
+                i18n.t("apps.chats.toolCalls.settingsMasterVolumeSet", {
+                  volume: volumePercent,
+                })
+              );
+              console.log(`[ToolCall] Master volume set to: ${masterVolume}`);
+            }
+
+            // Speech enabled
+            if (speechEnabled !== undefined) {
+              appStore.setSpeechEnabled(speechEnabled);
+              changes.push(
+                speechEnabled
+                  ? i18n.t("apps.chats.toolCalls.settingsSpeechEnabled")
+                  : i18n.t("apps.chats.toolCalls.settingsSpeechDisabled")
+              );
+              console.log(`[ToolCall] Speech ${speechEnabled ? "enabled" : "disabled"}`);
+            }
+
+            // Check for updates
+            if (checkForUpdates) {
+              import("@/utils/prefetch").then(({ forceRefreshCache }) => {
+                forceRefreshCache();
+              });
+              changes.push(i18n.t("apps.chats.toolCalls.settingsCheckingForUpdates"));
+              console.log("[ToolCall] Checking for updates...");
+            }
+
+            // Build result message
+            if (changes.length > 0) {
+              const resultMessage =
+                changes.length === 1
+                  ? changes[0]
+                  : changes.join(". ") + ".";
+              addToolResult({
+                tool: toolCall.toolName,
+                toolCallId: toolCall.toolCallId,
+                output: resultMessage,
+              });
+              result = "";
+            } else {
+              addToolResult({
+                tool: toolCall.toolName,
+                toolCallId: toolCall.toolCallId,
+                output: i18n.t("apps.chats.toolCalls.settingsNoChanges"),
+              });
+              result = "";
             }
             break;
           }
@@ -2538,9 +2672,9 @@ export function useAiChat(onPromptSetUsername?: () => void) {
   );
 
   const handleNudge = useCallback(() => {
-    handleDirectMessageSubmit("👋 *nudge sent*");
+    handleDirectMessageSubmit(t("apps.chats.status.nudgeSent"));
     // Consider adding shake effect trigger here if needed
-  }, [handleDirectMessageSubmit]);
+  }, [handleDirectMessageSubmit, t]);
 
   const clearChats = useCallback(() => {
     console.log("Clearing AI chats");
@@ -2560,7 +2694,7 @@ export function useAiChat(onPromptSetUsername?: () => void) {
     const initialMessage: AIChatMessage = {
       id: "1", // Ensure consistent ID for the initial message
       role: "assistant",
-      parts: [{ type: "text", text: "👋 hey! i'm zi. ask me anything!" }],
+      parts: [{ type: "text", text: i18n.t("apps.chats.messages.greeting") }],
       metadata: {
         createdAt: new Date(),
       },
@@ -2608,7 +2742,7 @@ export function useAiChat(onPromptSetUsername?: () => void) {
       const transcript = aiMessages // Use messages from store
         .map((msg: UIMessage) => {
           const time = ""; // v5 UIMessage doesn't have createdAt
-          const sender = msg.role === "user" ? username || "You" : "Zi";
+          const sender = msg.role === "user" ? username || "You" : "Ryo";
           const content = getAssistantVisibleText(msg);
           return `**${sender}** (${time}):\n${content}`;
         })

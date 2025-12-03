@@ -28,6 +28,7 @@ import {
 import { ArrowLeft, ArrowRight, History, Search, Share } from "lucide-react";
 import { InputDialog } from "@/components/dialogs/InputDialog";
 import { HelpDialog } from "@/components/dialogs/HelpDialog";
+import { useTranslatedHelpItems } from "@/hooks/useTranslatedHelpItems";
 import { AboutDialog } from "@/components/dialogs/AboutDialog";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
 import { appMetadata } from "..";
@@ -58,56 +59,56 @@ import { ShareItemDialog } from "@/components/dialogs/ShareItemDialog";
 import { toast } from "sonner";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { ThemedIcon } from "@/components/shared/ThemedIcon";
-
-// Analytics event namespace for Internet Explorer events
-export const IE_ANALYTICS = {
-  NAVIGATION_START: "internet-explorer:navigation_start",
-  NAVIGATION_ERROR: "internet-explorer:navigation_error",
-  NAVIGATION_SUCCESS: "internet-explorer:navigation_success",
-};
+import { IE_ANALYTICS } from "@/utils/analytics";
+import { useOffline } from "@/hooks/useOffline";
+import { checkOfflineAndShowError } from "@/utils/offline";
+import { useTranslation } from "react-i18next";
+import i18n from "@/lib/i18n";
 
 // Helper function to get language display name
 const getLanguageDisplayName = (lang: LanguageOption): string => {
+  const { t } = i18n;
   const languageMap: Record<LanguageOption, string> = {
-    auto: "Auto-detected",
-    english: "English",
-    chinese: "Chinese (Traditional)",
-    japanese: "Japanese",
-    korean: "Korean",
-    french: "French",
-    spanish: "Spanish",
-    portuguese: "Portuguese",
-    german: "German",
-    welsh: "Welsh",
-    sanskrit: "Sanskrit",
-    latin: "Latin",
-    alien: "Alien Language",
-    ai_language: "AI Language",
-    digital_being: "Digital Being Language",
+    auto: t("apps.internet-explorer.autodetected"),
+    english: t("apps.internet-explorer.english"),
+    chinese: t("apps.internet-explorer.chineseTraditional"),
+    japanese: t("apps.internet-explorer.japanese"),
+    korean: t("apps.internet-explorer.korean"),
+    french: t("apps.internet-explorer.french"),
+    spanish: t("apps.internet-explorer.spanish"),
+    portuguese: t("apps.internet-explorer.portuguese"),
+    german: t("apps.internet-explorer.german"),
+    welsh: t("apps.internet-explorer.welsh"),
+    sanskrit: t("apps.internet-explorer.sanskrit"),
+    latin: t("apps.internet-explorer.latin"),
+    alien: t("apps.internet-explorer.alienLanguage"),
+    ai_language: t("apps.internet-explorer.aiLanguage"),
+    digital_being: t("apps.internet-explorer.digitalBeingLanguage"),
   };
-  return languageMap[lang] || "Auto-detected";
+  return languageMap[lang] || t("apps.internet-explorer.autodetected");
 };
 
 // Helper function to get location display name
 const getLocationDisplayName = (loc: LocationOption): string => {
+  const { t } = i18n;
   const locationMap: Record<LocationOption, string> = {
-    auto: "Auto-detected",
-    united_states: "United States",
-    china: "China",
-    japan: "Japan",
-    korea: "South Korea",
-    france: "France",
-    spain: "Spain",
-    portugal: "Portugal",
-    germany: "Germany",
-    canada: "Canada",
-    uk: "United Kingdom",
-    india: "India",
-    brazil: "Brazil",
-    australia: "Australia",
-    russia: "Russia",
+    auto: t("apps.internet-explorer.autodetected"),
+    united_states: t("apps.internet-explorer.unitedStates"),
+    china: t("apps.internet-explorer.china"),
+    japan: t("apps.internet-explorer.japan"),
+    korea: t("apps.internet-explorer.southKorea"),
+    france: t("apps.internet-explorer.france"),
+    spain: t("apps.internet-explorer.spain"),
+    portugal: t("apps.internet-explorer.portugal"),
+    germany: t("apps.internet-explorer.germany"),
+    canada: t("apps.internet-explorer.canada"),
+    uk: t("apps.internet-explorer.unitedKingdom"),
+    india: t("apps.internet-explorer.india"),
+    brazil: t("apps.internet-explorer.brazil"),
+    australia: t("apps.internet-explorer.australia"),
+    russia: t("apps.internet-explorer.russia"),
   };
-  return locationMap[loc] || "Auto-detected";
+  return locationMap[loc] || t("apps.internet-explorer.autodetected");
 };
 
 interface ErrorPageProps {
@@ -253,18 +254,6 @@ const formatTitle = (title: string): string => {
     : title;
 };
 
-const getLoadingTitle = (baseTitle: string): string => {
-  // If it looks like a URL, extract the hostname
-  const titleToUse =
-    baseTitle.includes("/") || baseTitle.includes(".")
-      ? getHostnameFromUrl(baseTitle)
-      : baseTitle;
-
-  const formattedTitle = formatTitle(titleToUse);
-  return formattedTitle === "Internet Explorer"
-    ? "Internet Explorer - Loading"
-    : `${formattedTitle} - Loading`;
-};
 
 // Helper function to decode Base64 data (client-side)
 function decodeData(code: string): { url: string; year: string } | null {
@@ -319,6 +308,7 @@ export function InternetExplorerAppComponent({
   onNavigateNext,
   onNavigatePrevious,
 }: AppProps<InternetExplorerInitialData>) {
+  const translatedHelpItems = useTranslatedHelpItems("internet-explorer", helpItems || []);
   const debugMode = useAppStore((state) => state.debugMode);
   const terminalSoundsEnabled = useAppStore(
     (state) => state.terminalSoundsEnabled
@@ -382,6 +372,21 @@ export function InternetExplorerAppComponent({
     setTimeMachineViewOpen,
     fetchCachedYears,
   } = useInternetExplorerStore();
+
+  const { t } = useTranslation();
+
+  const getLoadingTitle = useCallback((baseTitle: string): string => {
+    // If it looks like a URL, extract the hostname
+    const titleToUse =
+      baseTitle.includes("/") || baseTitle.includes(".")
+        ? getHostnameFromUrl(baseTitle)
+        : baseTitle;
+
+    const formattedTitle = formatTitle(titleToUse);
+    return formattedTitle === "Internet Explorer"
+      ? t("apps.internet-explorer.loadingTitle")
+      : t("apps.internet-explorer.loadingTitleWithSite", { site: formattedTitle });
+  }, [t]);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const [hasMoreToScroll] = useState(false);
@@ -498,6 +503,8 @@ export function InternetExplorerAppComponent({
 
   const { playElevatorMusic, stopElevatorMusic, playDingSound } =
     useTerminalSounds();
+
+  const currentTheme = useThemeStore((state) => state.current);
 
   const currentYear = new Date().getFullYear();
   const pastYears = [
@@ -619,8 +626,8 @@ export function InternetExplorerAppComponent({
       const formattedTitle = formatTitle(titleToUse);
       newTitle =
         formattedTitle === "Internet Explorer"
-          ? "Internet Explorer - Travelling"
-          : `${formattedTitle} - Travelling`;
+          ? t("apps.internet-explorer.travellingTitle")
+          : t("apps.internet-explorer.travellingTitleWithSite", { site: formattedTitle });
     } else if (status === "loading") {
       newTitle = getLoadingTitle(baseTitle);
     } else if (currentPageTitle) {
@@ -656,7 +663,7 @@ export function InternetExplorerAppComponent({
     }
 
     setDisplayTitle(newTitle);
-  }, [status, currentPageTitle, finalUrl, url, year]);
+  }, [status, currentPageTitle, finalUrl, url, year, t, getLoadingTitle]);
 
   const getWaybackUrl = async (targetUrl: string, year: string) => {
     const now = new Date();
@@ -690,33 +697,35 @@ export function InternetExplorerAppComponent({
           const textContent =
             iframeRef.current.contentDocument.body?.textContent?.trim();
           if (textContent) {
-            try {
-              const potentialErrorData = JSON.parse(
-                textContent
-              ) as ErrorResponse;
-              if (
-                potentialErrorData &&
-                potentialErrorData.error === true &&
-                potentialErrorData.type
-              ) {
-                console.log(
-                  "[IE] Detected JSON error response in iframe body:",
-                  potentialErrorData
-                );
-                track(IE_ANALYTICS.NAVIGATION_ERROR, {
-                  url: iframeSrc,
-                  type: potentialErrorData.type,
-                  status: potentialErrorData.status || 500,
-                  message: potentialErrorData.message,
-                });
-                handleNavigationError(potentialErrorData, url);
-                return;
+            // Only try to parse as JSON if it looks like JSON (starts with { or [)
+            const looksLikeJson = textContent.startsWith("{") || textContent.startsWith("[");
+            if (looksLikeJson) {
+              try {
+                const potentialErrorData = JSON.parse(
+                  textContent
+                ) as ErrorResponse;
+                if (
+                  potentialErrorData &&
+                  potentialErrorData.error === true &&
+                  potentialErrorData.type
+                ) {
+                  console.log(
+                    "[IE] Detected JSON error response in iframe body:",
+                    potentialErrorData
+                  );
+                  track(IE_ANALYTICS.NAVIGATION_ERROR, {
+                    url: iframeSrc,
+                    type: potentialErrorData.type,
+                    status: potentialErrorData.status || 500,
+                    message: potentialErrorData.message,
+                  });
+                  handleNavigationError(potentialErrorData, url);
+                  return;
+                }
+              } catch (parseError) {
+                // Silently ignore - content looked like JSON but wasn't valid JSON
+                // This is expected for regular HTML pages
               }
-            } catch (parseError) {
-              console.debug(
-                "[IE] Iframe body content was not a JSON error:",
-                parseError
-              );
             }
           }
 
@@ -871,6 +880,11 @@ export function InternetExplorerAppComponent({
       forceRegenerate = false,
       currentHtmlContent: string | null = null
     ) => {
+      // Check if offline and show error
+      if (checkOfflineAndShowError("Internet Explorer requires an internet connection to navigate")) {
+        return;
+      }
+
       clearErrorDetails();
 
       if (abortControllerRef.current) {
@@ -1148,6 +1162,7 @@ export function InternetExplorerAppComponent({
       setYear,
       setUrl,
       fetchCachedYears,
+      currentTheme,
     ]
   );
 
@@ -1869,8 +1884,8 @@ export function InternetExplorerAppComponent({
     if (isFetchingWebsiteContent) {
       return (
         <div className="flex items-center gap-1">
-          {debugMode && <span className="text-gray-500">Fetch</span>}
-          <span>{`Fetching content of ${hostname} for reconstruction...`}</span>
+          {debugMode && <span className="text-gray-500">{t("apps.internet-explorer.fetch")}</span>}
+          <span>{t("apps.internet-explorer.fetchingContentForReconstruction", { hostname })}</span>
         </div>
       );
     }
@@ -1886,7 +1901,7 @@ export function InternetExplorerAppComponent({
                 {location !== "auto" && ` ${locationDisplayName}`}
               </span>
             )}
-            <span>{`Reimagining ${hostname} for year ${year}...`}</span>
+            <span>{t("apps.internet-explorer.reimaginingForYear", { hostname, year })}</span>
           </div>
         );
       case "past":
@@ -1900,15 +1915,15 @@ export function InternetExplorerAppComponent({
                   {location !== "auto" && ` ${locationDisplayName}`}
                 </span>
               )}
-              <span>{`Reconstructing history of ${hostname} for year ${year}...`}</span>
+              <span>{t("apps.internet-explorer.reconstructingHistoryForYear", { hostname, year })}</span>
             </div>
           );
         }
-        return `Fetching ${hostname} from year ${year}...`;
+        return t("apps.internet-explorer.fetchingFromYear", { hostname, year });
       case "now":
-        return `Loading ${hostname}...`;
+        return t("apps.internet-explorer.loading", { hostname });
       default:
-        return `Loading ${hostname}...`;
+        return t("apps.internet-explorer.loading", { hostname });
     }
   };
 
@@ -1934,8 +1949,8 @@ export function InternetExplorerAppComponent({
     setIsShareDialogOpen(true);
   }, []);
 
-  const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
+  const isOffline = useOffline();
 
   const menuBar = (
     <InternetExplorerMenuBar
@@ -2020,7 +2035,7 @@ export function InternetExplorerAppComponent({
                     variant="ghost"
                     size="icon"
                     onClick={handleGoBack}
-                    disabled={historyIndex >= history.length - 1}
+                    disabled={isOffline || historyIndex >= history.length - 1}
                     className="h-8 w-8"
                   >
                     <ArrowLeft className="h-4 w-4" />
@@ -2029,7 +2044,7 @@ export function InternetExplorerAppComponent({
                     variant="ghost"
                     size="icon"
                     onClick={handleGoForward}
-                    disabled={historyIndex <= 0}
+                    disabled={isOffline || historyIndex <= 0}
                     className="h-8 w-8"
                   >
                     <ArrowRight className="h-4 w-4" />
@@ -2055,6 +2070,7 @@ export function InternetExplorerAppComponent({
                   <Input
                     ref={urlInputRef}
                     value={localUrl}
+                    disabled={isOffline}
                     onChange={(e) => {
                       // Strip any https:// prefix on input
                       const strippedValue = stripProtocol(e.target.value);
@@ -2063,6 +2079,10 @@ export function InternetExplorerAppComponent({
                       setIsUrlDropdownOpen(true);
                     }}
                     onKeyDown={(e) => {
+                      if (isOffline && e.key === "Enter") {
+                        checkOfflineAndShowError("Internet Explorer requires an internet connection to navigate");
+                        return;
+                      }
                       if (e.key === "Enter") {
                         setIsUrlDropdownOpen(false);
                         // Use the currently selected suggestion when Enter is pressed
@@ -2259,14 +2279,20 @@ export function InternetExplorerAppComponent({
                           >
                             {suggestion.type === "search" ? (
                               <Search className="w-4 h-4 text-neutral-400" />
-                            ) : (
+                            ) : suggestion.favicon && !isOffline ? (
                               <img
-                                src={suggestion.favicon || "/icons/ie-site.png"}
+                                src={suggestion.favicon}
                                 alt=""
                                 className="w-4 h-4"
                                 onError={(e) => {
-                                  e.currentTarget.src = "/icons/ie-site.png";
+                                  e.currentTarget.src = "/icons/default/ie-site.png";
                                 }}
+                              />
+                            ) : (
+                              <ThemedIcon
+                                name="ie-site.png"
+                                alt=""
+                                className="w-4 h-4 [image-rendering:pixelated]"
                               />
                             )}
                             <div className="flex-1 truncate">
@@ -2363,7 +2389,7 @@ export function InternetExplorerAppComponent({
                         value="current"
                         className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
                       >
-                        Now
+                        {t("apps.internet-explorer.now")}
                       </SelectItem>
                       {pastYears.map((y) => (
                         <SelectItem
@@ -2424,15 +2450,22 @@ export function InternetExplorerAppComponent({
                                   }
                                   className="text-md h-6 px-3 active:bg-gray-900 active:text-white flex items-center gap-2"
                                 >
-                                  <img
-                                    src={child.favicon || "/icons/ie-site.png"}
-                                    alt=""
-                                    className="w-4 h-4"
-                                    onError={(e) => {
-                                      e.currentTarget.src =
-                                        "/icons/ie-site.png";
-                                    }}
-                                  />
+                                  {child.favicon && !isOffline ? (
+                                    <img
+                                      src={child.favicon}
+                                      alt=""
+                                      className="w-4 h-4"
+                                      onError={(e) => {
+                                        e.currentTarget.src = "/icons/default/ie-site.png";
+                                      }}
+                                    />
+                                  ) : (
+                                    <ThemedIcon
+                                      name="ie-site.png"
+                                      alt=""
+                                      className="w-4 h-4 [image-rendering:pixelated]"
+                                    />
+                                  )}
                                   {child.title}
                                   {child.year && child.year !== "current" && (
                                     <span className="text-xs text-gray-500 ml-1">
@@ -2467,14 +2500,22 @@ export function InternetExplorerAppComponent({
                               });
                             }}
                           >
-                            <img
-                              src={favorite.favicon || "/icons/ie-site.png"}
-                              alt="Site"
-                              className="w-4 h-4 mr-1"
-                              onError={(e) => {
-                                e.currentTarget.src = "/icons/ie-site.png";
-                              }}
-                            />
+                            {favorite.favicon && !isOffline ? (
+                              <img
+                                src={favorite.favicon}
+                                alt="Site"
+                                className="w-4 h-4 mr-1"
+                                onError={(e) => {
+                                  e.currentTarget.src = "/icons/default/ie-site.png";
+                                }}
+                              />
+                            ) : (
+                              <ThemedIcon
+                                name="ie-site.png"
+                                alt="Site"
+                                className="w-4 h-4 mr-1 [image-rendering:pixelated]"
+                              />
+                            )}
                             <span className="truncate">{favorite.title}</span>
                           </Button>
                         );
@@ -2606,13 +2647,14 @@ export function InternetExplorerAppComponent({
           <HelpDialog
             isOpen={isHelpDialogOpen}
             onOpenChange={setHelpDialogOpen}
-            helpItems={helpItems || []}
-            appName="Internet Explorer"
+            helpItems={translatedHelpItems}
+            appId="internet-explorer"
           />
           <AboutDialog
             isOpen={isAboutDialogOpen}
             onOpenChange={setAboutDialogOpen}
             metadata={appMetadata}
+            appId="internet-explorer"
           />
           <ConfirmDialog
             isOpen={isClearFavoritesDialogOpen}

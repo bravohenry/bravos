@@ -11,9 +11,12 @@ import { HelpDialog } from "@/components/dialogs/HelpDialog";
 import { AboutDialog } from "@/components/dialogs/AboutDialog";
 import { AppProps } from "../../base/types";
 import { SoundboardMenuBar } from "./SoundboardMenuBar";
-import { appMetadata } from "..";
+import { appMetadata, helpItems as defaultHelpItems } from "..";
+import { useTranslatedHelpItems } from "@/hooks/useTranslatedHelpItems";
 import { useSoundboardStore } from "@/stores/useSoundboardStore";
 import { useThemeStore } from "@/stores/useThemeStore";
+import { getTranslatedAppName } from "@/utils/i18n";
+import { useTranslation } from "react-i18next";
 
 interface ImportedSlot {
   audioData: string | null;
@@ -98,6 +101,8 @@ export function SoundboardAppComponent({
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
+  const translatedHelpItems = useTranslatedHelpItems("soundboard", helpItems.length > 0 ? helpItems : defaultHelpItems);
   // Disable waveforms by default on mobile Safari to prevent initial freeze
   const isMobileSafari =
     typeof navigator !== "undefined" &&
@@ -215,7 +220,7 @@ export function SoundboardAppComponent({
             id:
               board.id ||
               Date.now().toString() + Math.random().toString(36).slice(2),
-            name: board.name || "Imported Soundboard",
+            name: board.name || t("apps.soundboard.importedSoundboard"),
             slots: (board.slots || Array(9).fill(null)).map(
               (slot: ImportedSlot) => ({
                 audioData: slot.audioData,
@@ -275,7 +280,7 @@ export function SoundboardAppComponent({
           id:
             board.id ||
             Date.now().toString() + Math.random().toString(36).slice(2),
-          name: board.name || "Imported Soundboard",
+          name: board.name || t("apps.soundboard.importedSoundboard"),
           slots: (board.slots || Array(9).fill(null)).map(
             (slot: ImportedSlot) => ({
               audioData: slot.audioData,
@@ -304,7 +309,7 @@ export function SoundboardAppComponent({
           id:
             board.id ||
             Date.now().toString() + Math.random().toString(36).slice(2),
-          name: board.name || "Imported Soundboard",
+          name: board.name || t("apps.soundboard.importedSoundboard"),
           slots: (board.slots || Array(9).fill(null)).map(
             (slot: ImportedSlot) => ({
               audioData: slot.audioData,
@@ -378,7 +383,7 @@ export function SoundboardAppComponent({
   if (!hasInitialized || !activeBoard || !activeBoardId) {
     return (
       <WindowFrame
-        title="Soundboard"
+        title={getTranslatedAppName("soundboard")}
         onClose={onClose}
         isForeground={isForeground}
         appId="soundboard"
@@ -402,8 +407,8 @@ export function SoundboardAppComponent({
       <WindowFrame
         title={
           isEditingTitle
-            ? "Soundboard"
-            : activeBoard?.name || `Soundboard ${activeBoardId}`
+            ? getTranslatedAppName("soundboard")
+            : activeBoard?.name || `${getTranslatedAppName("soundboard")} ${activeBoardId}`
         }
         onClose={onClose}
         isForeground={isForeground}
@@ -508,13 +513,14 @@ export function SoundboardAppComponent({
         <HelpDialog
           isOpen={helpDialogOpen}
           onOpenChange={setHelpDialogOpen}
-          helpItems={helpItems}
-          appName="Soundboard"
+          helpItems={translatedHelpItems}
+          appId="soundboard"
         />
         <AboutDialog
           isOpen={aboutDialogOpen}
           onOpenChange={setAboutDialogOpen}
           metadata={appMetadata}
+          appId="soundboard"
         />
       </WindowFrame>
     </>

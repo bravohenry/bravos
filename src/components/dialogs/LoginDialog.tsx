@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { cn } from "@/lib/utils";
 import { getTabStyles } from "@/utils/tabStyles";
+import { useTranslation } from "react-i18next";
 
 interface LoginDialogProps {
   /* Common */
@@ -66,6 +67,8 @@ export function LoginDialog({
   const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
   const tabStyles = getTabStyles(currentTheme);
+  const { t } = useTranslation();
+  const dialogTitle = t("common.auth.dialogTitle");
 
   // Reset to the initial tab whenever the dialog is reopened
   useEffect(() => {
@@ -100,12 +103,12 @@ export function LoginDialog({
           )}
           style={{
             fontFamily: isXpTheme
-              ? '"Pixelated MS Sans Serif", Arial'
+              ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
               : undefined,
             fontSize: isXpTheme ? "11px" : undefined,
           }}
         >
-          Username
+          {t("common.auth.username")}
         </Label>
         <Input
           autoFocus={activeTab === "login"}
@@ -119,7 +122,7 @@ export function LoginDialog({
           )}
           style={{
             fontFamily: isXpTheme
-              ? '"Pixelated MS Sans Serif", Arial'
+              ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
               : undefined,
             fontSize: isXpTheme ? "11px" : undefined,
           }}
@@ -136,12 +139,12 @@ export function LoginDialog({
           )}
           style={{
             fontFamily: isXpTheme
-              ? '"Pixelated MS Sans Serif", Arial'
+              ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
               : undefined,
             fontSize: isXpTheme ? "11px" : undefined,
           }}
         >
-          Password
+          {t("common.auth.password")}
         </Label>
         <Input
           type="password"
@@ -155,7 +158,7 @@ export function LoginDialog({
           )}
           style={{
             fontFamily: isXpTheme
-              ? '"Pixelated MS Sans Serif", Arial'
+              ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
               : undefined,
             fontSize: isXpTheme ? "11px" : undefined,
           }}
@@ -177,12 +180,12 @@ export function LoginDialog({
           )}
           style={{
             fontFamily: isXpTheme
-              ? '"Pixelated MS Sans Serif", Arial'
+              ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
               : undefined,
             fontSize: isXpTheme ? "11px" : undefined,
           }}
         >
-          Username
+          {t("common.auth.username")}
         </Label>
         <Input
           autoFocus={activeTab === "signup"}
@@ -196,7 +199,7 @@ export function LoginDialog({
           )}
           style={{
             fontFamily: isXpTheme
-              ? '"Pixelated MS Sans Serif", Arial'
+              ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
               : undefined,
             fontSize: isXpTheme ? "11px" : undefined,
           }}
@@ -213,12 +216,12 @@ export function LoginDialog({
           )}
           style={{
             fontFamily: isXpTheme
-              ? '"Pixelated MS Sans Serif", Arial'
+              ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
               : undefined,
             fontSize: isXpTheme ? "11px" : undefined,
           }}
         >
-          Password
+          {t("common.auth.password")}
         </Label>
         <Input
           type="password"
@@ -232,7 +235,7 @@ export function LoginDialog({
           )}
           style={{
             fontFamily: isXpTheme
-              ? '"Pixelated MS Sans Serif", Arial'
+              ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
               : undefined,
             fontSize: isXpTheme ? "11px" : undefined,
           }}
@@ -301,11 +304,11 @@ export function LoginDialog({
                     "font-['Pixelated_MS_Sans_Serif',Arial] text-[11px]"
                   )}
                   style={{
-                    fontFamily: '"Pixelated MS Sans Serif", Arial',
+                    fontFamily: '"Pixelated MS Sans Serif", "ArkPixel", Arial',
                     fontSize: "11px",
                   }}
                 >
-                  Create Account
+                  {t("common.auth.createAccount")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="login"
@@ -314,11 +317,11 @@ export function LoginDialog({
                     "font-['Pixelated_MS_Sans_Serif',Arial] text-[11px]"
                   )}
                   style={{
-                    fontFamily: '"Pixelated MS Sans Serif", Arial',
+                    fontFamily: '"Pixelated MS Sans Serif", "ArkPixel", Arial',
                     fontSize: "11px",
                   }}
                 >
-                  Log In
+                  {t("common.auth.logIn")}
                 </TabsTrigger>
               </menu>
             </TabsList>
@@ -340,12 +343,12 @@ export function LoginDialog({
                 )}
                 style={{
                   fontFamily: isXpTheme
-                    ? '"Pixelated MS Sans Serif", Arial'
+                    ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
                     : undefined,
                   fontSize: isXpTheme ? "11px" : undefined,
                 }}
               >
-                Create Account
+                {t("common.auth.createAccount")}
               </TabsTrigger>
               <TabsTrigger
                 value="login"
@@ -358,12 +361,12 @@ export function LoginDialog({
                 )}
                 style={{
                   fontFamily: isXpTheme
-                    ? '"Pixelated MS Sans Serif", Arial'
+                    ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
                     : undefined,
                   fontSize: isXpTheme ? "11px" : undefined,
                 }}
               >
-                Log In
+                {t("common.auth.logIn")}
               </TabsTrigger>
             </TabsList>
           )}
@@ -389,7 +392,7 @@ export function LoginDialog({
             )}
             style={{
               fontFamily: isXpTheme
-                ? '"Pixelated MS Sans Serif", Arial'
+                ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
                 : undefined,
               fontSize: isXpTheme ? "11px" : undefined,
             }}
@@ -416,18 +419,18 @@ export function LoginDialog({
             )}
             style={{
               fontFamily: isXpTheme
-                ? '"Pixelated MS Sans Serif", Arial'
+                ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
                 : undefined,
               fontSize: isXpTheme ? "11px" : undefined,
             }}
           >
             {isActionLoading
               ? activeTab === "login"
-                ? "Logging in..."
-                : "Creating..."
+                ? t("common.auth.loggingIn")
+                : t("common.auth.creatingAccount")
               : activeTab === "login"
-              ? "Log In"
-              : "Create Account"}
+              ? t("common.auth.logIn")
+              : t("common.auth.createAccount")}
           </Button>
         </DialogFooter>
       </form>
@@ -443,24 +446,24 @@ export function LoginDialog({
       >
         {isXpTheme ? (
           <>
-            <DialogHeader>ZiOS Login</DialogHeader>
+            <DialogHeader>{dialogTitle}</DialogHeader>
             <div className="window-body">{dialogContent}</div>
           </>
         ) : currentTheme === "macosx" ? (
           <>
-            <DialogHeader>ZiOS Login</DialogHeader>
+            <DialogHeader>{dialogTitle}</DialogHeader>
             {dialogContent}
           </>
         ) : (
           <>
             <DialogHeader>
               <DialogTitle className="font-normal text-[16px]">
-                ZiOS Login
+                {dialogTitle}
               </DialogTitle>
               <DialogDescription className="sr-only">
                 {activeTab === "login"
-                  ? "Log in to your account"
-                  : "Create an account to access chat rooms and save your settings"}
+                  ? t("common.auth.loginDescription")
+                  : t("common.auth.signupDescription")}
               </DialogDescription>
             </DialogHeader>
             {dialogContent}

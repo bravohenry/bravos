@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { getSupportedMimeType } from "@/utils/audio";
+import { checkOfflineAndShowError } from "@/utils/offline";
 
 // Constants
 const DEFAULT_SILENCE_THRESHOLD = 2000; // ms
@@ -73,17 +74,23 @@ export function useAudioTranscription({
   const chunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | null>(null);
 
   // Refs for silence detection
   const silenceStartRef = useRef<number | null>(null);
-  const silenceTimeoutRef = useRef<NodeJS.Timeout>();
+  const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const recordingStartTimeRef = useRef<number>(0);
   const silentFramesCountRef = useRef<number>(0);
 
   const sendAudioForTranscription = useCallback(
     async (chunks: Blob[]) => {
       if (chunks.length === 0) return;
+
+      // Check if offline and show error
+      if (checkOfflineAndShowError("Audio transcription requires an internet connection")) {
+        onError?.(new Error("Audio transcription requires an internet connection"));
+        return;
+      }
 
       try {
         // Validate audio content
@@ -131,12 +138,14 @@ export function useAudioTranscription({
     if (mediaRecorderRef.current) {
       if (silenceTimeoutRef.current) {
         clearTimeout(silenceTimeoutRef.current);
+        silenceTimeoutRef.current = null;
       }
       silenceStartRef.current = null;
 
       // Ensure we stop the frequency analysis
-      if (animationFrameRef.current) {
+      if (animationFrameRef.current !== null) {
         cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
       }
 
       // Stop the media recorder
@@ -250,8 +259,9 @@ export function useAudioTranscription({
         chunksRef.current = [];
 
         // Clean up first
-        if (animationFrameRef.current) {
+        if (animationFrameRef.current !== null) {
           cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
         }
         if (audioContextRef.current) {
           await audioContextRef.current.close();

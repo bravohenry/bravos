@@ -44,31 +44,78 @@ interface IpodData {
   historyPosition: number; // Current position in playback history (-1 means at the end)
 }
 
-async function loadDefaultTracks(): Promise<{
+// ============================================================================
+// CACHING FOR iPod TRACKS
+// ============================================================================
+
+// In-memory cache for iPod tracks data
+let cachedIpodData: { tracks: Track[]; version: number } | null = null;
+let ipodDataPromise: Promise<{ tracks: Track[]; version: number }> | null = null;
+
+/**
+ * Preload iPod tracks data early (can be called before React mounts).
+ * This starts fetching the JSON file without blocking.
+ */
+export function preloadIpodData(): void {
+  if (cachedIpodData || ipodDataPromise) return;
+  loadDefaultTracks();
+}
+
+/**
+ * Load default tracks from JSON.
+ * @param forceRefresh - If true, bypasses cache and fetches fresh data (used by syncLibrary)
+ */
+async function loadDefaultTracks(forceRefresh = false): Promise<{
   tracks: Track[];
   version: number;
 }> {
-  try {
-    const res = await fetch("/data/ipod-videos.json");
-    const data = await res.json();
-    const videos: unknown[] = data.videos || data;
-    const version = data.version || 1;
-    const tracks = videos.map((v) => {
-      const video = v as Record<string, unknown>;
-      return {
-        id: video.id as string,
-        url: video.url as string,
-        title: video.title as string,
-        artist: video.artist as string | undefined,
-        album: (video.album as string | undefined) ?? "",
-        lyricOffset: video.lyricOffset as number | undefined,
-      };
-    });
-    return { tracks, version };
-  } catch (err) {
-    console.error("Failed to load ipod-videos.json", err);
-    return { tracks: [], version: 1 };
+  // Return cached data immediately if available (unless force refresh)
+  if (!forceRefresh && cachedIpodData) {
+    return cachedIpodData;
   }
+  
+  // Return existing promise if fetch is in progress (deduplication)
+  // But not if we need a force refresh
+  if (!forceRefresh && ipodDataPromise) {
+    return ipodDataPromise;
+  }
+  
+  // Start new fetch
+  const fetchPromise = (async () => {
+    try {
+      const res = await fetch("/data/ipod-videos.json");
+      const data = await res.json();
+      const videos: unknown[] = data.videos || data;
+      const version = data.version || 1;
+      const tracks = videos.map((v) => {
+        const video = v as Record<string, unknown>;
+        return {
+          id: video.id as string,
+          url: video.url as string,
+          title: video.title as string,
+          artist: video.artist as string | undefined,
+          album: (video.album as string | undefined) ?? "",
+          lyricOffset: video.lyricOffset as number | undefined,
+        };
+      });
+      // Update cache with fresh data
+      cachedIpodData = { tracks, version };
+      return cachedIpodData;
+    } catch (err) {
+      console.error("Failed to load ipod-videos.json", err);
+      return { tracks: [], version: 1 };
+    }
+  })();
+  
+  // Only set the shared promise for non-force-refresh requests
+  if (!forceRefresh) {
+    ipodDataPromise = fetchPromise;
+    fetchPromise.finally(() => {
+      ipodDataPromise = null;
+    });
+  }
+  
+  return fetchPromise;
 }
 
 const initialIpodData: IpodData = {
@@ -138,7 +185,7 @@ export interface IpodState extends IpodData {
   /** Export library to JSON string */
   exportLibrary: () => string;
   /** Adds a track from a YouTube video ID or URL, fetching metadata automatically */
-  addTrackFromVideoId: (urlOrId: string) => Promise<Track | null>;
+  addTrackFromVideoId: (urlOrId: string, autoPlay?: boolean) => Promise<Track | null>;
   /** Load the default library if no tracks exist */
   initializeLibrary: () => Promise<void>;
 
@@ -290,9 +337,27 @@ export const useIpodStore = create<IpodState>()(
             historyPosition: newShuffleState ? -1 : state.historyPosition,
           };
         }),
-      togglePlay: () => set((state) => ({ isPlaying: !state.isPlaying })),
-      setIsPlaying: (playing) => set({ isPlaying: playing }),
-      toggleVideo: () => set((state) => ({ showVideo: !state.showVideo })),
+      togglePlay: () => {
+        // Prevent playback when offline
+        if (typeof navigator !== "undefined" && !navigator.onLine) {
+          return;
+        }
+        set((state) => ({ isPlaying: !state.isPlaying }));
+      },
+      setIsPlaying: (playing) => {
+        // Prevent starting playback when offline
+        if (playing && typeof navigator !== "undefined" && !navigator.onLine) {
+          return;
+        }
+        set({ isPlaying: playing });
+      },
+      toggleVideo: () => {
+        // Prevent turning on video when offline
+        if (typeof navigator !== "undefined" && !navigator.onLine) {
+          return;
+        }
+        set((state) => ({ showVideo: !state.showVideo }));
+      },
       toggleBacklight: () =>
         set((state) => ({ backlightOn: !state.backlightOn })),
       toggleLcdFilter: () =>
@@ -543,7 +608,7 @@ export const useIpodStore = create<IpodState>()(
           });
         }
       },
-      addTrackFromVideoId: async (urlOrId: string): Promise<Track | null> => {
+      addTrackFromVideoId: async (urlOrId: string, autoPlay: boolean = true): Promise<Track | null> => {
         // Extract video ID from various URL formats
         const extractVideoId = (input: string): string | null => {
           // If it's already a video ID (11 characters, alphanumeric + hyphens/underscores)
@@ -662,6 +727,10 @@ export const useIpodStore = create<IpodState>()(
 
         try {
           get().addTrack(newTrack); // Add track to the store
+          // If autoPlay is false (e.g., for iOS), pause after adding
+          if (!autoPlay) {
+            set({ isPlaying: false });
+          }
           return newTrack;
         } catch (error) {
           console.error("Error adding track to store:", error);
@@ -671,8 +740,9 @@ export const useIpodStore = create<IpodState>()(
 
       syncLibrary: async () => {
         try {
+          // Force refresh to get latest tracks from server (bypass cache)
           const { tracks: serverTracks, version: serverVersion } =
-            await loadDefaultTracks();
+            await loadDefaultTracks(true);
           const current = get();
           const wasEmpty = current.tracks.length === 0;
 

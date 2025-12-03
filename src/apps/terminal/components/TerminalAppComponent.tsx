@@ -6,6 +6,7 @@ import { HelpDialog } from "@/components/dialogs/HelpDialog";
 import { AboutDialog } from "@/components/dialogs/AboutDialog";
 import { TerminalMenuBar } from "./TerminalMenuBar";
 import { appMetadata, helpItems } from "../index";
+import { useTranslatedHelpItems } from "@/hooks/useTranslatedHelpItems";
 import {
   useFileSystem,
   dbOperations,
@@ -17,9 +18,8 @@ import { useLaunchApp } from "@/hooks/useLaunchApp";
 import { useAiChat } from "@/apps/chats/hooks/useAiChat";
 import { useAppContext } from "@/contexts/AppContext";
 import { useAppStore } from "@/stores/useAppStore";
-import { appRegistry } from "@/config/appRegistry";
 import { useTerminalSounds } from "@/hooks/useTerminalSounds";
-import { track } from "@/utils/analytics";
+import { track } from "@vercel/analytics";
 import HtmlPreview, {
   isHtmlCodeBlock,
   extractHtmlContent,
@@ -28,6 +28,7 @@ import { useSound, Sounds } from "@/hooks/useSound";
 import { useChatsStore } from "@/stores/useChatsStore";
 import { useTextEditStore } from "@/stores/useTextEditStore";
 import { useIpodStore } from "@/stores/useIpodStore";
+import { getTranslatedAppName } from "@/utils/i18n";
 import { generateHTML, type AnyExtension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -40,32 +41,56 @@ import { useVideoStore } from "@/stores/useVideoStore";
 import { useFilesStore } from "@/stores/useFilesStore";
 import { useThemeStore } from "@/stores/useThemeStore";
 import EmojiAquarium from "@/components/shared/EmojiAquarium";
+import i18n from "@/lib/i18n";
 
 // Import new components and utilities
-import { CommandHistory, CommandContext } from "../types";
+import { CommandHistory, CommandContext, ToolInvocationData } from "../types";
 import { parseCommand } from "../utils/commandParser";
 import { commands, AVAILABLE_COMMANDS } from "../commands";
+import { TerminalToolInvocation } from "./TerminalToolInvocation";
 import { VimEditor } from "./VimEditor";
 import { TypewriterText, parseSimpleMarkdown } from "./TypewriterText";
 import { AnimatedEllipsis } from "./AnimatedEllipsis";
 import { UrgentMessageAnimation } from "./UrgentMessageAnimation";
 
-// Import analytics constants from AI command
-import { TERMINAL_ANALYTICS } from "../commands/ai";
+import { TERMINAL_ANALYTICS } from "@/utils/analytics";
 
 // Removed interfaces and constants - now imported from separate files
 
-// Helper: prettify tool names
-const formatToolName = (name: string): string =>
-  name
-    .replace(/([A-Z])/g, " $1")
-    .replace(/^./, (ch) => ch.toUpperCase())
-    .trim();
-
-const getAppName = (id?: string): string => {
-  if (!id) return "app";
-  const entry = (appRegistry as Record<string, { name?: string }>)[id];
-  return entry?.name || formatToolName(id);
+// Helper function to detect user's operating system
+const detectUserOS = (): string => {
+  if (typeof navigator === "undefined") return i18n.t("apps.terminal.output.unknown");
+  
+  const userAgent = navigator.userAgent;
+  const platform = navigator.platform || "";
+  
+  // Check for iOS (iPhone, iPad, iPod)
+  if (/iPad|iPhone|iPod/.test(userAgent) || 
+      (platform === "MacIntel" && navigator.maxTouchPoints > 1)) {
+    return "iOS";
+  }
+  
+  // Check for Android
+  if (/Android/.test(userAgent)) {
+    return "Android";
+  }
+  
+  // Check for Windows
+  if (/Win/.test(platform)) {
+    return "Windows";
+  }
+  
+  // Check for macOS (not iOS)
+  if (/Mac/.test(platform)) {
+    return "macOS";
+  }
+  
+  // Check for Linux
+  if (/Linux/.test(platform)) {
+    return "Linux";
+  }
+  
+  return "Unknown";
 };
 
 // Minimal system state for AI chat requests
@@ -85,15 +110,30 @@ const getSystemState = () => {
       ? ipodStore.tracks[ipodStore.currentIndex]
       : null;
 
+  // Detect user's operating system
+  const userOS = detectUserOS();
+
   // Use new instance-based model instead of legacy apps
   const runningInstances = Object.entries(appStore.instances)
     .filter(([, instance]) => instance.isOpen)
-    .map(([instanceId, instance]) => ({
-      instanceId,
-      appId: instance.appId,
-      isForeground: instance.isForeground || false,
-      title: instance.title,
-    }));
+    .map(([instanceId, instance]) => {
+      const base = {
+        instanceId,
+        appId: instance.appId,
+        isForeground: instance.isForeground || false,
+        title: instance.title,
+      };
+      // For applet-viewer instances, include the applet path
+      if (instance.appId === "applet-viewer" && instance.initialData) {
+        const appletData = instance.initialData as { path?: string; shareCode?: string };
+        return {
+          ...base,
+          appletPath: appletData.path || undefined,
+          appletId: appletData.shareCode || undefined,
+        };
+      }
+      return base;
+    });
 
   const foregroundInstance =
     runningInstances.find((inst) => inst.isForeground) || null;
@@ -104,7 +144,7 @@ const getSystemState = () => {
   // --- Local browser time information (client side) ---
   const nowClient = new Date();
   const userTimeZone =
-    Intl.DateTimeFormat().resolvedOptions().timeZone || "Unknown";
+    Intl.DateTimeFormat().resolvedOptions().timeZone || i18n.t("apps.terminal.output.unknown");
   const userTimeString = nowClient.toLocaleTimeString([], {
     hour: "numeric",
     minute: "2-digit",
@@ -138,7 +178,7 @@ const getSystemState = () => {
 
     // Get title from app store instance
     const appInstance = appStore.instances[instance.instanceId];
-    const title = appInstance?.title || "Untitled";
+    const title = appInstance?.title || i18n.t("apps.terminal.output.untitled");
 
     return {
       instanceId: instance.instanceId,
@@ -163,6 +203,7 @@ const getSystemState = () => {
     // Keep legacy apps for backward compatibility, but mark that instances are preferred
     apps: appStore.apps,
     username,
+    userOS,
     userLocalTime: {
       timeString: userTimeString,
       dateString: userDateString,
@@ -270,72 +311,6 @@ function TerminalHtmlPreview({
 
 // parseSimpleMarkdown is imported from TypewriterText exports
 
-interface ToolInvocation {
-  state: "partial-call" | "call" | "result";
-  step?: number;
-  toolCallId: string;
-  toolName: string;
-  args?: Record<string, unknown>;
-  result?: unknown;
-}
-
-const formatToolInvocation = (invocation: ToolInvocation): string | null => {
-  const { toolName, state, args, result } = invocation;
-  if (state === "call" || state === "partial-call") {
-    // Aquarium renders as a dedicated component; suppress textual output
-    if (toolName === "aquarium") return null;
-    let msg = "";
-    switch (toolName) {
-      case "textEditSearchReplace":
-        msg = "Replacing text…";
-        break;
-      case "textEditInsertText":
-        msg = "Inserting text…";
-        break;
-      case "launchApp":
-        msg = `Launching ${getAppName(args?.id as string)}…`;
-        break;
-      case "closeApp":
-        msg = `Closing ${getAppName(args?.id as string)}…`;
-        break;
-      case "textEditNewFile":
-        msg = "Creating new document…";
-        break;
-      default:
-        msg = `Running ${formatToolName(toolName)}…`;
-    }
-    return `::: ${msg}`;
-  }
-
-  if (state === "result") {
-    // Aquarium renders visually; no textual result
-    if (toolName === "aquarium") return null;
-    let msg: string | null = null;
-    if (toolName === "launchApp" && args?.id === "internet-explorer") {
-      const urlPart = args.url ? ` ${args.url}` : "";
-      const yearPart = args.year && args.year !== "" ? ` in ${args.year}` : "";
-      msg = `Launched${urlPart}${yearPart}`;
-    } else if (toolName === "launchApp") {
-      msg = `Launched ${getAppName(args?.id as string)}`;
-    } else if (toolName === "closeApp") {
-      msg = `Closed ${getAppName(args?.id as string)}`;
-    } else if (
-      toolName === "generateHtml" &&
-      typeof result === "string" &&
-      result.trim().length > 0
-    ) {
-      msg = `\n\n\u0060\u0060\u0060html\n${result.trim()}\n\u0060\u0060\u0060`;
-    } else if (typeof result === "string") {
-      msg = result;
-    } else {
-      msg = formatToolName(toolName);
-    }
-    return `→ ${msg}`;
-  }
-
-  return null;
-};
-
 // TypewriterText component has been extracted to separate file
 
 // AnimatedEllipsis component has been extracted to separate file
@@ -358,6 +333,7 @@ export function TerminalAppComponent({
   onNavigateNext,
   onNavigatePrevious,
 }: AppProps) {
+  const translatedHelpItems = useTranslatedHelpItems("terminal", helpItems || []);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
   const [currentCommand, setCurrentCommand] = useState("");
@@ -390,7 +366,6 @@ export function TerminalAppComponent({
   const [isInteractingWithPreview, setIsInteractingWithPreview] =
     useState(false);
   const [inputFocused, setInputFocused] = useState(false); // Add state for input focus
-  const [windowSize, setWindowSize] = useState({ width: 80, height: 24 }); // Terminal dimensions
   const spinnerChars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
   // Track if auto-scrolling is enabled
@@ -453,38 +428,6 @@ export function TerminalAppComponent({
     setHistoryCommands(commandHistory.map((cmd) => cmd.command));
   }, []);
 
-  // Calculate terminal dimensions based on window size
-  useEffect(() => {
-    const calculateTerminalSize = () => {
-      if (terminalRef.current) {
-        const container = terminalRef.current;
-        const style = window.getComputedStyle(container);
-        const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-        const availableWidth = container.clientWidth - padding;
-        const availableHeight = container.clientHeight;
-        
-        // Approximate character width (Monaco font at 12px is about 7.2px per char)
-        const charWidth = fontSize * 0.6;
-        const charHeight = fontSize * 1.2;
-        
-        const cols = Math.floor(availableWidth / charWidth);
-        const rows = Math.floor(availableHeight / charHeight);
-        
-        setWindowSize({ width: Math.max(80, cols), height: Math.max(24, rows) });
-      }
-    };
-
-    calculateTerminalSize();
-    const resizeObserver = new ResizeObserver(calculateTerminalSize);
-    if (terminalRef.current) {
-      resizeObserver.observe(terminalRef.current);
-    }
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [fontSize]);
-
   // Initialize with welcome message
   useEffect(() => {
     const currentTime = new Date().toLocaleTimeString();
@@ -496,7 +439,7 @@ export function TerminalAppComponent({
     setCommandHistory([
       {
         command: "",
-        output: `${asciiArt}\nlast login: ${currentTime}\ntype 'help' to see available commands\n\n`,
+        output: `${asciiArt}\n${i18n.t("apps.terminal.output.lastLogin", { time: currentTime })}\n${i18n.t("apps.terminal.output.typeHelpForCommands")}\n\n`,
         path: "welcome-message",
       },
     ]);
@@ -1335,16 +1278,16 @@ export function TerminalAppComponent({
           historyCommands[historyCommands.length - 1 - newIndex] || "";
 
         // If we're not in AI mode and the historic command was from AI mode
-        // (doesn't start with 'zi' and was saved with 'zi' prefix)
+        // (doesn't start with 'ryo' and was saved with 'ryo' prefix)
         const savedCommands = useTerminalStore.getState().commandHistory;
         const commandEntry = savedCommands[savedCommands.length - 1 - newIndex];
         if (
           !isInAiMode &&
           commandEntry &&
-          commandEntry.command.startsWith("zi ") &&
-          !historicCommand.startsWith("zi ")
+          commandEntry.command.startsWith("ryo ") &&
+          !historicCommand.startsWith("ryo ")
         ) {
-          setCurrentCommand("zi " + historicCommand);
+          setCurrentCommand("ryo " + historicCommand);
         } else {
           setCurrentCommand(historicCommand);
         }
@@ -1364,10 +1307,10 @@ export function TerminalAppComponent({
         if (
           !isInAiMode &&
           commandEntry &&
-          commandEntry.command.startsWith("zi ") &&
-          !historicCommand.startsWith("zi ")
+          commandEntry.command.startsWith("ryo ") &&
+          !historicCommand.startsWith("ryo ")
         ) {
-          setCurrentCommand("zi " + historicCommand);
+          setCurrentCommand("ryo " + historicCommand);
         } else {
           setCurrentCommand(historicCommand);
         }
@@ -1943,7 +1886,7 @@ export function TerminalAppComponent({
 
       default:
         return {
-          output: `command not found: ${cmd}. type 'help' for a list of available commands.`,
+          output: i18n.t("apps.terminal.output.commandNotFound", { cmd }),
           isError: true,
         };
     }
@@ -1999,22 +1942,38 @@ export function TerminalAppComponent({
       | undefined;
     const lines: string[] = [];
     let hasAquarium = false;
+    const toolInvocations: ToolInvocationData[] = [];
 
     if (parts && parts.length > 0) {
       parts.forEach((part) => {
-        if ((part as { type: string }).type === "text") {
+        const partType = (part as { type: string }).type;
+        if (partType === "text") {
           const processed = processMessageContent(
             (part as { text: string }).text
           );
           if (processed) lines.push(processed);
-        } else if ((part as { type: string }).type === "tool-invocation") {
-          const ti = (part as { toolInvocation: ToolInvocation })
-            .toolInvocation;
-          if (ti.toolName === "aquarium") {
+        } else if (partType.startsWith("tool-")) {
+          // AI SDK v5 tool parts have type like "tool-launchApp", "tool-ipodControl", etc.
+          const toolName = partType.slice(5); // Remove "tool-" prefix
+          const toolPart = part as {
+            type: string;
+            toolCallId: string;
+            state: "input-streaming" | "input-available" | "output-available" | "output-error";
+            input?: Record<string, unknown>;
+            output?: unknown;
+          };
+          
+          if (toolName === "aquarium") {
             hasAquarium = true;
+          } else {
+            // Store tool invocation for visual rendering
+            toolInvocations.push({
+              toolName,
+              state: toolPart.state,
+              input: toolPart.input,
+              output: toolPart.output,
+            });
           }
-          const txt = formatToolInvocation(ti);
-          if (txt) lines.push(txt);
         }
       });
     } else {
@@ -2039,7 +1998,8 @@ export function TerminalAppComponent({
         const existing = filteredHistory[existingIndex];
         if (
           existing.output === cleanedContent &&
-          existing.hasAquarium === hasAquarium
+          existing.hasAquarium === hasAquarium &&
+          JSON.stringify(existing.toolInvocations) === JSON.stringify(toolInvocations)
         )
           return prev;
 
@@ -2050,6 +2010,7 @@ export function TerminalAppComponent({
           path: "ai-assistant",
           messageId: lastMessage.id,
           hasAquarium,
+          toolInvocations: toolInvocations.length > 0 ? toolInvocations : undefined,
         };
         return updated;
       }
@@ -2064,6 +2025,7 @@ export function TerminalAppComponent({
           path: "ai-assistant",
           messageId: lastMessage.id,
           hasAquarium,
+          toolInvocations: toolInvocations.length > 0 ? toolInvocations : undefined,
         },
       ];
     });
@@ -2092,7 +2054,7 @@ export function TerminalAppComponent({
     // Store in Zustand (including AI commands)
     useTerminalStore
       .getState()
-      .addCommand(command.startsWith("zi ") ? command : `zi ${command}`);
+      .addCommand(command.startsWith("ryo ") ? command : `ryo ${command}`);
 
     // Reset animated lines to ensure only new content gets animated
     setAnimatedLines(new Set());
@@ -2150,8 +2112,7 @@ export function TerminalAppComponent({
         setCommandHistory([
           {
             command: "",
-            output:
-              "chat cleared. you're still chatting with zi. type 'exit' to return to terminal.",
+            output: i18n.t("apps.terminal.output.chatCleared"),
             path: "ai-assistant",
           },
         ]);
@@ -2387,7 +2348,7 @@ export function TerminalAppComponent({
         !item.output.startsWith("command not found") &&
         !item.output.includes("commands") &&
         !item.output.includes("     __  __") &&
-        !item.output.includes("ask zi anything.") &&
+        !item.output.includes("ask ryo anything.") &&
         // Don't animate ls command output
         !(item.command && item.command.trim().startsWith("ls"))
       ) {
@@ -2469,7 +2430,7 @@ export function TerminalAppComponent({
             vimCursorColumn={vimCursorColumn}
             vimMode={vimMode}
           />
-          <div className="flex mt-1">
+          <div className="flex items-baseline mt-1">
             <span className="text-green-400 mr-1">
               {vimMode === "normal" ? "" : vimMode === "insert" ? "" : ":"}
             </span>
@@ -2519,22 +2480,13 @@ export function TerminalAppComponent({
                   : "animate"
               }
               exit="exit"
-              layoutId={`terminal-line-${index}`}
-              layout="preserve-aspect"
-              transition={{
-                type: "spring",
-                duration: 0.3,
-                stiffness: 100,
-                damping: 25,
-                mass: 0.8,
-              }}
             >
               {item.command && (
                 <div className="flex select-text">
                   {item.path === "ai-user" ? (
                     <span className="text-purple-400 mr-2 select-text cursor-text">
                       <span className="inline-block w-2 text-center">→</span>{" "}
-                      zi
+                      ryo
                     </span>
                   ) : (
                     <span className="text-green-400 mr-2 select-text cursor-text">
@@ -2547,7 +2499,7 @@ export function TerminalAppComponent({
                   </span>
                 </div>
               )}
-              {item.output && (
+              {(item.output || (item.toolInvocations && item.toolInvocations.length > 0)) && (
                 <div
                   className={`ml-0 select-text ${
                     item.path === "ai-thinking" ? "text-gray-400" : ""
@@ -2555,10 +2507,10 @@ export function TerminalAppComponent({
                     item.path === "ai-error" ? "text-red-400" : ""
                   } ${item.path === "welcome-message" ? "text-gray-400" : ""} ${
                     // Add urgent message styling
-                    isUrgentMessage(item.output) ? "text-red-400" : ""
+                    item.output && isUrgentMessage(item.output) ? "text-red-400" : ""
                   } ${
                     // Add system message styling
-                    item.output.startsWith("ask zi anything") ||
+                    item.output && (item.output.startsWith("ask ryo anything") ||
                     item.output.startsWith("usage:") ||
                     item.output.startsWith("command not found:") ||
                     item.output.includes("type 'help' for") ||
@@ -2566,7 +2518,7 @@ export function TerminalAppComponent({
                     item.output.includes("not implemented") ||
                     item.output.includes("already exists") ||
                     item.output.startsWith("file not found:") ||
-                    item.output.startsWith("no files found")
+                    item.output.startsWith("no files found"))
                       ? "text-gray-400"
                       : ""
                   }`}
@@ -2575,34 +2527,24 @@ export function TerminalAppComponent({
                     <div>
                       <span className="gradient-spin">
                         <span className="inline-block w-2 text-center">
-                          {item.output.split(" ")[0]}
+                          {(item.output || "").split(" ")[0]}
                         </span>{" "}
-                        zi
+                        ryo
                       </span>
                       <span className="text-gray-500 italic shimmer-subtle">
-                        {" is thinking"}
+                        {" "}{i18n.t("apps.terminal.output.isThinking")}
                         <AnimatedEllipsis />
                       </span>
                     </div>
                   ) : item.path === "ai-assistant" ? (
-                    <motion.div
-                      layout="position"
-                      className="select-text cursor-text"
-                      transition={{
-                        type: "spring",
-                        duration: 0.3,
-                        stiffness: 100,
-                        damping: 25,
-                        mass: 0.8,
-                      }}
-                    >
+                    <div className="select-text cursor-text">
                       {(() => {
                         // Process the message to extract HTML and text parts
                         const { htmlContent, textContent, hasHtml } =
-                          extractHtmlContent(item.output);
+                          extractHtmlContent(item.output || "");
 
                         // Check if this is an urgent message
-                        const urgent = isUrgentMessage(item.output);
+                        const urgent = isUrgentMessage(item.output || "");
                         // Clean content by removing !!!! prefix if urgent
                         const cleanedTextContent = urgent
                           ? cleanUrgentPrefix(textContent || "")
@@ -2618,6 +2560,19 @@ export function TerminalAppComponent({
 
                         return (
                           <>
+                            {/* Render tool invocations FIRST (before text content) */}
+                            {item.toolInvocations && item.toolInvocations.length > 0 && (
+                              <div className="space-y-0.5 mb-1">
+                                {item.toolInvocations.map((invocation, invIdx) => (
+                                  <TerminalToolInvocation
+                                    key={`${item.messageId}-tool-${invIdx}`}
+                                    invocation={invocation}
+                                    fontSize={fontSize}
+                                  />
+                                ))}
+                              </div>
+                            )}
+
                             {/* Show only non-HTML text content with markdown parsing */}
                             {cleanedTextContent &&
                               (() => {
@@ -2677,7 +2632,7 @@ export function TerminalAppComponent({
                           </>
                         );
                       })()}
-                    </motion.div>
+                    </div>
                   ) : animatedLines.has(index) ? (
                     <>
                       {isUrgentMessage(item.output) && (
@@ -2727,7 +2682,7 @@ export function TerminalAppComponent({
         <div className="relative select-text">
           <form
             onSubmit={handleCommandSubmit}
-            className="flex transition-all duration-200 select-text"
+            className="flex items-baseline transition-all duration-200 select-text"
           >
             {isInAiMode ? (
               <span className="text-purple-400 mr-2 whitespace-nowrap select-text cursor-text">
@@ -2737,12 +2692,12 @@ export function TerminalAppComponent({
                       <span className="inline-block w-2 text-center">
                         {spinnerChars[spinnerIndex]}
                       </span>{" "}
-                      zi
+                      ryo
                     </span>
                   </span>
                 ) : (
                   <>
-                    <span className="inline-block w-2 text-center">→</span> zi
+                    <span className="inline-block w-2 text-center">→</span> ryo
                   </>
                 )}
               </span>
@@ -2773,7 +2728,7 @@ export function TerminalAppComponent({
               {isAiLoading && isInAiMode && (
                 <div className="absolute top-0 left-0 w-full h-full pointer-events-none flex items-center">
                   <span className="text-gray-400/40 opacity-30 shimmer">
-                    is thinking
+                    {i18n.t("apps.terminal.output.isThinking")}
                     <AnimatedEllipsis />
                   </span>
                 </div>
@@ -2815,7 +2770,7 @@ export function TerminalAppComponent({
       {!isXpTheme && isForeground && menuBar}
       <WindowFrame
         appId="terminal"
-        title={`Terminal — -zsh — ${windowSize.width}x${windowSize.height}`}
+        title={getTranslatedAppName("terminal")}
         onClose={onClose}
         isForeground={isForeground}
         transparentBackground={true}
@@ -2826,13 +2781,14 @@ export function TerminalAppComponent({
         menuBar={isXpTheme ? menuBar : undefined}
       >
         <motion.div
-          className="flex flex-col h-full w-full bg-[#1e1e1e] text-white antialiased font-monaco overflow-hidden select-text terminal-container"
+          className="terminal-content flex flex-col h-full w-full bg-black/80 backdrop-blur-lg text-white antialiased font-monaco overflow-hidden select-text"
           style={{
+            // Use CSS custom property to allow !important override in macOS theme
+            "--terminal-font-size": `${fontSize}px`,
             fontSize: `${fontSize}px`,
             fontFamily:
               '"Monaco", "ArkPixel", "SerenityOS-Emoji", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", "Courier New", monospace',
-            color: "#ffffff",
-          }}
+          } as React.CSSProperties}
           animate={
             terminalFlash
               ? {
@@ -2865,8 +2821,8 @@ export function TerminalAppComponent({
       <HelpDialog
         isOpen={isHelpDialogOpen}
         onOpenChange={setIsHelpDialogOpen}
-        appName="Terminal"
-        helpItems={helpItems || []}
+        appId="terminal"
+        helpItems={translatedHelpItems}
       />
       <AboutDialog
         isOpen={isAboutDialogOpen}
@@ -2876,13 +2832,14 @@ export function TerminalAppComponent({
             name: "Terminal",
             version: "1.0",
             creator: {
-              name: "Zihan",
-              url: "https://bravohenry.com",
+              name: "Ryo Lu",
+              url: "https://ryo.lu",
             },
-            github: "https://github.com/bravohenry/bravos",
+            github: "https://github.com/ryokun6/ryos",
             icon: "/icons/default/terminal.png",
           }
         }
+        appId="terminal"
       />
     </>
   );

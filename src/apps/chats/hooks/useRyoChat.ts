@@ -1,11 +1,13 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/stores/useAppStore";
 import { useInternetExplorerStore } from "@/stores/useInternetExplorerStore";
 import { useVideoStore } from "@/stores/useVideoStore";
 import { useIpodStore } from "@/stores/useIpodStore";
 import { useChatsStore } from "@/stores/useChatsStore";
+import { useLanguageStore } from "@/stores/useLanguageStore";
 
 // Helper function to get system state for AI chat
 const getSystemState = () => {
@@ -14,6 +16,7 @@ const getSystemState = () => {
   const videoStore = useVideoStore.getState();
   const ipodStore = useIpodStore.getState();
   const chatsStore = useChatsStore.getState();
+  const languageStore = useLanguageStore.getState();
 
   const currentVideo = videoStore.getCurrentVideo();
   const currentTrack = ipodStore.tracks[ipodStore.currentIndex];
@@ -43,6 +46,7 @@ const getSystemState = () => {
     apps: appStore.apps,
     instances: appStore.instances,
     username: chatsStore.username,
+    locale: languageStore.current,
     runningApps: {
       foreground: foregroundApp,
       background: backgroundApps,
@@ -102,6 +106,7 @@ export function useRyoChat({
   onScrollToBottom,
   roomMessages = [],
 }: UseRyoChatProps) {
+  const { t } = useTranslation();
   // Pull current auth credentials from store (reactive)
   const { authToken, username } = useChatsStore();
 
@@ -178,11 +183,11 @@ export function useRyoChat({
         return { isMention: true, messageContent };
       } else if (input === "@ryo") {
         // If they just typed @ryo without a message, treat it as a nudge
-        return { isMention: true, messageContent: "👋 *nudge sent*" };
+        return { isMention: true, messageContent: t("apps.chats.status.nudgeSent") };
       }
       return { isMention: false, messageContent: "" };
     },
-    []
+    [t]
   );
 
   return {

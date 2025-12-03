@@ -23,6 +23,8 @@ export const getModelInstance = (model: SupportedModel): LanguageModelV2 => {
       return google("gemini-2.5-flash");
     case "gemini-2.5-flash-image":
       return google("gemini-2.5-flash-image");
+    case "gemini-3-pro-preview":
+      return google("gemini-3-pro-preview");
     case "claude-4.5":
       return anthropic("claude-sonnet-4-5");
     case "claude-4":
@@ -33,6 +35,8 @@ export const getModelInstance = (model: SupportedModel): LanguageModelV2 => {
       return anthropic("claude-3-5-sonnet-20241022");
     case "gpt-5":
       return openai("gpt-5");
+    case "gpt-5.1":
+      return openai("gpt-5.1");
     case "gpt-5-mini":
       return openai("gpt-5-mini");
     case "gpt-4o":
@@ -43,6 +47,6 @@ export const getModelInstance = (model: SupportedModel): LanguageModelV2 => {
       return openai("gpt-4.1-mini");
     default:
       // Fallback – should never happen due to exhaustive switch
-      return openai("gpt-5");
+      return openai("gpt-5.1");
   }
 };

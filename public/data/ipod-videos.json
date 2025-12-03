@@ -1,6 +1,35 @@
 {
   "videos": [
     {
+      "id": "eET3YAZp4rI",
+      "url": "https://www.youtube.com/watch?v=eET3YAZp4rI",
+      "title": "Ketchup And Lemonade",
+      "artist": "NINGNING",
+      "lyricOffset": -2350
+    },
+    {
+      "id": "dpP_C_LnA1c",
+      "url": "https://www.youtube.com/watch?v=dpP_C_LnA1c",
+      "title": "X",
+      "artist": "Lexie Liu",
+      "lyricOffset": -350
+    },
+    {
+      "id": "fXivMSJm_kA",
+      "url": "https://www.youtube.com/watch?v=fXivMSJm_kA",
+      "title": "YUKON",
+      "artist": "Justin Bieber",
+      "lyricOffset": 1000
+    },
+    {
+      "id": "KFMYx1TibeQ",
+      "url": "https://www.youtube.com/watch?v=KFMYx1TibeQ",
+      "title": "Folded",
+      "artist": "Kehlani",
+      "album": "",
+      "lyricOffset": -2450
+    },
+    {
       "id": "KlhuSz0HbcE",
       "url": "https://www.youtube.com/watch?v=KlhuSz0HbcE",
       "title": "Tiramisu",
@@ -74,13 +103,13 @@
     {
       "id": "HeqsjDF7Lw0",
       "url": "https://www.youtube.com/watch?v=HeqsjDF7Lw0",
-      "title": "時よ止まれ",
+      "title": "Toki Yo Tomare",
       "artist": "ILLIT",
       "lyricOffset": -9800
     },
     {
-      "id": "qJolLqOS7Is",
-      "url": "https://www.youtube.com/watch?v=qJolLqOS7Is",
+      "id": "T2ZaUFDOikU",
+      "url": "https://www.youtube.com/watch?v=T2ZaUFDOikU",
       "title": "2-5-1",
       "artist": "Crush",
       "lyricOffset": 1000
@@ -98,6 +127,13 @@
       "title": "香車豪宅",
       "artist": "攬佬",
       "lyricOffset": 1000
+    },
+    {
+      "id": "hz4kvS7_iR8",
+      "url": "https://www.youtube.com/watch?v=hz4kvS7_iR8",
+      "title": "Dopamine",
+      "artist": "GISELLE",
+      "lyricOffset": 1600
     },
     {
       "id": "kKsivrgoyDw",

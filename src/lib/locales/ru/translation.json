@@ -1,0 +1,1862 @@
+{
+  "apps": {
+    "applet-viewer": {
+      "description": "Просмотр и запуск апплетов",
+      "dialogs": {
+        "addedToFeatured": "Добавлено в избранное",
+        "allAppletsUpToDate": "Все апплеты обновлены",
+        "appletAlreadyShared": "Апплет уже опубликован",
+        "appletDeleted": "Апплет удален",
+        "appletExported": "Апплет экспортирован!",
+        "appletExportedDescription": "{{fileName}}.app успешно экспортирован.",
+        "appletImported": "Апплет импортирован!",
+        "appletImportedDescription": "{{fileName}} сохранен в /Applets{{iconText}}",
+        "appletNotFound": "Апплет не найден",
+        "appletNotFoundDescription": "Общий апплет, возможно, был удален, или ссылка недействительна.",
+        "appletSaved": "Апплет сохранен",
+        "appletSavedDescription": "Сохранено в /Applets/{{fileName}}",
+        "appletShared": "Апплет опубликован!",
+        "appletStore": "Магазин апплетов",
+        "appletUpdateAvailable": "Доступно обновление апплета",
+        "appletUpdateAvailableDescription": "Для {{appletName}} доступно обновление.",
+        "appletUpdated": "Апплет обновлен",
+        "appletUpdatedShare": "Апплет обновлен!",
+        "appletsUpdated": "{{count}} апплетов обновлено",
+        "areYouSureDeleteApplet": "Вы уверены, что хотите удалить этот апплет?",
+        "couldNotCompressAppletFile": "Не удалось сжать файл апплета.",
+        "couldNotImportFile": "Не удалось импортировать файл.",
+        "exportFailed": "Экспорт не удался",
+        "failedToDeleteApplet": "Не удалось удалить апплет",
+        "failedToFetchSharedApplet": "Не удалось получить общий апплет",
+        "failedToLoadSharedApplet": "Не удалось загрузить общий апплет",
+        "failedToSaveApplet": "Не удалось сохранить апплет",
+        "failedToShareApplet": "Не удалось поделиться апплетом",
+        "failedToUpdateApplet": "Не удалось обновить апплет",
+        "failedToUpdateApplets": "Не удалось обновить апплеты",
+        "failedToUpdateFeaturedStatus": "Не удалось обновить статус избранного",
+        "importFailed": "Импорт не удался",
+        "loading": "Загрузка...",
+        "loginRequired": "Требуется вход",
+        "mustBeLoggedInToShare": "Вам необходимо войти в систему, чтобы поделиться апплетами.",
+        "newAppletUpdates": "{{count}} новое обновление апплета",
+        "newAppletUpdatesPlural": "{{count}} новых обновлений апплета",
+        "noAppletToShare": "Нет апплета для совместного использования",
+        "noAppletsAvailable": "В данный момент апплеты недоступны.",
+        "noAppletsFound": "Не найдено апплетов по запросу \"{{query}}\".",
+        "pleaseCheckConnection": "Проверьте соединение и повторите попытку.",
+        "pleaseOpenAppletFirst": "Сначала откройте апплет.",
+        "pleaseTryAgainLater": "Повторите попытку позже.",
+        "removedFromFeatured": "Удалено из рекомендованного",
+        "shareLinkGeneratedSuccessfully": "Ссылка для обмена успешно сгенерирована.",
+        "shareLinkUpdatedSuccessfully": "Ссылка для обмена успешно обновлена.",
+        "sharedApplet": "Общий апплет",
+        "sharedAppletLoaded": "Общий апплет загружен",
+        "showingExistingShareLink": "Отображается существующая ссылка для обмена.",
+        "untitled": "Без названия",
+        "untitledApplet": "Апплет без названия",
+        "updatingApplet": "Обновление апплета...",
+        "updatingAppletSingle": "Обновление 1 апплета...",
+        "updatingApplets": "Обновление {{count}} апплетов...",
+        "updatingAppletsPlural": "Обновление {{count}} апплетов..."
+      },
+      "help": {
+        "appletStore": {
+          "description": "Просматривайте и устанавливайте апплеты от сообщества. Откройте меню «Магазин», чтобы найти новые приложения.",
+          "title": "Магазин апплетов"
+        },
+        "createWithRyosChat": {
+          "description": "Попросите ryOS Chat создать для вас пользовательские приложения и апплеты. Делитесь своими идеями и мгновенно получайте рабочие приложения.",
+          "title": "Создать с помощью ryOS Chat"
+        },
+        "keepUpdated": {
+          "description": "Проверьте наличие обновлений в меню «Магазин», чтобы получить последние версии установленных апплетов.",
+          "title": "Обновлять"
+        },
+        "openFromFinder": {
+          "description": "Просматривайте и открывайте апплеты, сохраненные в вашей системе, используя меню «Файл».",
+          "title": "Открыть из Finder"
+        },
+        "shareApplets": {
+          "description": "Делитесь своими любимыми апплетами с другими, используя опцию «Поделиться апплетом» в меню «Файл».",
+          "title": "Поделиться апплетами"
+        },
+        "viewApplets": {
+          "description": "Открывайте и запускайте апплеты, сохраненные из ryOS Chat или загруженные из магазина.",
+          "title": "Просмотреть апплеты"
+        }
+      },
+      "labels": {
+        "addToFeatured": "Добавить в рекомендуемые",
+        "deleteApplet": "Удалить апплет",
+        "discover": "Обзор",
+        "removeFromFeatured": "Удалить из рекомендуемых",
+        "searchApplets": "Поиск апплетов",
+        "showAll": "Показать все"
+      },
+      "menu": {
+        "aboutApplets": "Об апплетах",
+        "appletStore": "Магазин апплетов",
+        "appletsHelp": "Справка по апплетам",
+        "checkForUpdates": "Проверить обновления",
+        "createAccount": "Создать учетную запись...",
+        "exportAs": "Экспортировать как...",
+        "html": "HTML",
+        "importFromDevice": "Импортировать с устройства...",
+        "logOut": "Выйти",
+        "login": "Войти...",
+        "noAppletsOpen": "Нет открытых апплетов",
+        "open": "Открыть...",
+        "openAppletStore": "Открыть Магазин апплетов",
+        "ryosApp": "Приложение ryOS",
+        "shareApplet": "Поделиться апплетом...",
+        "store": "Магазин",
+        "untitled": "Без названия",
+        "updateApplets": "Обновить {{count}} апплет",
+        "updateAppletsPlural": "Обновить {{count}} апплетов",
+        "window": "Окно"
+      },
+      "name": "Магазин апплетов",
+      "sections": {
+        "featured": "Рекомендуемые",
+        "installed": "Установленные",
+        "newApplets": "Новые апплеты",
+        "updatesAvailable": "Доступны обновления"
+      },
+      "status": {
+        "get": "Получить",
+        "open": "Открыть",
+        "save": "Сохранить",
+        "update": "Обновить",
+        "updatedDaysAgo": "Обновлено {{days}} дн. назад",
+        "updatedHoursAgo": "Обновлено {{hours}} ч. назад",
+        "updatedJustNow": "Обновлено только что",
+        "updatedMinutesAgo": "Обновлено {{minutes}} мин. назад",
+        "updatedMonthsAgo": "Обновлено {{months}} мес. назад",
+        "updatedWeeksAgo": "Обновлено {{weeks}} нед. назад",
+        "updatedYearsAgo": "Обновлено {{years}} г. назад",
+        "updatedYesterday": "Обновлено вчера"
+      }
+    },
+    "chats": {
+      "ariaLabels": {
+        "copyMessage": "Скопировать сообщение",
+        "deleteMessage": "Удалить сообщение",
+        "deleteRoom": "Удалить чат",
+        "leaveConversation": "Покинуть беседу",
+        "mentionRyo": "Упомянуть Ryo",
+        "messageUser": "Написать {{username}}",
+        "newChat": "Новый чат",
+        "pushToTalk": "Нажми и говори",
+        "sendNudge": "Отправить напоминание",
+        "speakMessage": "Озвучить сообщение",
+        "stopGeneration": "Остановить генерацию",
+        "stopSpeech": "Остановить речь"
+      },
+      "description": "Чат с ИИ",
+      "dialogs": {
+        "addUsersToPrivateChat": "Добавить пользователей в приватный чат",
+        "cancel": "Отмена",
+        "clearChatsDescription": "Вы уверены, что хотите очистить этот чат? Это действие нельзя отменить.",
+        "clearChatsTitle": "Очистить чаты",
+        "create": "Создать",
+        "creating": "Создание...",
+        "deleteChatRoomDescription": "Вы уверены, что хотите удалить комнату «{{name}}»? Это действие нельзя отменить.",
+        "deleteChatRoomTitle": "Удалить чат-комнату",
+        "failedToCreateRoom": "Не удалось создать комнату",
+        "leaveConversationDescription": "Вы уверены, что хотите покинуть «{{name}}»? Вы больше не будете видеть сообщения в этой беседе.",
+        "leaveConversationTitle": "Покинуть беседу",
+        "newChatDescription": "Создайте публичную чат-комнату или начните приватную беседу",
+        "newChatDescriptionPrivate": "Начать приватную беседу",
+        "newChatTitle": "Новый чат",
+        "passwordMinLengthError": "Пароль должен содержать не менее 8 символов",
+        "passwordSetFailed": "Не удалось установить пароль",
+        "passwordSetSuccess": "Пароль установлен",
+        "passwordSetSuccessDescription": "Теперь вы можете использовать свой пароль для восстановления учетной записи",
+        "public": "Публичный",
+        "roomName": "Название комнаты",
+        "roomNamePlaceholder": "общий",
+        "saveTranscriptDescription": "Введите имя для файла стенограммы чата",
+        "saveTranscriptTitle": "Сохранить стенограмму",
+        "searchUsernamePlaceholder": "Поиск пользователя...",
+        "setPasswordButton": "Установить пароль",
+        "setPasswordDescription": "Установите пароль, чтобы включить восстановление учетной записи. Вы сможете использовать этот пароль для получения нового токена, если потеряете доступ.",
+        "setPasswordTitle": "Установить пароль"
+      },
+      "help": {
+        "chatWithRyo": {
+          "description": "Напишите сообщение, чтобы пообщаться с Ryo, сгенерировать код или получить помощь с ryOS.",
+          "title": "Общение с Ryo"
+        },
+        "controlApps": {
+          "description": "Попросите Ryo запустить или закрыть приложения, сменить темы или управлять воспроизведением на iPod.",
+          "title": "Управление приложениями"
+        },
+        "createEditFiles": {
+          "description": "Попросите Ryo создавать HTML-апплеты, редактировать документы, читать файлы или искать в Магазине апплетов.",
+          "title": "Создание и редактирование файлов"
+        },
+        "joinChatRooms": {
+          "description": "Общайтесь с другими в публичных чатах. Упомяните @ryo для получения ответов от ИИ.",
+          "title": "Присоединиться к чатам"
+        },
+        "nudgeDjMode": {
+          "description": "Отправьте 👋, чтобы получить контекстные подсказки. Ryo становится диджеем, когда играет музыка.",
+          "title": "Намек и режим диджея"
+        },
+        "pushToTalk": {
+          "description": "Удерживайте пробел или нажмите кнопку микрофона, чтобы записать и отправить голосовые сообщения.",
+          "title": "Нажми и говори"
+        }
+      },
+      "menu": {
+        "aboutChats": "О чатах",
+        "chatSpeech": "Речь в чате",
+        "chats": "Чаты",
+        "chatsHelp": "Помощь по чатам",
+        "clearChat": "Очистить чат",
+        "createAccount": "Создать учетную запись...",
+        "decreaseFontSize": "Уменьшить размер шрифта",
+        "increaseFontSize": "Увеличить размер шрифта",
+        "logOut": "Выйти",
+        "login": "Войти...",
+        "newChat": "Новый чат...",
+        "resetFontSize": "Сбросить размер шрифта",
+        "saveTranscript": "Сохранить стенограмму...",
+        "showRooms": "Показать комнаты",
+        "sound": "Звук",
+        "typingSynth": "Синтезатор набора текста"
+      },
+      "messages": {
+        "delete": "Удалить",
+        "greeting": "👋 Привет! Я Рио. Спрашивай что угодно!",
+        "ryo": "Рио",
+        "you": "Вы"
+      },
+      "name": "Чаты",
+      "sidebar": {
+        "channels": "Каналы",
+        "chats": "Чаты",
+        "new": "новый",
+        "online": "онлайн",
+        "private": "Приватный"
+      },
+      "status": {
+        "chatRequiresInternet": "Для чата требуется подключение к интернету",
+        "clear": "Очистить",
+        "createAccountToContinue": "Создайте аккаунт, чтобы продолжить...",
+        "dailyLimitReached": "Достигнут дневной лимит сообщений ИИ.",
+        "editing": "редактирование...",
+        "leave": "Покинуть",
+        "loginToChat": "Войти в чат",
+        "loginToContinue": "Войдите, чтобы продолжить общаться с Рио.",
+        "loginToRyOS": "Войти в ryOS",
+        "newChat": "Новый чат",
+        "noTranscriptionText": "Текст транскрипции не получен",
+        "nudgeSent": "👋 *подталкивание отправлено*",
+        "recording": "Запись...",
+        "retry": "Повторить",
+        "ryo": "@ryo",
+        "ryoWillRespond": "Рио ответит на это сообщение",
+        "scrollToBottom": "Прокрутить вниз",
+        "sessionExpired": "Сеанс истек. Пожалуйста, войдите снова.",
+        "startNewConversation": "Начать новый разговор?",
+        "thinking": "Думаю",
+        "transcribing": "Расшифровка...",
+        "typeMessage": "Введите сообщение...",
+        "typeOrPushSpace": "Наберите текст или нажмите 'пробел', чтобы говорить...",
+        "usingModel": "Используется {{model}}"
+      },
+      "tokenStatus": {
+        "clickToRefresh": "Нажмите, чтобы вручную обновить токен",
+        "daysAgo": "{{days}} дн. назад",
+        "daysOld": "{{days}} дней",
+        "hoursAgo": "{{hours}} ч. назад",
+        "justNow": "только что",
+        "last": "Последний",
+        "minutesAgo": "{{minutes}} мин. назад",
+        "refresh": "Обновить",
+        "refreshed": "Обновлено",
+        "refreshing": "Обновление...",
+        "tokenRefreshed": "Токен обновлен"
+      },
+      "toolCalls": {
+        "addedAndStartedPlaying": "Добавлена новая песня и начато воспроизведение",
+        "addingSong": "Добавление песни...",
+        "calling": "Вызов {{toolName}}...",
+        "changingSettings": "Изменение настроек...",
+        "closed": "{{appName}} закрыто",
+        "closing": "Закрытие {{appName}}...",
+        "contentWritten": "Содержимое записано",
+        "controllingPlayback": "Управление воспроизведением...",
+        "edited": "{{fileName}} отредактирован",
+        "editingFile": "Редактирование файла...",
+        "error": "Ошибка: {{errorText}}",
+        "fetchingApplet": "Загрузка апплета...",
+        "fileCreated": "Файл создан",
+        "findingFiles": "Поиск файлов...",
+        "foundApplets": "Найден {{count}} апплет",
+        "foundAppletsPlural": "Найдено {{count}} апплетов",
+        "foundApplications": "Найдено {{count}} приложение",
+        "foundApplicationsList": "Найдено {{count}} приложения",
+        "foundApplicationsListPlural": "Найдено {{count}} приложений",
+        "foundApplicationsPlural": "Найдено {{count}} приложений",
+        "foundDocuments": "Найден {{count}} документ",
+        "foundDocumentsPlural": "Найдено {{count}} документов",
+        "foundFileType": "Найдено {{count}} {{fileType}}",
+        "foundFileTypePlural": "Найдено {{count}} {{fileType}}",
+        "foundSharedApplets": "Найден {{count}} общий апплет",
+        "foundSharedAppletsPlural": "Найдено {{count}} общих апплетов",
+        "foundSongs": "Найдена {{count}} песня",
+        "foundSongsInMusic": "Найдена {{count}} песня в Музыке",
+        "foundSongsInMusicPlural": "Найдено {{count}} песен в Музыке",
+        "foundSongsPlural": "Найдено {{count}} песен",
+        "generating": "Генерация…",
+        "ipodAdded": "Добавлено «{{title}}» на iPod. Нажмите центральную кнопку или кнопку воспроизведения на iPod, чтобы начать воспроизведение.",
+        "ipodAddedAndPlaying": "Добавлено «{{title}}» на iPod и начато воспроизведение.",
+        "ipodCannotAdd": "Невозможно добавить {{id}}: видео недоступно или недействительно.",
+        "ipodFailedToAdd": "Не удалось добавить {{id}} на iPod.",
+        "ipodFailedToAddWithError": "Не удалось добавить {{id}}: {{error}}",
+        "ipodPaused": "Приостановлено",
+        "ipodPausedTrack": "Приостановлено {{trackDesc}}",
+        "ipodPlaying": "Воспроизведение",
+        "ipodPlayingTrack": "Воспроизводится {{trackDesc}}",
+        "ipodReady": "iPod готов. Нажмите центральную кнопку или кнопку воспроизведения на iPod, чтобы начать воспроизведение",
+        "ipodSelected": "Выбрано {{trackDesc}}. Нажмите центральную кнопку или кнопку воспроизведения на iPod, чтобы начать воспроизведение",
+        "ipodSkippedTo": "Переключено на {{trackDesc}}",
+        "ipodSkippedToNext": "Переключено на следующий трек",
+        "ipodSongNotFound": "Песня не найдена в библиотеке iPod",
+        "ipodTranslatedLyricsTo": "Текст песни переведен на {{langName}}",
+        "ipodTurnedOffFullScreen": "Отключен полноэкранный режим",
+        "ipodTurnedOffLyricsTranslation": "Отключен перевод текста песни",
+        "ipodTurnedOffVideo": "Отключено видео",
+        "ipodTurnedOnFullScreen": "Включен полноэкранный режим",
+        "ipodTurnedOnVideo": "Включено видео",
+        "ipodWentBackTo": "Вернулись к {{trackDesc}}",
+        "ipodWentBackToPrevious": "Вернулись к предыдущему треку",
+        "launched": "Запущено {{appName}}",
+        "launchedWithUrl": "Открыта {{url}}",
+        "launchedWithUrlAndYear": "Открыта {{url}} в {{year}} году",
+        "launching": "Запуск {{appName}}…",
+        "launchingApp": "Запуск приложения…",
+        "listedItems": "Перечисленные элементы",
+        "listingApplications": "Перечисление приложений…",
+        "listingSharedApplets": "Перечисление общих апплетов…",
+        "loadingMusicLibrary": "Загрузка музыкальной библиотеки…",
+        "multipleMatchesFound": "Найдено несколько совпадений",
+        "musicLibraryEmpty": "Музыкальная библиотека пуста",
+        "noFileTypeFound": "Не найдено {{fileType}} в каталоге {{path}}",
+        "noItemsFound": "Элементы не найдены",
+        "noSharedAppletsAvailable": "Общие апплеты недоступны",
+        "noSharedAppletsMatched": "Общие апплеты не соответствуют «{{query}}»",
+        "opened": "Открыто",
+        "openedApplet": "Открыт {{appletName}}",
+        "openedDocument": "Открыт документ: {{fileName}}",
+        "openedFile": "Открыт {{fileName}}",
+        "openingAppletPreview": "Открытие предварительного просмотра апплета…",
+        "openingFile": "Открытие файла…",
+        "pausedIpod": "iPod приостановлен",
+        "playing": "Воспроизводится {{title}}",
+        "playingByArtist": "Воспроизводится: {{title}} исполнителя {{artist}}",
+        "playingIpod": "Воспроизводится iPod",
+        "playingSong": "Воспроизводится песня…",
+        "playingSongByArtist": "Воспроизводится песня исполнителя {{artist}}",
+        "playingSongGeneric": "Воспроизводится песня",
+        "playingSongWithId": "Воспроизводится песня ({{id}})",
+        "playingTrack": "Воспроизводится: {{title}}",
+        "playingTrackByArtist": "Воспроизводится: {{title}} исполнителя {{artist}}",
+        "preparingHtmlPreview": "Подготовка предварительного просмотра HTML...",
+        "read": "Прочитать {{fileName}}",
+        "readingFile": "Чтение файла…",
+        "running": "Выполнение {{toolName}}…",
+        "settingsCheckingForUpdates": "Проверка обновлений…",
+        "settingsLanguageChanged": "Язык изменен на {{language}}",
+        "settingsMasterVolumeSet": "Громкость установлена на {{volume}}%",
+        "settingsNoChanges": "Изменений нет",
+        "settingsSpeechDisabled": "Синтез речи отключен",
+        "settingsSpeechEnabled": "Синтез речи включен",
+        "settingsThemeChanged": "Тема изменена на {{theme}}",
+        "settingsUpdated": "Настройки обновлены",
+        "skippedToNextTrack": "Переключено на следующий трек",
+        "skippedToPreviousTrack": "Переключено на предыдущий трек",
+        "skippingToNext": "Переключение на следующий…",
+        "skippingToPrevious": "Переключение на предыдущий…",
+        "switchedTo": "Переключено на {{theme}}",
+        "switchingTheme": "Переключение темы…",
+        "textNotFound": "Текст не найден",
+        "toggledIpodPlayback": "Переключено воспроизведение iPod",
+        "toolExecutionFailed": "Ошибка выполнения инструмента",
+        "writingContent": "Запись содержимого…"
+      }
+    },
+    "control-panels": {
+      "aiModel": "Модель ИИ",
+      "aiModelDescription": "Используется в чатах, IE и других местах",
+      "appearance": "Внешний вид",
+      "backup": "Резервное копирование",
+      "backupRestoreDescription": "Резервное копирование или восстановление всех настроек и файлов приложения.",
+      "bootScreen": "Экран загрузки",
+      "bootScreenDescription": "Проверить анимацию экрана загрузки",
+      "chatSynth": "Чат-синтезатор",
+      "chatSynthVolume": "Громкость чат-синтезатора",
+      "checkForUpdates": "Проверить обновления",
+      "color": "Цвет",
+      "crt": "ЭЛТ",
+      "custom": "Пользовательский",
+      "debugMode": "Режим отладки",
+      "debugModeDescription": "Включить параметры отладки",
+      "default": "По умолчанию",
+      "description": "Системные настройки",
+      "displayMode": "Режим отображения",
+      "dream": "Мечта",
+      "elevenlabs": "ElevenLabs",
+      "elevenlabsVoiceId": "ID голоса ElevenLabs",
+      "formatFileSystem": "Форматировать файловую систему",
+      "formatFileSystemDescription": "Это удалит все файлы (кроме образцов документов), изображения и пользовательские обои. ryOS перезапустится после форматирования.",
+      "help": {
+        "aiModel": {
+          "description": "Выберите модель ИИ, используемую чатами и помощником Терминала",
+          "title": "Модель ИИ"
+        },
+        "appearance": {
+          "description": "Выберите фотографии, узоры или шейдерные эффекты для обоев рабочего стола",
+          "title": "Внешний вид"
+        },
+        "backupRestore": {
+          "description": "Экспортировать или восстановить все настройки и файлы",
+          "title": "Резервное копирование и восстановление"
+        },
+        "shaderEffects": {
+          "description": "Включить визуальные эффекты ЭЛТ, Галактика или Аврора",
+          "title": "Эффекты шейдеров"
+        },
+        "sounds": {
+          "description": "Включить/выключить звуки интерфейса, синтезатор набора текста и эффекты Терминала / IE",
+          "title": "Звуки"
+        },
+        "system": {
+          "description": "Сбросить настройки или отформатировать виртуальную файловую систему",
+          "title": "Система"
+        }
+      },
+      "highContrast": "Высокий контраст",
+      "invert": "Инвертировать",
+      "ipod": "iPod",
+      "ipodVolume": "Громкость iPod",
+      "logIn": "Войти",
+      "logOut": "Выйти",
+      "logOutOfAllDevices": "Выйти со всех устройств",
+      "loggedInToRyOS": "Вы вошли в ryOS",
+      "loggingOut": "Выход...",
+      "login": "Вход",
+      "loginToSendMessages": "Войдите, чтобы отправлять сообщения и многое другое",
+      "master": "Общая",
+      "masterVolume": "Общая громкость",
+      "menu": {
+        "aboutControlPanels": "О панелях управления",
+        "app": "Приложение",
+        "controlPanelsHelp": "Справка по панелям управления"
+      },
+      "mono": "Моно",
+      "name": "Панели управления",
+      "openai": "OpenAI",
+      "openaiVoice": "Голос OpenAI",
+      "patterns": "Шаблоны",
+      "resetAllSettings": "Сбросить все настройки",
+      "resetAllSettingsDescription": "Это очистит все сохраненные настройки и восстановит значения по умолчанию.",
+      "restore": "Восстановить",
+      "ryOSAccount": "Учетная запись ryOS",
+      "select": "Выбрать",
+      "selectACategory": "Выберите категорию",
+      "selectAPreset": "Выберите предустановку",
+      "sepia": "Сепия",
+      "setPassword": "Установить пароль",
+      "shaderEffect": "Эффект шейдера",
+      "shaderEffectDescription": "Фоновый эффект, требовательный к производительности",
+      "show": "Показать",
+      "sound": "Звук",
+      "speech": "Речь",
+      "speechVolume": "Громкость речи",
+      "synth": "Синтезатор",
+      "system": "Система",
+      "terminalIeAmbientSynth": "Синтезатор",
+      "theme": "Тема",
+      "themeDescription": "Изменяет внешний вид окон, меню и элементов управления",
+      "ttsModel": "Модель TTS",
+      "ttsModelDescription": "Поставщик преобразования текста в речь",
+      "ttsVoice": "Голос TTS",
+      "ui": "Интерфейс",
+      "uiSounds": "Звуки интерфейса",
+      "uiVolume": "Громкость интерфейса"
+    },
+    "finder": {
+      "contextMenu": {
+        "addToDesktop": "Добавить на Рабочий стол",
+        "date": "Дата",
+        "duplicate": "Дублировать",
+        "emptyTrash": "Очистить Корзину...",
+        "kind": "Вид",
+        "moveToTrash": "Переместить в Корзину",
+        "name": "Имя",
+        "newFolder": "Новая папка…",
+        "open": "Открыть",
+        "rename": "Переименовать…",
+        "size": "Размер",
+        "sortBy": "Сортировать по"
+      },
+      "defaultNames": {
+        "copy": "копия",
+        "untitledFolder": "безымянная папка"
+      },
+      "description": "Просмотр и управление файлами",
+      "dialogs": {
+        "emptyTrash": {
+          "description": "Вы уверены, что хотите очистить Корзину? Это действие невозможно отменить.",
+          "title": "Очистить Корзину"
+        },
+        "newFolder": {
+          "description": "Введите имя для новой папки:",
+          "title": "Новая папка"
+        },
+        "renameItem": {
+          "description": "Введите новое имя для «{{name}}»",
+          "title": "Переименовать объект"
+        }
+      },
+      "fileTypes": {
+        "application": "Приложение",
+        "bmpImage": "Изображение BMP",
+        "document": "Документ",
+        "folder": "Папка",
+        "gifImage": "Изображение GIF",
+        "htmlApplet": "Апплет HTML",
+        "internetShortcut": "Интернет-ярлык",
+        "jpegImage": "Изображение JPEG",
+        "mp3Audio": "Аудио MP3",
+        "pngImage": "Изображение PNG",
+        "quicktimeMovie": "Фильм QuickTime",
+        "unknown": "Неизвестно",
+        "webpImage": "Изображение WebP"
+      },
+      "folders": {
+        "applets": "Апплеты",
+        "applications": "Приложения",
+        "desktop": "Рабочий стол",
+        "documents": "Документы",
+        "images": "Изображения",
+        "music": "Музыка",
+        "sites": "Сайты",
+        "trash": "Корзина",
+        "videos": "Видео"
+      },
+      "help": {
+        "browseNavigate": {
+          "description": "Кнопки «Назад/Вперед», адресная строка и меню «Переход» для быстрой навигации",
+          "title": "Просмотр и навигация"
+        },
+        "fileManagement": {
+          "description": "Создавайте папки, переименовывайте, перемещайте и перетаскивайте объекты для организации файлов",
+          "title": "Управление файлами"
+        },
+        "quickAccess": {
+          "description": "Мгновенно переходите к Документам, Программам или Корзине из меню «Переход»",
+          "title": "Быстрый доступ"
+        },
+        "storageInfo": {
+          "description": "Просматривайте свободное место и количество объектов в нижнем колонтитуле окна",
+          "title": "Информация о хранилище"
+        },
+        "trash": {
+          "description": "Перетаскивайте файлы в Корзину и очищайте ее для окончательного удаления",
+          "title": "Корзина"
+        },
+        "viewSort": {
+          "description": "Изменяйте размеры значков и сортируйте по имени, типу, размеру или дате",
+          "title": "Просмотр и сортировка"
+        }
+      },
+      "menu": {
+        "aboutFinder": "О Finder",
+        "back": "Назад",
+        "byDate": "по дате",
+        "byIcon": "По значкам",
+        "byKind": "по типу",
+        "byList": "Списком",
+        "byName": "по имени",
+        "bySize": "по размеру",
+        "bySmallIcon": "По мелким значкам",
+        "duplicate": "Дублировать",
+        "emptyTrash": "Очистить Корзину...",
+        "finderHelp": "Справка Finder",
+        "forward": "Вперед",
+        "importFromDevice": "Импортировать с устройства...",
+        "moveToTrash": "Переместить в Корзину",
+        "newFinderWindow": "Новое окно Finder",
+        "newFolder": "Новая папка...",
+        "putBack": "Вернуть на место",
+        "rename": "Переименовать..."
+      },
+      "messages": {
+        "appletImported": "Апплет импортирован!",
+        "appletImportedDesc": "{{name}} сохранено в /Applets{{iconText}}",
+        "appletImportedIconText": " с {{icon}} значком",
+        "importFailed": "Импорт не удался",
+        "importFailedAppletDesc": "Не удалось импортировать файл апплета.",
+        "importFailedDesc": "Не удалось импортировать файл.",
+        "invalidFileType": "Недопустимый тип файла",
+        "invalidFileTypeDesc": "Только файлы .app, .gz и .html можно импортировать в Апплеты",
+        "loading": "Загрузка..."
+      },
+      "name": "Finder",
+      "placeholders": {
+        "enterPath": "Введите путь"
+      },
+      "statusBar": {
+        "available": "доступно",
+        "item": "объект",
+        "items": "объектов"
+      },
+      "tableHeaders": {
+        "modified": "Изменено",
+        "name": "Имя",
+        "size": "Размер",
+        "type": "Тип"
+      },
+      "window": {
+        "finder": "Finder",
+        "macintoshHd": "Macintosh HD"
+      }
+    },
+    "internet-explorer": {
+      "addFavorite": "Добавить в избранное",
+      "aiLanguage": "Язык ИИ",
+      "alienLanguage": "Инопланетный язык",
+      "anErrorOccurred": "Произошла ошибка",
+      "appName": "Internet Explorer",
+      "areYouSureClearFavorites": "Вы уверены, что хотите очистить все избранное?",
+      "areYouSureClearHistory": "Вы уверены, что хотите очистить всю историю?",
+      "areYouSureResetFavorites": "Вы уверены, что хотите сбросить избранное до значений по умолчанию?",
+      "aurora": "Аврора",
+      "australia": "Австралия",
+      "autodetected": "Автоматически определено",
+      "back": "Назад",
+      "brazil": "Бразилия",
+      "canada": "Канада",
+      "cannotAccessWebsite": "Не удается получить доступ к {{url}}. Веб-сайт может блокировать доступ или требовать аутентификации.",
+      "cannotFindServerOrDnsError": "Не удается найти сервер или ошибка DNS",
+      "checkWebAddressAndTryAgain": "Проверьте введенный веб-адрес и повторите попытку.",
+      "china": "Китай",
+      "chineseTraditional": "Китайский (традиционный)",
+      "clearFavorites": "Очистить избранное",
+      "clearHistory": "Очистить историю",
+      "closeTimeMachine": "Закрыть Time Machine",
+      "description": "Просмотр веб-страниц",
+      "digitalBeingLanguage": "Язык цифрового существа",
+      "english": "Английский",
+      "enterTitleForFavorite": "Введите название для этого избранного",
+      "enterUrl": "Введите URL",
+      "error": "Ошибка",
+      "errorLoadingPreview": "Ошибка загрузки предпросмотра.",
+      "failedToGenerateFuturisticWebsite": "Не удалось сгенерировать футуристический веб-сайт. Возможно, модель ИИ не выбрана.",
+      "favorite": "Избранное",
+      "fetch": "Получить",
+      "fetchingContentForReconstruction": "Получение содержимого {{hostname}} для реконструкции...",
+      "fetchingFromYear": "Получение {{hostname}} за {{year}} год...",
+      "folder": "Папка",
+      "france": "Франция",
+      "french": "Французский",
+      "from": "из",
+      "futureTimeline": {
+        "description": "Изменить настройки будущей временной шкалы",
+        "reset": "Сброс",
+        "selectYear": "Выбрать год",
+        "title": "Редактировать будущую временную шкалу"
+      },
+      "galaxy": "Галактика",
+      "german": "Немецкий",
+      "germany": "Германия",
+      "goBackToPreviousPage": "Вернитесь на предыдущую страницу.",
+      "goToNow": "Перейти к текущему моменту",
+      "help": {
+        "browseWeb": {
+          "description": "Введите URL-адреса и используйте кнопки навигации (Назад, Вперед, Обновить, Стоп).",
+          "title": "Просмотр веб-страниц"
+        },
+        "exploreTimeNodes": {
+          "description": "Нажмите значок часов в адресной строке, чтобы увидеть доступные снимки текущего сайта за разные периоды времени.",
+          "title": "Исследовать временные узлы"
+        },
+        "historyReimagined": {
+          "description": "ИИ реконструирует очень старые сайты (до 1996 года) и представляет будущие веб-возможности.",
+          "title": "Переосмысленная история"
+        },
+        "saveFavorites": {
+          "description": "Добавляйте сайты и определенные годы на панель избранного для быстрого доступа.",
+          "title": "Сохранить избранное"
+        },
+        "shareJourney": {
+          "description": "Используйте кнопку «Поделиться», чтобы сгенерировать ссылку на точную страницу и год, которые вы просматриваете.",
+          "title": "Поделитесь своим путешествием"
+        },
+        "travelThroughTime": {
+          "description": "Выберите год из выпадающего списка, чтобы просмотреть веб-сайты из прошлого или будущего.",
+          "title": "Путешествие во времени"
+        }
+      },
+      "history": "История",
+      "host": "Узел: {{hostname}}",
+      "in": "в",
+      "india": "Индия",
+      "invalidShareLink": "Недействительная ссылка для обмена",
+      "japan": "Япония",
+      "japanese": "Японский",
+      "korean": "Корейский",
+      "latin": "Латынь",
+      "loading": "Загрузка {{hostname}}...",
+      "loadingEllipsis": "Загрузка...",
+      "loadingTitle": "Internet Explorer - Загрузка",
+      "loadingTitleWithSite": "{{site}} - Загрузка",
+      "menu": {
+        "aboutInternetExplorer": "О программе Internet Explorer",
+        "addToFavorites": "Добавить в избранное...",
+        "aiLanguage": "Язык ИИ",
+        "alien": "Инопланетный",
+        "australia": "Австралия",
+        "auto": "Авто",
+        "back": "Назад",
+        "brazil": "Бразилия",
+        "canada": "Канада",
+        "china": "Китай",
+        "chinese": "Китайский",
+        "clearFavorites": "Очистить избранное...",
+        "clearHistory": "Очистить историю...",
+        "digitalBeing": "Цифровое существо",
+        "editFuture": "Изменить будущее...",
+        "english": "Английский",
+        "favorites": "Избранное",
+        "folder": "Папка",
+        "forward": "Вперед",
+        "france": "Франция",
+        "french": "Французский",
+        "german": "Немецкий",
+        "germany": "Германия",
+        "goHome": "На главную",
+        "goToUrl": "Перейти по URL",
+        "history": "История",
+        "india": "Индия",
+        "internetExplorerHelp": "Справка Internet Explorer",
+        "italian": "Итальянский",
+        "japan": "Япония",
+        "japanese": "Японский",
+        "korea": "Корея",
+        "korean": "Корейский",
+        "language": "Язык",
+        "latin": "Латинский",
+        "location": "Местоположение",
+        "now": "Сейчас",
+        "openTimeMachine": "Открыть Time Machine",
+        "portugal": "Португалия",
+        "portuguese": "Португальский",
+        "refresh": "Обновить",
+        "resetFavorites": "Сбросить избранное...",
+        "russia": "Россия",
+        "russian": "Русский",
+        "sanskrit": "Санскрит",
+        "sharePage": "Поделиться страницей...",
+        "spain": "Испания",
+        "spanish": "Испанский",
+        "stop": "Стоп",
+        "unitedKingdom": "Великобритания",
+        "unitedStates": "Соединенные Штаты",
+        "welsh": "Валлийский",
+        "year": "Год"
+      },
+      "name": "Internet Explorer",
+      "nebula": "Туманность",
+      "newer": "Новее",
+      "newerVersion": "Более новая версия",
+      "newest": "Новейший",
+      "now": "Сейчас",
+      "off": "Выкл.",
+      "older": "Старее",
+      "olderVersion": "Более старая версия",
+      "oldest": "Старейший",
+      "openingRequestedPage": "Открытие запрошенной страницы",
+      "openingSharedPage": "Открытие общей страницы",
+      "page": "Страница",
+      "pageCouldNotBeLoadedInIframe": "Страницу не удалось загрузить в iframe. Это может быть связано с ограничениями безопасности или проблемами с сетью.",
+      "pleaseTryTheFollowing": "Попробуйте следующее:",
+      "portugal": "Португалия",
+      "portuguese": "Португальский",
+      "reconstructingHistoryForYear": "Восстановление истории {{hostname}} за {{year}} год...",
+      "refresh": "Обновить",
+      "reimaginingForYear": "Переосмысление {{hostname}} за {{year}} год...",
+      "requiresInternetConnection": "Для навигации Internet Explorer требуется подключение к Интернету",
+      "resetFavorites": "Сбросить избранное",
+      "russia": "Россия",
+      "sanskrit": "Санскрит",
+      "search": "Поиск",
+      "shareLinkInvalidOrCorrupted": "Указанная ссылка для общего доступа недействительна или повреждена.",
+      "shareThisPage": "Поделиться этой страницей",
+      "shareThisPageAndTime": "Поделиться этой страницей и временем",
+      "showCachedVersionsTimeMachine": "Показать кэшированные версии (Машина времени)",
+      "site": "Сайт",
+      "southKorea": "Южная Корея",
+      "spain": "Испания",
+      "spanish": "Испанский",
+      "timeNodes": "{{count}} Узел времени",
+      "timeNodes_plural": "{{count}} Узлов времени",
+      "travel": "Путешествия",
+      "travellingTitle": "Internet Explorer - Переход",
+      "travellingTitleWithSite": "{{site}} - Переход",
+      "tryRefreshingThePage": "Попробуйте обновить страницу.",
+      "unableToLoadPreview": "Не удалось загрузить предварительный просмотр.",
+      "unitedKingdom": "Великобритания",
+      "unitedStates": "Соединенные Штаты",
+      "welsh": "Валлийский",
+      "year": "Год"
+    },
+    "ipod": {
+      "ariaLabels": {
+        "closeFullscreen": "Закрыть полноэкранный режим",
+        "cycleLyricLayout": "Переключить макет текста песни",
+        "nextTrack": "Следующий трек",
+        "playPause": "Воспроизвести/Пауза",
+        "previousTrack": "Предыдущий трек",
+        "select": "Выбрать",
+        "toggleHangulRomanization": "Переключить хангыль / романизацию",
+        "translateLyrics": "Перевести текст песни"
+      },
+      "description": "Музыкальный плеер",
+      "dialogs": {
+        "addSongDescription": "Вставьте ссылку на YouTube, чтобы добавить на ваш iPod",
+        "addSongTitle": "Добавить песню",
+        "addedNewSongsToTop": "Добавлено {{newCount}} новая песня{{newPlural}} в начало{{updatedText}}. Всего: {{total}} песен",
+        "addedSongsToTop": "Добавлено {{count}} песня{{plural}} в начало. Первая песня готова к воспроизведению!",
+        "addingNewTrack": "Добавление нового трека по ссылке...",
+        "andUpdated": " и обновлено {{count}} трек{{plural}}",
+        "autoUpdateFailed": "Сбой автообновления",
+        "autoUpdatedLibraryAddedSongs": "Библиотека автоматически обновлена: добавлено {{newCount}} новая песня{{newPlural}} в начало{{updatedText}}",
+        "autoUpdatedTrackMetadata": "Автоматически обновлены метаданные {{count}} трек{{plural}}",
+        "clearLibraryDescription": "Вы уверены, что хотите очистить всю свою музыкальную библиотеку? Это действие невозможно отменить.",
+        "clearLibraryTitle": "Очистить медиатеку",
+        "errorAdding": "Ошибка добавления:",
+        "failedToAutoUpdateLibrary": "Не удалось автоматически обновить медиатеку",
+        "failedToCheckForLibraryUpdates": "Не удалось проверить наличие обновлений медиатеки",
+        "failedToExportLibrary": "Не удалось экспортировать медиатеку",
+        "failedToImportLibrary": "Не удалось импортировать медиатеку: Неверный формат",
+        "failedToLoadSharedTrack": "Не удалось загрузить общий трек",
+        "failedToSyncWithServerLibrary": "Не удалось синхронизировать с медиатекой сервера",
+        "ipodRequiresInternet": "iPod требуется подключение к интернету",
+        "libraryAlreadyUpToDate": "Ваша медиатека уже обновлена",
+        "libraryAutoUpdated": "Медиатека автоматически обновлена",
+        "libraryExportedSuccessfully": "Медиатека успешно экспортирована",
+        "libraryImportedSuccessfully": "Медиатека успешно импортирована",
+        "librarySynced": "Медиатека синхронизирована",
+        "libraryUpToDateWithSongs": "Медиатека обновлена, содержит {{count}} песен",
+        "libraryUpdated": "Медиатека обновлена",
+        "noUpdates": "Нет обновлений",
+        "openedSharedTrack": "Открыт общий трек. Нажмите ⏯, чтобы начать воспроизведение.",
+        "syncFailed": "Сбой синхронизации",
+        "updateCheckFailed": "Сбой проверки обновлений",
+        "youreOffline": "Вы не в сети"
+      },
+      "help": {
+        "addSongs": {
+          "description": "Вставьте URL-адреса YouTube, чтобы добавить музыку на ваш iPod.",
+          "title": "Добавить песни"
+        },
+        "displayFullscreen": {
+          "description": "Настройте подсветку, темы и переключитесь на полноэкранное видео.",
+          "title": "Дисплей и полноэкранный режим"
+        },
+        "playbackControls": {
+          "description": "Воспроизведение, пауза, пропуск треков и управление текущей песней.",
+          "title": "Управление воспроизведением"
+        },
+        "playbackModes": {
+          "description": "Включите случайное воспроизведение, повтор песен или плейлистов и многое другое.",
+          "title": "Режимы воспроизведения"
+        },
+        "syncedLyrics": {
+          "description": "Просматривайте синхронизированные по времени тексты песен и получайте мгновенные переводы.",
+          "title": "Синхронизированные тексты"
+        },
+        "wheelNavigation": {
+          "description": "Используйте колесо Click Wheel для навигации по меню и вашей музыкальной библиотеке.",
+          "title": "Навигация колесом"
+        }
+      },
+      "keys": {
+        "enter": "Ввод",
+        "escape": "Выход",
+        "select": "Выбрать"
+      },
+      "menu": {
+        "aboutIpod": "Об iPod",
+        "addSong": "Добавить песню...",
+        "addToLibrary": "Добавить в медиатеку...",
+        "allSongs": "Все песни",
+        "alternating": "Чередующийся",
+        "backlight": "Подсветка",
+        "black": "Черный",
+        "classic": "Классический",
+        "clearLibrary": "Очистить медиатеку...",
+        "controls": "Управление",
+        "exportLibrary": "Экспорт медиатеки...",
+        "file": "Файл",
+        "fullScreen": "На весь экран",
+        "importLibrary": "Импорт медиатеки...",
+        "ipodHelp": "Справка iPod",
+        "korean": "한글",
+        "lcdFilter": "ЖК-фильтр",
+        "library": "Медиатека",
+        "lyrics": "Текст песни",
+        "multi": "Мульти",
+        "next": "Следующий",
+        "pause": "Пауза",
+        "play": "Воспроизвести",
+        "previous": "Предыдущий",
+        "refreshLyrics": "Обновить текст",
+        "repeatAll": "Повторить все",
+        "repeatOne": "Повторить одну",
+        "shareApp": "Поделиться приложением...",
+        "shareSong": "Поделиться песней...",
+        "showLyrics": "Показать текст",
+        "shuffle": "Перемешать",
+        "single": "Одиночный",
+        "syncLibrary": "Синхронизировать медиатеку...",
+        "traditionalChinese": "繁體",
+        "translate": "Перевести",
+        "u2": "U2",
+        "unknownArtist": "Неизвестный исполнитель",
+        "video": "Видео",
+        "view": "Вид"
+      },
+      "menuItems": {
+        "all": "Все",
+        "allSongs": "Все песни",
+        "backlight": "Подсветка",
+        "extras": "Дополнения",
+        "ipod": "iPod",
+        "music": "Музыка",
+        "nowPlaying": "Сейчас играет",
+        "off": "Выкл.",
+        "on": "Вкл.",
+        "one": "Один",
+        "repeat": "Повтор",
+        "settings": "Настройки",
+        "shuffle": "Перемешать",
+        "shuffleSongs": "Перемешать песни",
+        "theme": "Тема"
+      },
+      "name": "iPod",
+      "status": {
+        "added": "♬ Добавлено",
+        "hangulOn": "Хангыль вкл.",
+        "layoutAlternating": "Макет: Чередующийся",
+        "layoutCenter": "Макет: По центру",
+        "layoutFocus": "Макет: Фокус",
+        "libraryCleared": "Медиатека очищена",
+        "lightOff": "Свет ВЫКЛ",
+        "lightOn": "Свет ВКЛ",
+        "loadingLyrics": "Загрузка текста…",
+        "offset": "Смещение",
+        "repeatAll": "Повтор всех",
+        "repeatOff": "Повтор ВЫКЛ",
+        "repeatOne": "Повтор одной",
+        "romanizationOn": "Романизация ВКЛ",
+        "shuffleOff": "Перемешивание ВЫКЛ",
+        "shuffleOn": "Перемешивание ВКЛ",
+        "themeBlack": "Тема: Черная",
+        "themeClassic": "Тема: Классическая",
+        "themeU2": "Тема: U2",
+        "translatingLyrics": "Перевод текста…"
+      },
+      "translationLanguages": {
+        "chinese": "Китайский",
+        "english": "Английский",
+        "french": "Французский",
+        "german": "Немецкий",
+        "italian": "Итальянский",
+        "japanese": "Японский",
+        "korean": "Корейский",
+        "original": "Оригинал",
+        "portuguese": "Португальский",
+        "russian": "Русский",
+        "spanish": "Испанский"
+      }
+    },
+    "minesweeper": {
+      "description": "Классическая головоломка",
+      "help": {
+        "desktopControls": {
+          "description": "Левый клик — открыть, правый клик — пометить флагом, двойной клик по цифрам — автоматически открыть соседние клетки.",
+          "title": "Управление на ПК"
+        },
+        "gameRules": {
+          "description": "Числа показывают соседние мины. Пометьте все мины флагами и откройте все безопасные клетки, чтобы выиграть.",
+          "title": "Правила игры"
+        },
+        "mobileControls": {
+          "description": "Нажмите, чтобы открыть, долгое нажатие — чтобы пометить мину флагом.",
+          "title": "Мобильное управление"
+        },
+        "restart": {
+          "description": "Нажмите на смайлик или выберите Игра ▸ Новая игра, чтобы начать новую игру.",
+          "title": "Перезапустить"
+        },
+        "timerCounter": {
+          "description": "Верхняя панель показывает прошедшее время и оставшиеся непомеченные мины.",
+          "title": "Таймер и счетчик"
+        }
+      },
+      "lcd": {
+        "left": "Осталось",
+        "total": "Всего"
+      },
+      "menu": {
+        "aboutMinesweeper": "О Сапере",
+        "minesweeperHelp": "Справка по Саперу",
+        "newGame": "Новая игра"
+      },
+      "name": "Сапер"
+    },
+    "paint": {
+      "description": "Рисовать и редактировать изображения",
+      "dialogs": {
+        "discardChanges": "Отменить изменения",
+        "discardChangesDescription": "У вас есть несохраненные изменения. Все равно создать новый файл?",
+        "enterImageName": "Введите имя для изображения",
+        "error": "Ошибка",
+        "failedToLoadImageContent": "Не удалось загрузить содержимое изображения.",
+        "failedToSaveImage": "Не удалось сохранить изображение",
+        "imageSavedSuccessfully": "Изображение успешно сохранено",
+        "saveImage": "Сохранить изображение"
+      },
+      "filtersMenu": {
+        "openFiltersMenu": "Открыть меню фильтров"
+      },
+      "help": {
+        "colors": {
+          "description": "Выберите цвета из палитры под инструментами, чтобы изменить цвет рисования.",
+          "title": "Цвета"
+        },
+        "drawingTools": {
+          "description": "Используйте панель инструментов слева для выбора различных инструментов рисования, таких как карандаш, кисть, фигуры и другие.",
+          "title": "Инструменты рисования"
+        },
+        "filters": {
+          "description": "Примените инверсию, оттенки серого, яркость и многое другое из меню «Фильтры».",
+          "title": "Фильтры"
+        },
+        "patterns": {
+          "description": "Выберите из различных узоров в нижней палитре для заливки фигур и областей.",
+          "title": "Узоры"
+        },
+        "saving": {
+          "description": "Используйте Файл > Сохранить, чтобы сохранить вашу работу, или Файл > Сохранить как, чтобы сохранить ее под новым именем.",
+          "title": "Сохранение"
+        },
+        "undo": {
+          "description": "Нажмите ⌘Z или используйте Правка > Отменить, чтобы отменить последнее действие.",
+          "title": "Отменить"
+        }
+      },
+      "menu": {
+        "aboutPaint": "О Paint",
+        "export": "Экспорт",
+        "filterBlur": "Размытие",
+        "filterBrightnessMinus": "Яркость -",
+        "filterBrightnessPlus": "Яркость +",
+        "filterCategoryArtistic": "Художественный",
+        "filterCategoryBlur": "Размытие",
+        "filterCategoryColor": "Цвет",
+        "filterCategoryRetro": "Ретро",
+        "filterCrt": "CRT",
+        "filterDither": "Дизеринг",
+        "filterEdgeDetect": "Обнаружение краёв",
+        "filterGaussianBlur": "Размытие по Гауссу",
+        "filterGlitch": "Глитч",
+        "filterGrayscale": "Оттенки серого",
+        "filterInvert": "Инвертировать",
+        "filterMotionBlur": "Размытие в движении",
+        "filterNoise": "Шум",
+        "filterOldPhoto": "Старое фото",
+        "filterPixelate": "Пикселизация",
+        "filterRadialBlur": "Радиальное размытие",
+        "filterSepia": "Сепия",
+        "filterSharpen": "Резкость",
+        "filterVhs": "VHS",
+        "filters": "Фильтры",
+        "importFromDevice": "Импортировать с устройства...",
+        "newFile": "Новый файл",
+        "open": "Открыть...",
+        "paintHelp": "Справка по рисованию",
+        "save": "Сохранить",
+        "saveEllipsis": "Сохранить..."
+      },
+      "name": "Рисование",
+      "selectedPattern": "Выбранный узор",
+      "toolbar": {
+        "brush": "Кисть",
+        "eraser": "Ластик",
+        "fillColor": "Цвет заливки",
+        "hand": "Рука",
+        "line": "Линия",
+        "oval": "Овал",
+        "pencil": "Карандаш",
+        "rectangle": "Прямоугольник",
+        "rectangleSelect": "Выделение прямоугольником",
+        "select": "Выбор",
+        "spray": "Распылитель",
+        "text": "Текст"
+      },
+      "untitled": "Без названия"
+    },
+    "pc": {
+      "description": "3D-симуляция ПК",
+      "dialogs": {
+        "resetVirtualPcDescription": "Вы уверены, что хотите сбросить ПК? Это приведет к удалению всех текущих данных.",
+        "resetVirtualPcTitle": "Сбросить виртуальный ПК"
+      },
+      "help": {
+        "aspectRatio": {
+          "description": "Переключение между форматом 4∶3 или широкоэкранным для соответствия вашему монитору",
+          "title": "Соотношение сторон"
+        },
+        "fullscreenMode": {
+          "description": "Переключитесь в режим «Вид ▸ Полный экран» для полного погружения",
+          "title": "Полноэкранный режим"
+        },
+        "keyboardControls": {
+          "description": "Используйте физическую клавиатуру для ввода в игре",
+          "title": "Управление с клавиатуры"
+        },
+        "mouseCapture": {
+          "description": "Нажмите в окне, чтобы захватить / освободить мышь",
+          "title": "Захват мыши"
+        },
+        "pcEmulator": {
+          "description": "Запускает классические DOS-игры и приложения прямо в вашем браузере",
+          "title": "Эмулятор ПК"
+        },
+        "saveStates": {
+          "description": "Сохраняйте или загружайте прогресс игры в любое время из меню Файл",
+          "title": "Сохранения"
+        }
+      },
+      "loadingEmulator": "ЗАГРУЗКА ЭМУЛЯТОРА",
+      "loadingGame": "Загрузка {{gameName}}...",
+      "menu": {
+        "aboutVirtualPc": "О Virtual PC",
+        "aspectRatio": "Соотношение сторон",
+        "controls": "Управление",
+        "fullScreen": "Полноэкранный режим",
+        "loadGame": "Загрузить игру",
+        "loadState": "Загрузить состояние",
+        "mouseSensitivity": "Чувствительность мыши",
+        "reset": "Сброс",
+        "saveState": "Сохранить состояние",
+        "toggleMouseCapture": "Переключить захват мыши",
+        "virtualPcHelp": "Справка Virtual PC"
+      },
+      "name": "Virtual PC",
+      "programsAvailable": "{{count}} ДОСТУПНЫХ ПРОГРАММ",
+      "virtualPc": "Виртуальный ПК"
+    },
+    "photo-booth": {
+      "ariaLabels": {
+        "photo": "Фото {{index}}"
+      },
+      "buttons": {
+        "effects": "Эффекты"
+      },
+      "description": "Сделать фото с эффектами",
+      "effects": {
+        "blackAndWhite": "Чёрно-белый",
+        "bulge": "Выпуклость",
+        "coldBlue": "Холодный синий",
+        "fishEye": "Рыбий глаз",
+        "glitch": "Глитч",
+        "highContrast": "Высокий контраст",
+        "kaleidoscope": "Калейдоскоп",
+        "neon": "Неон",
+        "normal": "Обычный",
+        "pinch": "Сужение",
+        "rainbow": "Радуга",
+        "ripple": "Рябь",
+        "squeeze": "Сжатие",
+        "stretch": "Растяжение",
+        "twirl": "Закручивание",
+        "vibrant": "Яркий",
+        "vintage": "Винтаж",
+        "xRay": "Рентген"
+      },
+      "errors": {
+        "cameraApiNotAvailable": "API камеры недоступен",
+        "cameraError": "Ошибка камеры: {{error}}",
+        "cameraPermissionDenied": "Доступ к камере запрещен",
+        "cameraRequiresHttps": "Камера требует HTTPS",
+        "couldNotAccessCamera": "Не удалось получить доступ к камере",
+        "noCameraFound": "Камера не найдена"
+      },
+      "help": {
+        "applyingEffects": {
+          "description": "Нажмите кнопку «Эффекты» (справа от кнопки камеры), чтобы открыть панель эффектов и применить забавные фильтры к изображению с вашей камеры в реальном времени.",
+          "title": "Применение эффектов"
+        },
+        "downloadingPhotos": {
+          "description": "Фотографии сохраняются автоматически. Нажмите на фотографию в ленте фотографий, чтобы загрузить ее.",
+          "title": "Загрузка фотографий"
+        },
+        "quickSnaps": {
+          "description": "Нажмите кнопку таймера (слева от кнопки камеры), чтобы начать серию из четырех фотографий, сделанных с интервалом в одну секунду.",
+          "title": "Быстрые снимки"
+        },
+        "switchingCameras": {
+          "description": "Используйте меню «Вид» в строке меню, чтобы переключаться между доступными камерами, если у вас подключено несколько.",
+          "title": "Переключение камер"
+        },
+        "takingPhoto": {
+          "description": "Нажмите большую красную кнопку камеры, чтобы сделать один снимок.",
+          "title": "Съемка фотографии"
+        },
+        "viewingPhotos": {
+          "description": "Нажмите кнопку стопки фотографий (крайняя слева), чтобы показать или скрыть ленту фотографий внизу, отображающую все ваши сохраненные фотографии.",
+          "title": "Просмотр фотографий"
+        }
+      },
+      "menu": {
+        "aboutPhotoBooth": "О Photo Booth",
+        "camera": "Камера",
+        "clearAllPhotos": "Удалить все фотографии",
+        "effects": "Эффекты",
+        "exportPhotos": "Экспортировать фотографии",
+        "photoBoothHelp": "Справка Photo Booth"
+      },
+      "name": "Photo Booth"
+    },
+    "soundboard": {
+      "description": "Воспроизвести звуковые эффекты",
+      "help": {
+        "customizeSlot": {
+          "description": "Добавляйте эмодзи и название к каждому образцу для быстрой идентификации",
+          "title": "Настроить слот"
+        },
+        "importExport": {
+          "description": "Делитесь досками как файлами; перетащите для импорта",
+          "title": "Импорт / Экспорт"
+        },
+        "keyboardPlay": {
+          "description": "Нажмите 1-9 для мгновенного воспроизведения звуков",
+          "title": "Воспроизведение с клавиатуры"
+        },
+        "multipleBoards": {
+          "description": "Создавайте, переименовывайте и переключайте доски для наборов звуков",
+          "title": "Несколько досок"
+        },
+        "recordSlot": {
+          "description": "Нажмите на слот, чтобы записать аудио; нажмите еще раз, чтобы остановить",
+          "title": "Слот записи"
+        },
+        "waveformView": {
+          "description": "Просматривайте живую осциллограмму во время записи или воспроизведения",
+          "title": "Вид осциллограммы"
+        }
+      },
+      "importedSoundboard": "Импортированная звуковая панель",
+      "menu": {
+        "aboutSoundboard": "О звуковой панели",
+        "deleteSoundboard": "Удалить звуковую панель",
+        "emojis": "Эмодзи",
+        "exportSoundboards": "Экспортировать звуковые панели...",
+        "importSoundboards": "Импортировать звуковые панели...",
+        "loadSpecialSoundboards": "Загрузить специальные звуковые панели",
+        "newSoundboard": "Новая звуковая панель",
+        "renameSoundboard": "Переименовать звуковую панель",
+        "resetSoundboards": "Сбросить звуковые панели",
+        "soundboardHelp": "Справка по звуковой панели",
+        "waveforms": "Осциллограммы"
+      },
+      "name": "Звуковая панель",
+      "newSoundboardDefault": "Новая звуковая панель",
+      "soundboards": "Звуковые панели"
+    },
+    "synth": {
+      "addPreset": "ДОБАВИТЬ ПРЕСЕТ",
+      "controls": "УПРАВЛЕНИЕ",
+      "description": "Виртуальный синтезатор",
+      "dialogs": {
+        "enterPresetName": "Введите имя для вашего пресета",
+        "saveNewPreset": "Сохранить новый пресет",
+        "updatePreset": "Обновить пресет",
+        "updatePresetName": "Обновите имя вашего пресета"
+      },
+      "effects": "Эффекты",
+      "effectsParams": {
+        "bitcrusher": "Биткрашер",
+        "chorus": "Хорус",
+        "delay": "Дилэй",
+        "distortion": "Дисторшн",
+        "gain": "Гейн",
+        "phaser": "Фазер",
+        "reverb": "Реверб"
+      },
+      "envelope": "Огибающая",
+      "envelopeParams": {
+        "attack": "Атака",
+        "decay": "Спад",
+        "release": "Затухание",
+        "sustain": "Сустейн"
+      },
+      "help": {
+        "controlsPanel": {
+          "description": "Переключите УПРАВЛЕНИЕ, чтобы настроить осцилляторы, огибающую и эффекты",
+          "title": "Панель управления"
+        },
+        "effects": {
+          "description": "Реверб, дилэй, дисторшн, хорус, фазер и биткрашер",
+          "title": "Эффекты"
+        },
+        "midiInput": {
+          "description": "Подключите MIDI-клавиатуру и играйте мгновенно",
+          "title": "MIDI-вход"
+        },
+        "presets": {
+          "description": "Сохраняйте, загружайте и управляйте пользовательскими звуковыми пресетами",
+          "title": "Пресеты"
+        },
+        "virtualKeyboard": {
+          "description": "Играйте ноты с помощью экранных клавиш или компьютерной клавиатуры",
+          "title": "Виртуальная клавиатура"
+        },
+        "waveform3d": {
+          "description": "Живая анимированная осциллограмма при открытой панели управления",
+          "title": "3D-осциллограмма"
+        }
+      },
+      "menu": {
+        "aboutSynth": "О синтезаторе",
+        "keyLabels": "Метки клавиш",
+        "newPreset": "Новый пресет",
+        "noLabels": "Без меток",
+        "noteLabels": "Метки нот",
+        "presets": "Пресеты",
+        "resetSynth": "Сбросить синтезатор",
+        "synthHelp": "Справка по синтезатору"
+      },
+      "name": "Синтезатор",
+      "noPresetsYet": "Пресеты пока отсутствуют. Создайте новый с помощью кнопки «НОВЫЙ».",
+      "oscillator": "Осциллятор",
+      "selectPreset": "Выбрать пресет",
+      "status": {
+        "octave": "Октава {{offset}}",
+        "presetLoaded": "Пресет \"{{name}}\" загружен",
+        "presetSaved": "Пресет \"{{name}}\" сохранен",
+        "presetUpdated": "Пресет \"{{name}}\" обновлен",
+        "synthResetToDefaults": "Синтезатор сброшен к настройкам по умолчанию"
+      },
+      "waveform": "Форма волны",
+      "waveforms": {
+        "sawtooth": "Пила",
+        "sine": "Синус",
+        "square": "Меандр",
+        "triangle": "Треугольник"
+      }
+    },
+    "terminal": {
+      "commands": {
+        "about": "О терминале",
+        "ai": "Войти в режим чата с ИИ ryo",
+        "cat": "Просмотреть содержимое файла",
+        "cd": "Сменить каталог",
+        "chat": "Чат с ryo (псевдоним)",
+        "clear": "Очистить экран терминала",
+        "cowsay": "Говорящая корова",
+        "date": "Показать текущую дату/время",
+        "echo": "Показать текст",
+        "edit": "Открыть в текстовом редакторе",
+        "help": "Показать доступные команды",
+        "history": "Показать историю команд",
+        "logout": "Выйти из текущего пользователя",
+        "ls": "Показать содержимое каталога",
+        "mkdir": "Создать каталог",
+        "pwd": "Показать текущий каталог",
+        "rm": "Переместить файл в корзину",
+        "ryo": "Чат с ryo",
+        "su": "Переключить или создать пользователя",
+        "touch": "Создать пустой файл",
+        "vim": "Открыть файл в редакторе vim",
+        "whoami": "Показать текущего пользователя"
+      },
+      "description": "Интерфейс командной строки",
+      "help": {
+        "aiAssistant": {
+          "description": "Введите \"ryo <запрос>\", чтобы пообщаться с ИИ Ryo прямо в терминале.",
+          "title": "ИИ-помощник"
+        },
+        "basicCommands": {
+          "description": "Используйте команды ls, cd, cat, pwd, clear и touch для навигации и управления файлами.",
+          "title": "Основные команды"
+        },
+        "commandHistory": {
+          "description": "Нажимайте стрелки ↑ / ↓ для переключения между предыдущими командами и их быстрого повторного запуска.",
+          "title": "История команд"
+        },
+        "fileEditing": {
+          "description": "Открывайте документы в TextEdit (edit) или редакторе в стиле Vim (vim) прямо из командной строки.",
+          "title": "Редактирование файлов"
+        },
+        "navigation": {
+          "description": "Просматривайте ту же виртуальную файловую систему, что и Finder, с помощью привычных команд Unix.",
+          "title": "Навигация"
+        },
+        "terminalSounds": {
+          "description": "Различные звуки для вывода, ошибок и ответов ИИ. Переключайте в меню Вид ▸ Звуки.",
+          "title": "Звуки терминала"
+        }
+      },
+      "menu": {
+        "aboutTerminal": "О Терминале",
+        "clearTerminal": "Очистить терминал",
+        "decreaseFontSize": "Уменьшить размер шрифта",
+        "increaseFontSize": "Увеличить размер шрифта",
+        "muteSounds": "Отключить звуки",
+        "resetFontSize": "Сбросить размер шрифта",
+        "terminalHelp": "Справка по Терминалу"
+      },
+      "name": "Терминал",
+      "output": {
+        "addedAndStartedPlaying": "Добавлена новая песня, начато воспроизведение.",
+        "askRyoAnything": "спроси ryo что угодно. набери 'exit', чтобы вернуться в терминал.",
+        "askRyoWithPrompt": "спроси ryo что угодно. набери 'exit', чтобы вернуться в терминал.\n→ из вашей команды: {{prompt}}",
+        "chatCleared": "чат очищен. вы все еще общаетесь с ryo. наберите 'exit', чтобы вернуться в терминал.",
+        "commandNotFound": "команда не найдена: {{cmd}}. наберите 'help' для списка доступных команд.",
+        "contentWritten": "Содержимое записано",
+        "fileCreated": "Файл создан",
+        "fileEdited": "Файл изменен",
+        "foundApplets": "Найден {{count}} апплет",
+        "foundAppletsPlural": "Найдено {{count}} апплетов",
+        "foundApplications": "Найдено {{count}} приложение",
+        "foundApplicationsPlural": "Найдено {{count}} приложений",
+        "foundDocuments": "Найден {{count}} документ",
+        "foundDocumentsPlural": "Найдено {{count}} документов",
+        "isThinking": "думает",
+        "lastLogin": "последний вход: {{time}}",
+        "listedItems": "Элементы перечислены",
+        "multipleMatchesFound": "Найдено несколько совпадений",
+        "noFilesFound": "файлы не найдены",
+        "noItemsFound": "Элементы не найдены",
+        "noSuchDirectory": "cd: {{dir}}: нет такого каталога",
+        "opened": "Открыто",
+        "pausedIpod": "iPod на паузе",
+        "playingIpod": "iPod воспроизводит",
+        "playingSong": "Воспроизводится песня",
+        "readFile": "Прочитано {{fileName}}",
+        "skippedToNextTrack": "Переход к следующему треку",
+        "skippedToPreviousTrack": "Переход к предыдущему треку",
+        "textNotFound": "Текст не найден",
+        "toggledIpodPlayback": "Переключено воспроизведение iPod",
+        "typeHelpForCommands": "наберите 'help', чтобы увидеть доступные команды",
+        "unknown": "Неизвестно",
+        "untitled": "Без названия"
+      }
+    },
+    "textedit": {
+      "alignCenter": "Выровнять по центру",
+      "alignLeft": "Выровнять по левому краю",
+      "alignRight": "Выровнять по правому краю",
+      "bold": "Жирный",
+      "bulletList": "Маркированный список",
+      "description": "Простой редактор форматированного текста",
+      "dialogs": {
+        "discardChanges": "Отменить изменения",
+        "doYouWantToDiscardYourChangesAndCreateANewFile": "Вы хотите отменить изменения и создать новый файл?",
+        "enterANameForYourFile": "Введите имя для файла",
+        "enterFilenameToSaveOrDeleteItBeforeClosing": "Введите имя файла для сохранения или удалите его перед закрытием.",
+        "keepNewDocument": "Оставить новый документ",
+        "saveChanges": "Сохранить изменения",
+        "saveFile": "Сохранить файл",
+        "saveYourChangesBeforeClosing": "Сохраните изменения перед закрытием."
+      },
+      "failedToUpdateEditorWithDocumentUpdatedEvent": "Не удалось обновить редактор событием обновления документа:",
+      "heading1": "Заголовок 1",
+      "heading2": "Заголовок 2",
+      "heading3": "Заголовок 3",
+      "help": {
+        "fileManagement": {
+          "description": "Создавайте, открывайте, сохраняйте и экспортируйте файлы (HTML, MD, TXT)",
+          "title": "Управление файлами"
+        },
+        "formatting": {
+          "description": "Параметры жирного, курсивного, подчеркнутого текста, заголовков и выравнивания",
+          "title": "Форматирование"
+        },
+        "listsTasks": {
+          "description": "Создавайте маркированные, нумерованные списки и списки задач с флажками",
+          "title": "Списки и задачи"
+        },
+        "richEditing": {
+          "description": "Легко вводите, копируйте, вырезайте, вставляйте, отменяйте и повторяйте текст",
+          "title": "Расширенное редактирование"
+        },
+        "slashCommands": {
+          "description": "Наберите / для быстрых действий или позвольте Ryo AI удаленно редактировать строки",
+          "title": "Слэш-команды"
+        },
+        "voiceDictation": {
+          "description": "Диктуйте текст без помощи рук прямо в документ",
+          "title": "Голосовая диктовка"
+        }
+      },
+      "italic": "Курсив",
+      "menu": {
+        "aboutTextEdit": "О TextEdit",
+        "alignCenter": "Выровнять по центру",
+        "alignLeft": "Выровнять по левому краю",
+        "alignRight": "Выровнять по правому краю",
+        "bold": "Жирный",
+        "bulletList": "Маркированный список",
+        "exportAs": "Экспортировать как...",
+        "format": "Формат",
+        "heading1": "Заголовок 1",
+        "heading2": "Заголовок 2",
+        "heading3": "Заголовок 3",
+        "html": "HTML",
+        "importFromDevice": "Импортировать с устройства...",
+        "italic": "Курсив",
+        "markdown": "Markdown",
+        "newFile": "Новый файл",
+        "numberedList": "Нумерованный список",
+        "open": "Открыть...",
+        "plainText": "Обычный текст",
+        "save": "Сохранить",
+        "saveEllipsis": "Сохранить как...",
+        "taskList": "Список задач",
+        "text": "Текст",
+        "texteditHelp": "Справка TextEdit",
+        "underline": "Подчеркнуть"
+      },
+      "name": "TextEdit",
+      "numberedList": "Нумерованный список",
+      "slashCommands": {
+        "bulletList": {
+          "description": "Создать простой маркированный список",
+          "title": "Маркированный список"
+        },
+        "heading1": {
+          "description": "Большой заголовок раздела",
+          "title": "Заголовок 1"
+        },
+        "heading2": {
+          "description": "Средний заголовок раздела",
+          "title": "Заголовок 2"
+        },
+        "heading3": {
+          "description": "Малый заголовок раздела",
+          "title": "Заголовок 3"
+        },
+        "numberedList": {
+          "description": "Создать нумерованный список",
+          "title": "Нумерованный список"
+        },
+        "taskList": {
+          "description": "Создать список задач с флажками",
+          "title": "Список задач"
+        },
+        "text": {
+          "description": "Просто начните вводить обычный текст",
+          "title": "Текст"
+        }
+      },
+      "speak": "Произнести",
+      "stopSpeech": "Остановить речь",
+      "text": "Текст",
+      "underline": "Подчеркнуть",
+      "untitled": "Без названия"
+    },
+    "videos": {
+      "description": "Смотреть видео",
+      "dialogs": {
+        "addVideoDescription": "Введите URL YouTube, Vimeo или видео-URL",
+        "addVideoTitle": "Добавить видео",
+        "clearPlaylistDescription": "Вы уверены, что хотите очистить весь плейлист? Это действие невозможно отменить.",
+        "clearPlaylistTitle": "Очистить плейлист",
+        "failedToLoadSharedVideo": "Не удалось загрузить общее видео",
+        "openedSharedVideo": "Открыто общее видео. Нажмите",
+        "resetPlaylistDescription": "Вы уверены, что хотите сбросить плейлист до видео по умолчанию? Это заменит ваш текущий плейлист.",
+        "resetPlaylistTitle": "Сбросить плейлист",
+        "toStartPlaying": "для начала воспроизведения.",
+        "videoId": "ID видео: {{videoId}}",
+        "videoItemType": "Видео"
+      },
+      "help": {
+        "addVideo": {
+          "description": "Вставьте любой URL YouTube, чтобы добавить в плейлист",
+          "title": "Добавить видео"
+        },
+        "loop": {
+          "description": "Зациклить текущее видео или весь плейлист",
+          "title": "Повтор"
+        },
+        "playback": {
+          "description": "Элементы управления: Воспроизведение, Пауза, Следующий, Предыдущий",
+          "title": "Воспроизведение"
+        },
+        "playlist": {
+          "description": "Управление и организация вашего видеоплейлиста",
+          "title": "Плейлист"
+        },
+        "retroUi": {
+          "description": "Эстетика классического проигрывателя QuickTime",
+          "title": "Ретро-интерфейс"
+        },
+        "shuffle": {
+          "description": "Перемешать порядок воспроизведения",
+          "title": "Перемешать"
+        }
+      },
+      "menu": {
+        "aboutVideos": "О программе «Видео»",
+        "addToLibrary": "Добавить в медиатеку...",
+        "allVideos": "Все видео",
+        "clearLibrary": "Очистить медиатеку...",
+        "controls": "Элементы управления",
+        "fullScreen": "На весь экран",
+        "library": "Медиатека",
+        "next": "Следующий",
+        "openVideo": "Открыть видео...",
+        "pause": "Пауза",
+        "play": "Воспроизвести",
+        "previous": "Предыдущий",
+        "repeatAll": "Повторять все",
+        "repeatOne": "Повторять один",
+        "resetLibrary": "Сбросить медиатеку...",
+        "shareVideo": "Поделиться видео...",
+        "shuffle": "Перемешать",
+        "unknownArtist": "Неизвестный исполнитель",
+        "videosHelp": "Справка по видео"
+      },
+      "name": "Видео",
+      "status": {
+        "add": "ДОБАВИТЬ",
+        "addVideos": "Добавить видео",
+        "errorAdding": "Ошибка при добавлении: {{error}}",
+        "failedToAddVideo": "Не удалось добавить видео",
+        "failedToProcessVideo": "Не удалось обработать видео: {{videoId}}",
+        "fullscreen": "ПОЛНОЭКРАННЫЙ РЕЖИМ",
+        "next": "ДАЛЕЕ ⏭",
+        "paused": "ПАУЗА ⏸",
+        "play": "ВОСПРОИЗВЕСТИ ▶",
+        "playing": "▶ Воспроизводится: {{title}}",
+        "playlistReset": "ПЛЕЙЛИСТ СБРОШЕН",
+        "pressToPlay": "НАЖМИТЕ ⏯ ДЛЯ ВОСПРОИЗВЕДЕНИЯ",
+        "prev": "ПРЕД.",
+        "repeat": "ПОВТОР",
+        "repeatingPlaylist": "ПОВТОР ПЛЕЙЛИСТА",
+        "shuffle": "ПЕРЕМЕШИВАНИЕ",
+        "shuffleOff": "ПЕРЕМЕШИВАНИЕ ВЫКЛ.",
+        "shuffleOn": "ПЕРЕМЕШИВАНИЕ ВКЛ.",
+        "time": "Время",
+        "title": "Название",
+        "toGetStarted": "чтобы начать",
+        "track": "Трек",
+        "unknownError": "Неизвестная ошибка",
+        "videoAdded": "ВИДЕО ДОБАВЛЕНО"
+      }
+    }
+  },
+  "common": {
+    "aboutThisMac": {
+      "builtInMemory": "Встроенная память",
+      "clickToToggle": "Нажмите, чтобы переключить",
+      "description": "Информация о ryOS на этом компьютере",
+      "largestUnusedBlock": "Самый большой неиспользуемый блок",
+      "mb": "МБ",
+      "system": "Система",
+      "title": "Об этом компьютере",
+      "virtualMemory": "Виртуальная память",
+      "virtualMemoryOff": "Выкл."
+    },
+    "appleMenu": {
+      "aboutThisComputer": "Об этом компьютере"
+    },
+    "auth": {
+      "createAccount": "Создать аккаунт",
+      "creatingAccount": "Создание...",
+      "dialogTitle": "Вход в ryOS",
+      "logIn": "Войти",
+      "logOut": "Выйти",
+      "logOutDescription": "Вы уверены, что хотите выйти? Вы будете отключены от своего аккаунта.",
+      "loggingIn": "Вход...",
+      "loginDescription": "Войдите в свой аккаунт",
+      "password": "Пароль",
+      "setPasswordRequired": "Требуется установить пароль",
+      "setPasswordRequiredDescription": "Вам необходимо установить пароль перед выходом, чтобы обеспечить возможность восстановления аккаунта. Хотите установить пароль сейчас?",
+      "signupDescription": "Создайте аккаунт, чтобы получить доступ к чатам и сохранить свои настройки",
+      "username": "Имя пользователя"
+    },
+    "desktop": {
+      "myComputer": "Мой компьютер",
+      "setWallpaper": "Установить обои…"
+    },
+    "dialog": {
+      "about": "О программе",
+      "adding": "Добавление...",
+      "cancel": "Отмена",
+      "close": "Закрыть",
+      "confirm": "Подтвердить",
+      "delete": "Удалить",
+      "discardChanges": "Отменить изменения",
+      "discardChangesDesc": "Вы хотите отменить изменения и создать новый файл?",
+      "emoji": {
+        "chooseEmoji": "Выберите эмодзи",
+        "description": "Выберите эмодзи для этого звукового слота",
+        "setEmoji": "Установить эмодзи"
+      },
+      "enterFileName": "Введите имя для файла",
+      "enterFilenameToSave": "Введите имя файла для сохранения или удалите его перед закрытием.",
+      "help": "Справка",
+      "informationAboutApp": "Информация о приложении",
+      "keepNewDocument": "Сохранить новый документ",
+      "madeBy": "Разработано",
+      "openInGitHub": "Открыть в GitHub",
+      "save": "Сохранить",
+      "saveBeforeClosing": "Сохраните изменения перед закрытием.",
+      "saveChanges": "Сохранить изменения",
+      "saveFile": "Сохранить файл",
+      "share": {
+        "by": "от",
+        "copyLink": "Скопировать ссылку",
+        "couldNotCopyToClipboard": "Не удалось скопировать в буфер обмена. Пожалуйста, попробуйте выделить и скопировать вручную.",
+        "failedToCopyLink": "Не удалось скопировать ссылку",
+        "failedToGenerateShareLink": "Не удалось сгенерировать ссылку для {{itemType}}",
+        "from": "из",
+        "generating": "Генерация...",
+        "itemTypes": {
+          "app": "Приложение",
+          "applet": "Апплет",
+          "item": "Элемент",
+          "page": "Страница",
+          "song": "Песня"
+        },
+        "linkCopied": "Ссылка скопирована",
+        "linkCopiedToClipboard": "Ссылка на {{itemType}} скопирована в буфер обмена",
+        "pleaseTryAgainLater": "Пожалуйста, попробуйте позже",
+        "qrCode": "QR-код",
+        "shareItem": "Поделиться {{itemType}}",
+        "shareItemViaLinkOrQrCode": "Поделиться этим {{itemType}} по ссылке или QR-коду",
+        "shareLinkFor": "Поделиться ссылкой на {{itemType}}",
+        "shareLinkOrScanToOpen": "Поделитесь ссылкой или отсканируйте, чтобы открыть этот {{itemType}}"
+      },
+      "version": "Версия",
+      "welcomeTo": "Добро пожаловать в {{appName}}"
+    },
+    "dock": {
+      "appletStore": "Магазин апплетов",
+      "applications": "Приложения",
+      "folderContents": "Содержимое папки",
+      "hide": "Скрыть",
+      "minimized": "(свернуто)",
+      "newWindow": "Новое окно",
+      "open": "Открыть",
+      "quit": "Выход",
+      "showAllWindows": "Показать все окна",
+      "trash": "Корзина"
+    },
+    "htmlPreview": {
+      "bannerFallbackTitle": "Безымянный апплет",
+      "codePreviewTitle": "Предварительный просмотр кода ryOS",
+      "codePreviewTitleFullscreen": "Полноэкранный предварительный просмотр кода ryOS",
+      "copyHtml": "Скопировать HTML-код",
+      "downloadHtml": "Скачать HTML",
+      "exitFullscreen": "Выйти из полноэкранного режима",
+      "full": "Полный",
+      "maximizePreview": "Развернуть предпросмотр",
+      "minimizePreview": "Свернуть предпросмотр",
+      "saveApplet": "Сохранить как апплет",
+      "saveAppletDescription": "Введите имя апплета, существующий апплет будет перезаписан:",
+      "split": "Разделенный",
+      "toastOpenAction": "Открыть",
+      "toastSaveFailed": "Не удалось сохранить апплет",
+      "toastSaveFailedDescription": "Произошла ошибка при сохранении апплета.",
+      "toastSaved": "Апплет успешно сохранен",
+      "toggleCode": "Переключить код",
+      "toggleSplitView": "Переключить разделенный вид"
+    },
+    "menu": {
+      "applications": "Программы",
+      "clear": "Очистить",
+      "close": "Закрыть",
+      "copy": "Копировать",
+      "cut": "Вырезать",
+      "documents": "Документы",
+      "edit": "Правка",
+      "file": "Файл",
+      "go": "Переход",
+      "help": "Справка",
+      "images": "Изображения",
+      "music": "Музыка",
+      "paste": "Вставить",
+      "redo": "Повторить",
+      "selectAll": "Выбрать все",
+      "shareApp": "Поделиться приложением...",
+      "sites": "Сайты",
+      "trash": "Корзина",
+      "undo": "Отменить",
+      "videos": "Видео",
+      "view": "Вид"
+    },
+    "startMenu": {
+      "aboutThisComputer": "Об этом компьютере",
+      "ryos98": "98",
+      "ryosProfessional": "Professional",
+      "start": "Пуск"
+    },
+    "system": {
+      "debugBootScreenTest": "Тест экрана загрузки (отладка)...",
+      "formatFileSystem": "Форматировать файловую систему",
+      "formatFileSystemDesc": "Вы уверены, что хотите форматировать файловую систему? Это навсегда удалит все документы (кроме образцов документов), изображения и пользовательские обои. ryOS перезапустится после форматирования.",
+      "formattingFileSystem": "Форматирование файловой системы...",
+      "rebooting": "Перезагрузка...",
+      "resetAllSettings": "Сбросить все настройки",
+      "resetAllSettingsDesc": "Вы уверены, что хотите сбросить все настройки? Это удалит все сохраненные настройки и восстановит состояния по умолчанию. ryOS перезапустится после сброса.",
+      "resettingSystem": "Сброс системы...",
+      "restoringSystem": "Восстановление системы...",
+      "systemRestoring": "Восстановление системы...",
+      "updatingToRyOS": "Обновление до ryOS {{version}}...",
+      "updatingToRyOSWithBuild": "Обновление до ryOS {{version}} ({{buildNumber}})..."
+    },
+    "toast": {
+      "alreadyLatestVersion": "Уже установлена последняя версия",
+      "couldNotCheckUpdates": "Не удалось проверить наличие обновлений",
+      "failedToCacheAssets": "Не удалось кэшировать ресурсы",
+      "failedToLoadAssetManifest": "Не удалось загрузить манифест ресурсов",
+      "files": "файлов",
+      "noAssetsToCache": "Нет ресурсов для кэширования",
+      "reboot": "Перезагрузить",
+      "total": "всего",
+      "updateReady": "Обновление готово для ryOS {{version}} ({{buildNumber}})",
+      "updatingAssets": "Обновление ресурсов",
+      "updatingIcons": "Обновление значков",
+      "updatingSounds": "Обновление звуков",
+      "updatingSystemFiles": "Обновление системных файлов"
+    }
+  },
+  "settings": {
+    "language": {
+      "chineseTraditional": "中文",
+      "description": "Выберите предпочитаемый язык для интерфейса ryOS",
+      "english": "English",
+      "french": "Français",
+      "german": "Deutsch",
+      "italian": "Italiano",
+      "japanese": "日本語",
+      "korean": "한국어",
+      "portuguese": "Português",
+      "russian": "Русский",
+      "spanish": "Español",
+      "title": "Язык"
+    }
+  }
+}

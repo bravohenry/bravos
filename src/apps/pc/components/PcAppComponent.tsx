@@ -6,10 +6,13 @@ import { HelpDialog } from "@/components/dialogs/HelpDialog";
 import { AboutDialog } from "@/components/dialogs/AboutDialog";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
 import { helpItems, appMetadata } from "..";
+import { getTranslatedAppName } from "@/utils/i18n";
 import { Game, loadGames } from "@/stores/usePcStore";
 import { motion } from "framer-motion";
 import { useJsDos, DosProps, DosEvent } from "../hooks/useJsDos";
 import { useThemeStore } from "@/stores/useThemeStore";
+import { useTranslation } from "react-i18next";
+import { useTranslatedHelpItems } from "@/hooks/useTranslatedHelpItems";
 
 export function PcAppComponent({
   isWindowOpen,
@@ -38,8 +41,10 @@ export function PcAppComponent({
   const containerRef = useRef<HTMLDivElement>(null);
   const dosPropsRef = useRef<DosProps | null>(null);
 
+  const { t } = useTranslation();
   const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
+  const translatedHelpItems = useTranslatedHelpItems("pc", helpItems);
 
   useEffect(() => {
     // Cleanup dosbox instance when window is closed
@@ -259,7 +264,7 @@ export function PcAppComponent({
     <>
       {!isXpTheme && isForeground && menuBar}
       <WindowFrame
-        title="Virtual PC"
+        title={getTranslatedAppName("pc")}
         onClose={onClose}
         isForeground={isForeground}
         appId="pc"
@@ -282,7 +287,7 @@ export function PcAppComponent({
               <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
                 <div className="px-4 py-2 rounded bg-black/50 backdrop-blur-sm">
                   <div className="font-geneva-12 text-sm shimmer">
-                    Loading {selectedGame.name}...
+                    {t("apps.pc.loadingGame", { gameName: selectedGame.name })}
                   </div>
                 </div>
               </div>
@@ -293,15 +298,15 @@ export function PcAppComponent({
                 <div className="bg-black px-4 py-2 border-b border-[#3a3a3a]">
                   <div className="flex items-center justify-between">
                     <div className="font-apple-garamond text-white text-lg">
-                      Virtual PC
+                      {t("apps.pc.virtualPc")}
                     </div>
                     <div className="font-geneva-12 text-gray-400 text-[12px] flex items-center gap-2">
                       {isScriptLoaded ? (
-                        `${loadGames().length} PROGRAMS AVAILABLE`
+                        t("apps.pc.programsAvailable", { count: loadGames().length })
                       ) : (
                         <>
                           <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-                          LOADING EMULATOR
+                          {t("apps.pc.loadingEmulator")}
                         </>
                       )}
                     </div>
@@ -366,20 +371,21 @@ export function PcAppComponent({
         <HelpDialog
           isOpen={isHelpDialogOpen}
           onOpenChange={setIsHelpDialogOpen}
-          helpItems={helpItems}
-          appName="Virtual PC"
+          helpItems={translatedHelpItems}
+          appId="pc"
         />
         <AboutDialog
           isOpen={isAboutDialogOpen}
           onOpenChange={setIsAboutDialogOpen}
           metadata={appMetadata}
+          appId="pc"
         />
         <ConfirmDialog
           isOpen={isResetDialogOpen}
           onOpenChange={setIsResetDialogOpen}
           onConfirm={handleReset}
-          title="Reset Virtual PC"
-          description="Are you sure you want to reset the PC? This will clear all current state."
+          title={t("apps.pc.dialogs.resetVirtualPcTitle")}
+          description={t("apps.pc.dialogs.resetVirtualPcDescription")}
         />
       </WindowFrame>
     </>

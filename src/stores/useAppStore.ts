@@ -9,6 +9,8 @@ import { ShaderType } from "@/components/shared/GalaxyBackground";
 import { DisplayMode } from "@/utils/displayMode";
 import { AIModel } from "@/types/aiModels";
 import { ensureIndexedDBInitialized } from "@/utils/indexedDB";
+import { track } from "@vercel/analytics";
+import { APP_ANALYTICS } from "@/utils/analytics";
 export type { AIModel } from "@/types/aiModels";
 
 // ---------------- Types ---------------------------------------------------------
@@ -17,6 +19,8 @@ export interface AppInstance extends AppState {
   appId: AppId;
   title?: string;
   createdAt: number; // stable ordering for taskbar (creation time)
+  isLoading?: boolean;
+  isMinimized?: boolean;
 }
 
 const getInitialState = (): AppManagerState => {
@@ -46,6 +50,7 @@ interface AppStoreState extends AppManagerState {
     initialData?: unknown,
     title?: string
   ) => string;
+  markInstanceAsLoaded: (instanceId: string) => void;
   closeAppInstance: (instanceId: string) => void;
   bringInstanceToForeground: (instanceId: string) => void;
   minimizeInstance: (instanceId: string) => void;
@@ -59,6 +64,8 @@ interface AppStoreState extends AppManagerState {
   getForegroundInstance: () => AppInstance | null;
   navigateToNextInstance: (currentInstanceId: string) => void;
   navigateToPreviousInstance: (currentInstanceId: string) => void;
+  minimizeInstance: (instanceId: string) => void;
+  restoreInstance: (instanceId: string) => void;
   launchApp: (
     appId: AppId,
     initialData?: unknown,
@@ -128,6 +135,12 @@ interface AppStoreState extends AppManagerState {
   masterVolume: number;
   setMasterVolume: (v: number) => void;
   _debugCheckInstanceIntegrity: () => void;
+  
+  // ryOS version (fetched from version.json)
+  ryOSVersion: string | null;
+  ryOSBuildNumber: string | null;
+  ryOSBuildTime: string | null;
+  setRyOSVersion: (version: string, buildNumber: string, buildTime?: string) => void;
 }
 
 const CURRENT_APP_STORE_VERSION = 3; // bump for instanceOrder unification
@@ -172,6 +185,17 @@ export const useAppStore = create<AppStoreState>()(
       setHasBooted: () => set({ isFirstBoot: false }),
       masterVolume: 1,
       setMasterVolume: (vol) => set({ masterVolume: vol }),
+
+      // ryOS version (fetched from version.json)
+      ryOSVersion: null,
+      ryOSBuildNumber: null,
+      ryOSBuildTime: null,
+      setRyOSVersion: (version, buildNumber, buildTime) =>
+        set({
+          ryOSVersion: version,
+          ryOSBuildNumber: buildNumber,
+          ryOSBuildTime: buildTime || null,
+        }),
 
       updateWindowState: (appId, position, size) =>
         set((state) => ({
@@ -493,13 +517,19 @@ export const useAppStore = create<AppStoreState>()(
               // ignore and fall back to default size
             }
           }
+
+          // Check if app is lazy (most are, except Finder which is critical)
+          // We can assume non-Finder apps might need loading time
+          const isLazy = appId !== "finder";
+
           const instances = {
             ...state.instances,
             [createdId]: {
               instanceId: createdId,
               appId,
               isOpen: true,
-              isForeground: true,
+              isForeground: !isLazy, // Only foreground immediately if not lazy
+              isLoading: isLazy,
               initialData,
               title,
               position,
@@ -507,10 +537,14 @@ export const useAppStore = create<AppStoreState>()(
               createdAt: Date.now(),
             },
           } as typeof state.instances;
-          Object.keys(instances).forEach((id) => {
-            if (id !== createdId)
-              instances[id] = { ...instances[id], isForeground: false };
-          });
+
+          if (!isLazy) {
+            Object.keys(instances).forEach((id) => {
+              if (id !== createdId)
+                instances[id] = { ...instances[id], isForeground: false };
+            });
+          }
+
           const instanceOrder = [
             ...state.instanceOrder.filter((id) => id !== createdId),
             createdId,
@@ -518,7 +552,7 @@ export const useAppStore = create<AppStoreState>()(
           return {
             instances,
             instanceOrder,
-            foregroundInstanceId: createdId,
+            foregroundInstanceId: isLazy ? state.foregroundInstanceId : createdId,
             nextInstanceId: nextNum,
           };
         });
@@ -528,12 +562,58 @@ export const useAppStore = create<AppStoreState>()(
               detail: {
                 instanceId: createdId,
                 isOpen: true,
+                isForeground: appId === "finder", // Only finder is foreground immediately
+              },
+            })
+          );
+          // Track app launch analytics
+          track(APP_ANALYTICS.APP_LAUNCH, { appId });
+        }
+        return createdId;
+      },
+
+      markInstanceAsLoaded: (instanceId) => {
+        set((state) => {
+          const inst = state.instances[instanceId];
+          if (!inst || !inst.isLoading) return state;
+
+          // When loaded, bring to foreground
+          const instances = { ...state.instances };
+          Object.keys(instances).forEach((id) => {
+            instances[id] = {
+              ...instances[id],
+              isForeground: id === instanceId,
+            };
+          });
+
+          instances[instanceId] = {
+            ...inst,
+            isLoading: false,
+            isForeground: true,
+          };
+
+          // Ensure it's at the end of order
+          const order = [
+            ...state.instanceOrder.filter((id) => id !== instanceId),
+            instanceId,
+          ];
+
+          window.dispatchEvent(
+            new CustomEvent("instanceStateChange", {
+              detail: {
+                instanceId,
+                isOpen: true,
                 isForeground: true,
               },
             })
           );
-        }
-        return createdId;
+
+          return {
+            instances,
+            instanceOrder: order,
+            foregroundInstanceId: instanceId,
+          };
+        });
       },
 
       closeAppInstance: (instanceId) => {
@@ -734,8 +814,115 @@ export const useAppStore = create<AppStoreState>()(
         const prev = (idx - 1 + instanceOrder.length) % instanceOrder.length;
         get().bringInstanceToForeground(instanceOrder[prev]);
       },
+      minimizeInstance: (instanceId) => {
+        set((state) => {
+          const inst = state.instances[instanceId];
+          if (!inst || inst.isMinimized) return state;
+
+          const instances = { ...state.instances };
+          instances[instanceId] = { ...inst, isMinimized: true, isForeground: false };
+
+          // Find next foreground from non-minimized windows
+          let nextForeground: string | null = null;
+          for (let i = state.instanceOrder.length - 1; i >= 0; i--) {
+            const id = state.instanceOrder[i];
+            if (id !== instanceId && instances[id]?.isOpen && !instances[id]?.isMinimized) {
+              nextForeground = id;
+              break;
+            }
+          }
+
+          if (nextForeground) {
+            instances[nextForeground] = { ...instances[nextForeground], isForeground: true };
+          }
+
+          window.dispatchEvent(
+            new CustomEvent("instanceStateChange", {
+              detail: { instanceId, isOpen: true, isForeground: false, isMinimized: true },
+            })
+          );
+
+          return {
+            instances,
+            foregroundInstanceId: nextForeground,
+          };
+        });
+      },
+      restoreInstance: (instanceId) => {
+        set((state) => {
+          const inst = state.instances[instanceId];
+          if (!inst || !inst.isMinimized) return state;
+
+          const instances = { ...state.instances };
+          // Remove foreground from all others
+          Object.keys(instances).forEach((id) => {
+            instances[id] = { ...instances[id], isForeground: false };
+          });
+          // Restore and bring to foreground
+          instances[instanceId] = { ...inst, isMinimized: false, isForeground: true };
+
+          // Move to end of order
+          const order = [
+            ...state.instanceOrder.filter((id) => id !== instanceId),
+            instanceId,
+          ];
+
+          window.dispatchEvent(
+            new CustomEvent("instanceStateChange", {
+              detail: { instanceId, isOpen: true, isForeground: true, isMinimized: false },
+            })
+          );
+
+          return {
+            instances,
+            instanceOrder: order,
+            foregroundInstanceId: instanceId,
+          };
+        });
+      },
       launchApp: (appId, initialData, title, multiWindow = false) => {
         const state = get();
+        
+        // Check if all instances of this app are minimized
+        // If so, restore them instead of creating a new instance
+        const appInstances = Object.values(state.instances).filter(
+          (inst) => inst.appId === appId && inst.isOpen
+        );
+        
+        if (appInstances.length > 0) {
+          // Check if all instances are minimized
+          const allMinimized = appInstances.every((inst) => inst.isMinimized);
+          
+          if (allMinimized) {
+            // Restore all minimized instances
+            let lastRestoredId: string | null = null;
+            appInstances.forEach((inst) => {
+              if (inst.isMinimized) {
+                state.restoreInstance(inst.instanceId);
+                lastRestoredId = inst.instanceId;
+              }
+            });
+            
+            // Bring the most recently restored instance to foreground
+            if (lastRestoredId) {
+              state.bringInstanceToForeground(lastRestoredId);
+              // Update initialData if provided
+              if (initialData) {
+                set((s) => ({
+                  instances: {
+                    ...s.instances,
+                    [lastRestoredId!]: {
+                      ...s.instances[lastRestoredId!],
+                      initialData,
+                    },
+                  },
+                }));
+              }
+              return lastRestoredId;
+            }
+          }
+        }
+        
         const supportsMultiWindow =
           multiWindow ||
           appId === "textedit" ||
@@ -807,6 +994,9 @@ export const useAppStore = create<AppStoreState>()(
         ttsVoice: state.ttsVoice,
         ipodVolume: state.ipodVolume,
         masterVolume: state.masterVolume,
+        ryOSVersion: state.ryOSVersion,
+        ryOSBuildNumber: state.ryOSBuildNumber,
+        ryOSBuildTime: state.ryOSBuildTime,
         instances: Object.fromEntries(
           Object.entries(state.instances)
             .filter(([, inst]) => inst.isOpen)

@@ -182,6 +182,21 @@
   --os-color-selection-text: #000000;
 }
 
+/* Ensure all UI elements in Windows 98 theme use the theme font with ArkPixel fallback */
+:root[data-os-theme="win98"] button,
+:root[data-os-theme="win98"] input,
+:root[data-os-theme="win98"] label,
+:root[data-os-theme="win98"] select,
+:root[data-os-theme="win98"] textarea,
+:root[data-os-theme="win98"] [role="menuitem"],
+:root[data-os-theme="win98"] [role="menuitemcheckbox"],
+:root[data-os-theme="win98"] [role="menuitemradio"],
+:root[data-os-theme="win98"] [role="option"] {
+  font-family: var(--os-font-ui) !important;
+  font-smooth: antialiased !important;
+  -webkit-font-smoothing: antialiased !important;
+}
+
 /* Windows XP Theme */
 :root[data-os-theme="xp"] {
   --os-font-ui: Tahoma, "Pixelated MS Sans Serif", "MS Sans Serif", "ArkPixel",
@@ -218,6 +233,21 @@
 :root[data-os-theme="xp"] .window:not(.is-foreground) {
   --os-color-selection-bg: #ece9da; /* soft gray */
   --os-color-selection-text: #000000;
+}
+
+/* Ensure all UI elements in Windows XP theme use the theme font with ArkPixel fallback */
+:root[data-os-theme="xp"] button,
+:root[data-os-theme="xp"] input,
+:root[data-os-theme="xp"] label,
+:root[data-os-theme="xp"] select,
+:root[data-os-theme="xp"] textarea,
+:root[data-os-theme="xp"] [role="menuitem"],
+:root[data-os-theme="xp"] [role="menuitemcheckbox"],
+:root[data-os-theme="xp"] [role="menuitemradio"],
+:root[data-os-theme="xp"] [role="option"] {
+  font-family: var(--os-font-ui) !important;
+  font-smooth: antialiased !important;
+  -webkit-font-smoothing: antialiased !important;
 }
 
 /* Backwards compatibility aliases */
@@ -576,6 +606,24 @@
   font-size: 13px !important;
 }
 
+/* Allow Terminal to use its own font size in macOS theme */
+/* Use CSS custom property to override !important rules */
+:root[data-os-theme="macosx"] div.terminal-content,
+:root[data-os-theme="macosx"] .terminal-content div,
+:root[data-os-theme="macosx"] .terminal-content p,
+:root[data-os-theme="macosx"] .terminal-content span,
+:root[data-os-theme="macosx"] .terminal-content pre,
+:root[data-os-theme="macosx"] .terminal-content code,
+:root[data-os-theme="macosx"] .terminal-content input,
+:root[data-os-theme="macosx"] .terminal-content label,
+:root[data-os-theme="macosx"] .terminal-content button,
+:root[data-os-theme="macosx"] .terminal-content form,
+:root[data-os-theme="macosx"] .terminal-tool-invocation,
+:root[data-os-theme="macosx"] .terminal-tool-invocation div,
+:root[data-os-theme="macosx"] .terminal-tool-invocation span {
+  font-size: var(--terminal-font-size, 12px) !important;
+}
+
 :root[data-os-theme="macosx"] .synth-force-font {
   font-family: "Geneva-12", "ArkPixel", "SerenityOS-Emoji", system-ui,
     -apple-system, sans-serif !important;
@@ -763,15 +811,16 @@
   position: absolute;
   left: 1px;
   right: 1px;
-  height: 40%;
+  height: 50%;
   background: linear-gradient(
-    rgba(255, 255, 255, 0.9),
-    rgba(255, 255, 255, 0.3)
+    to bottom,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(255, 255, 255, 0.4) 60%,
+    rgba(255, 255, 255, 0) 100%
   );
-  border-radius: 5px 5px 2px 2px;
+  border-radius: 5px 5px 0 0;
   top: 0px;
   pointer-events: none;
-  z-index: 1;
 }
 
 /* Arrow indicator for macOS select */
@@ -805,7 +854,7 @@
 
 /* Ensure the gloss effect matches the border radius for standalone buttons */
 :root[data-os-theme="macosx"] .aqua-select-btn:before {
-  border-radius: 5px 5px 2px 2px !important;
+  border-radius: 5px 5px 0 0 !important;
 }
 
 /* Button group styling for aqua-select buttons: only first/last rounded */
@@ -1145,6 +1194,15 @@
   border-radius: 7.2px !important;
 }
 
+:root[data-os-theme="macosx"] .macosx-dialog.rounded-none {
+  border-radius: 0 !important;
+}
+
+/* Use Apple Garamond for ryOS branding in macOSX dialogs */
+:root[data-os-theme="macosx"] .macosx-dialog .font-mondwest {
+  font-family: "AppleGaramond", "Apple Garamond", "Times New Roman", serif !important;
+}
+
 :root[data-os-theme="macosx"] .macosx-dialog-header {
   border-radius: 7.2px 7.2px 0px 0px !important;
 }
@@ -1305,14 +1363,14 @@
 
 /* AboutDialog title styling for macOS theme */
 :root[data-os-theme="macosx"] .font-apple-garamond {
-  font-family: "AppleGaramond", "Apple Garamond", "Times New Roman", serif !important;
+  font-family: "AppleGaramond", "Apple Garamond", "Times New Roman", "Hiragino Mincho ProN", serif !important;
   font-size: 1.5rem !important;
 }
 
 /* Ensure AboutDialog title doesn't get overridden by general div styles */
 :root[data-os-theme="macosx"] .font-apple-garamond.text-2xl {
   font-size: 1.5rem !important;
-  font-family: "AppleGaramond", "Apple Garamond", "Times New Roman", serif !important;
+  font-family: "AppleGaramond", "Apple Garamond", "Times New Roman", "Hiragino Mincho ProN", serif !important;
 }
 
 /* AboutDialog body text styling for macOS theme */

@@ -11,7 +11,7 @@ import {
   useInternetExplorerStore,
   type Favorite,
 } from "@/stores/useInternetExplorerStore";
-import { useFilesStore, FileSystemItem } from "@/stores/useFilesStore";
+import { useFilesStore, FileSystemItem, ensureFileContentLoaded } from "@/stores/useFilesStore";
 import { useTextEditStore } from "@/stores/useTextEditStore";
 import { useAppStore } from "@/stores/useAppStore";
 import { migrateIndexedDBToUUIDs } from "@/utils/indexedDBMigration";
@@ -421,77 +421,11 @@ export function useFileSystem(
     return "/" + parts.slice(0, -1).join("/");
   };
 
-  // --- Lazy Default Content Loader --- //
+  // --- Lazy Default Content Loader (uses cached filesystem data) --- //
   const ensureDefaultContent = useCallback(
     async (filePath: string, uuid: string): Promise<boolean> => {
-      try {
-        // Load the filesystem data from JSON
-        const res = await fetch("/data/filesystem.json");
-        const data = await res.json();
-
-        // Find the file in the JSON data
-        const fileData = data.files?.find(
-          (f: { path: string }) => f.path === filePath
-        );
-        if (!fileData) {
-          return false; // No default content for this file
-        }
-
-        if (fileData.content) {
-          // This is a document with text content
-          const storeName = STORES.DOCUMENTS;
-          const existingDoc = await dbOperations.get<DocumentContent>(
-            storeName,
-            uuid
-          );
-          if (!existingDoc) {
-            console.log(
-              `[useFileSystem] Loading default content for document ${fileData.name}`
-            );
-            await dbOperations.put<DocumentContent>(
-              storeName,
-              {
-                name: fileData.name,
-                content: fileData.content,
-              },
-              uuid
-            );
-            return true;
-          }
-        } else if (fileData.assetPath) {
-          // This is an image with an asset path
-          const storeName = STORES.IMAGES;
-          const existingImg = await dbOperations.get<DocumentContent>(
-            storeName,
-            uuid
-          );
-          if (!existingImg) {
-            console.log(
-              `[useFileSystem] Loading default content for image ${fileData.name}`
-            );
-            const response = await fetch(fileData.assetPath);
-            if (response.ok) {
-              const blob = await response.blob();
-              await dbOperations.put<DocumentContent>(
-                storeName,
-                {
-                  name: fileData.name,
-                  content: blob,
-                },
-                uuid
-              );
-              return true;
-            }
-          }
-        }
-        return false;
-      } catch (err) {
-        console.error(
-          `[useFileSystem] Error loading default content for ${filePath}:`,
-          err
-        );
-        return false;
-      }
+      // Use the centralized lazy loader which has cached JSON data
+      return ensureFileContentLoaded(filePath, uuid);
     },
     []
   );
@@ -929,6 +863,62 @@ export function useFileSystem(
   // Define handleFileOpen
   const handleFileOpen = useCallback(
     async (file: ExtendedDisplayFileItem) => {
+      // 0. Handle Aliases/Shortcuts first - resolve to target before processing
+      // Handle nested aliases by resolving until we get to the actual target
+      let currentFile = file;
+      let resolved = false;
+      const visitedPaths = new Set<string>();
+      const maxDepth = 10; // Prevent infinite loops from circular aliases
+      let depth = 0;
+      
+      while (!resolved && depth < maxDepth) {
+        depth++;
+        const fileMetadata = fileStore.getItem(currentFile.path);
+        if (fileMetadata?.aliasType && fileMetadata?.aliasTarget) {
+          // Check for circular references
+          if (visitedPaths.has(currentFile.path)) {
+            console.warn(`[useFileSystem] Circular alias detected at ${currentFile.path}`);
+            return;
+          }
+          visitedPaths.add(currentFile.path);
+          
+          if (fileMetadata.aliasType === "app") {
+            // Launch app directly
+            const appId = fileMetadata.aliasTarget as AppId;
+            launchApp(appId);
+            return;
+          } else {
+            // Open file/applet - need to resolve the original file
+            const targetPath = fileMetadata.aliasTarget;
+            const targetFile = fileStore.getItem(targetPath);
+            
+            if (!targetFile) {
+              console.warn(`[useFileSystem] Target file not found: ${targetPath}`);
+              return;
+            }
+
+            // Replace currentFile with target file and check if it's also an alias
+            currentFile = {
+              ...targetFile,
+              icon: getFileIcon(targetFile),
+              modifiedAt: targetFile.modifiedAt ? new Date(targetFile.modifiedAt) : undefined,
+            } as ExtendedDisplayFileItem;
+            // Continue loop to check if target is also an alias
+          }
+        } else {
+          // Not an alias, use this file
+          resolved = true;
+        }
+      }
+      
+      if (depth >= maxDepth) {
+        console.warn(`[useFileSystem] Maximum alias resolution depth reached for ${file.path}`);
+        return;
+      }
+      
+      // Use the resolved file for the rest of the function
+      file = currentFile;
+
       // 1. Handle Directories (Virtual and Real)
       if (file.isDirectory) {
         if (file.type === "directory" || file.type === "directory-virtual") {

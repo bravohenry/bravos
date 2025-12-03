@@ -14,6 +14,10 @@ export const AI_MODELS = {
     name: "gemini-2.5-flash-image",
     provider: "Google",
   },
+  "gemini-3-pro-preview": {
+    name: "gemini-3-pro-preview",
+    provider: "Google",
+  },
   "claude-4.5": {
     name: "claude-4.5",
     provider: "Anthropic",
@@ -32,6 +36,10 @@ export const AI_MODELS = {
   },
   "gpt-5": {
     name: "gpt-5",
+    provider: "OpenAI",
+  },
+  "gpt-5.1": {
+    name: "gpt-5.1",
     provider: "OpenAI",
   },
   "gpt-5-mini": {

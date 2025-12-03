@@ -3,6 +3,8 @@ import { toast } from "sonner";
 import { useFileSystem } from "@/apps/finder/hooks/useFileSystem";
 import { useLaunchApp } from "@/hooks/useLaunchApp";
 import { useFilesStore } from "@/stores/useFilesStore";
+import { track } from "@vercel/analytics";
+import { APPLET_ANALYTICS } from "@/utils/analytics";
 
 export interface Applet {
   id: string;
@@ -136,6 +138,11 @@ export const useAppletActions = () => {
   };
 
   const handleInstall = async (applet: Applet, onSuccess?: () => void) => {
+    // Check if offline
+    if (typeof navigator !== "undefined" && "onLine" in navigator && !navigator.onLine) {
+      throw new Error("Applet installation requires an internet connection");
+    }
+
     try {
       const isUpdate = isAppletInstalled(applet.id);
       
@@ -193,6 +200,22 @@ export const useAppletActions = () => {
         },
       });
       window.dispatchEvent(event);
+      
+      // Track analytics for install or update
+      if (isUpdate) {
+        track(APPLET_ANALYTICS.UPDATE, {
+          appletId: applet.id,
+          title: applet.title || applet.name || "Untitled Applet",
+          createdBy: applet.createdBy || data.createdBy || "",
+        });
+      } else {
+        track(APPLET_ANALYTICS.INSTALL, {
+          appletId: applet.id,
+          title: applet.title || applet.name || "Untitled Applet",
+          createdBy: applet.createdBy || data.createdBy || "",
+          featured: applet.featured || false,
+        });
+      }
       
       toast.success(isUpdate ? "Applet updated" : "Applet installed", {
         description: `Saved to /Applets/${finalName}`,

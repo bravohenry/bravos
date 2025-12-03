@@ -1,18 +1,13 @@
 # ZiOS — A web-based agentic AI OS, made with Cursor
 
-A modern web-based desktop environment inspired by classic macOS, built with a cutting-edge web stack and AI.
-Features multiple built-in applications, a familiar desktop interface, and a system context-aware AI agent.
-Works on all devices—including mobile, tablet, and desktop.
+A modern web-based desktop environment inspired by classic macOS and Windows, built with React, TypeScript, and AI. Features multiple built-in applications, a familiar desktop interface, and a system-aware AI assistant. Works on all devices—desktop, tablet, and mobile.
 
 ## Features
 
 ### Desktop Environment
 
 - Authentic macOS and Windows-style desktop interactions
-- Multi-instance window manager with support for multiple windows per app
-- Cross-device window resizers
-- Menubar with app-specific menus (or taskbar + Start menu on Windows themes)
-- Icon and list views
+- Multi-instance window manager with drag, resize, and minimize
 - Customizable wallpapers (photos, patterns, or videos)
 - System-wide sampled and synthesizer sound effects
 - System-wide UI, Chats, and Terminal sounds
@@ -52,6 +47,7 @@ The OS1 branch extends ryOS with a comprehensive macOS-inspired theme featuring:
 
 ### Built-in Applications
 
+<<<<<<< HEAD
 - **Finder**: File manager with Quick Access & Storage Info
 - **TextEdit**: Rich text editing with markdown support and task lists
   - Multi-window support - open multiple documents simultaneously
@@ -161,115 +157,57 @@ The OS1 branch extends ryOS with a comprehensive macOS-inspired theme featuring:
   - Integration with Finder for file management
   - Create applets via ryOS Chat AI assistant
 
+## Quick Start
+
+1. Launch apps from the Finder, Desktop, or Apple/Start menu
+2. Drag windows to move, drag edges to resize
+3. Use Control Panels to customize appearance and sounds
+4. Chat with Zi AI for help or to control apps
+5. Files auto-save to browser storage
+
 ## Project Structure
 
 ```
-project/
-├── public/           # Static assets
-│   ├── assets/       # Videos, sounds, and other media
-│   ├── fonts/        # Font files
-│   ├── icons/        # UI icons organized by category
-│   ├── patterns/     # Pattern files
-│   └── wallpapers/   # Wallpaper images (photos and tiles)
+├── api/              # Vercel API endpoints (AI, chat, lyrics, etc.)
+├── public/           # Static assets (icons, wallpapers, sounds, fonts)
 ├── src/
-│   ├── apps/         # Individual application modules
-│   │   └── [app-name]/ # Each app has its own directory
-│   │       ├── components/ # App-specific components
-│   │       ├── hooks/      # Custom hooks specific to the app
-│   │       └── utils/      # Utility functions for the app
-│   ├── components/   # Shared React components
-│   │   ├── dialogs/    # Dialog components
-│   │   ├── layout/     # Layout components
-│   │   ├── shared/     # Shared components across applications
-│   │   └── ui/         # UI components (shadcn components)
+│   ├── apps/         # Individual app modules
+│   ├── components/   # Shared React components (ui, dialogs, layout)
 │   ├── config/       # Configuration files
 │   ├── contexts/     # React context providers
 │   ├── hooks/        # Custom React hooks
 │   ├── lib/          # Libraries and utilities
-│   ├── stores/       # State management (e.g., Zustand stores)
-│   ├── styles/       # CSS and styling utilities
-│   ├── types/        # TypeScript type definitions
-│   └── utils/        # Utility functions
-├── api/              # API endpoints
-│   ├── applet-ai.ts  # AI API for applets with rate limiting
-│   ├── share-applet.ts # Applet sharing and storage
-│   ├── chat.ts       # Main AI chat endpoint
-│   ├── chat-rooms.js # Chat room management and real-time messaging
-│   ├── audio-transcribe.ts # Speech-to-text transcription
-│   ├── speech.ts     # Text-to-speech synthesis
-│   ├── lyrics.ts     # Lyric fetching and translation
-│   ├── ie-generate.ts # Internet Explorer AI site generation
-│   └── utils/        # API utilities (CORS, rate limiting, AI models)
-└── ...config files   # e.g., vite.config.ts, tsconfig.json, package.json
+│   ├── stores/       # Zustand state management
+│   ├── styles/       # CSS and styling
+│   └── types/        # TypeScript definitions
 ```
 
-## Key Features & Technologies
+## Tech Stack
 
-### AI & Backend
-- **AI Integration**: Multiple AI models (OpenAI, Anthropic, Google) via Vercel AI SDK
-- **Real-time Communication**: Pusher for chat rooms and live updates
-- **Rate Limiting**: Redis-based rate limiting for API endpoints
-- **Authentication**: Token-based authentication with Redis storage
-- **Edge Functions**: Vercel Edge Runtime for low-latency API responses
-
-### Frontend Stack
-- **TypeScript** for type safety
-- **React 18** with hooks and context
-- **Zustand** for state management
-- **Tailwind CSS** for utility-first styling
-- **shadcn/ui** components built on Radix UI primitives
-- **Framer Motion** for animations
-- **Lucide React** for icons
-- **TipTap** for rich text editing
-- **Three.js** for 3D graphics (Galaxy shader, etc.)
-- **Tone.js** for audio synthesis
-
-### Storage & Persistence
-- **IndexedDB** for local file system and document storage
-- **LocalStorage** for user preferences and app state
-- **Redis (Upstash)** for server-side data (chat rooms, applets, auth tokens)
-
-### Development Tools
-- **Vite** for fast development and building
-- **ESLint** for code quality
-- **Bun** as package manager and runtime
-- **Vercel** for deployment and hosting
+- **Frontend:** React 19, TypeScript, Tailwind CSS, shadcn/ui, Framer Motion
+- **Audio:** Tone.js, WaveSurfer.js
+- **3D:** Three.js (shaders)
+- **Text Editor:** TipTap
+- **State:** Zustand
+- **Storage:** IndexedDB, LocalStorage, Redis (Upstash)
+- **AI:** OpenAI, Anthropic, Google via Vercel AI SDK
+- **Real-time:** Pusher
+- **Build:** Vite, Bun
+- **Deployment:** Vercel
 
 ## Scripts
 
-- `bun dev` - Start development server
-- `bun run build` - Build for production
-- `bun run lint` - Run ESLint
-- `bun run preview` - Preview production build
-- `bun run generate:icons` - Generate icon manifest
-- `bun run generate:wallpapers` - Generate wallpaper manifest
-- `bun run launch-kiosk` - Launch in kiosk mode
-
-## Recent Updates
-
-### Applet System
-- **Applet Store**: Browse, install, and share HTML applets created by the community
-- **Applet AI API**: Dedicated AI endpoint for applets with rate limiting (15-50 text requests/hour, 1-12 image requests/hour)
-- **Applet Authentication**: Secure token bridge for applets to access user authentication
-- **Update System**: Automatic detection and one-click updates for installed applets
-- **Import/Export**: Support for `.app` files (gzipped JSON with metadata) and plain HTML
-
-### Chat Rooms
-- **Real-time Messaging**: Public and private chat rooms with Pusher integration
-- **User Authentication**: Secure login system with token-based sessions
-- **Unread Tracking**: Message counters and notifications for rooms
-- **Message Management**: Delete messages and moderate rooms
-- **Private Conversations**: One-on-one private messaging
-
-### Enhanced Features
-- **Multi-window TextEdit**: Open multiple documents simultaneously with independent state
-- **iPod Lyrics**: Interactive lyric offset adjustment with gesture support
-- **Finder Integration**: Applets appear in Finder with metadata and sharing support
-- **Theme Improvements**: Enhanced Windows XP/98 theme support with mobile-safe controls
+```bash
+bun dev              # Start development server
+bun run build        # Build for production
+bun run lint         # Run ESLint
+bun run preview      # Preview production build
+vercel dev           # Run with Vercel dev server (recommended)
+```
 
 ## License
 
-This project is licensed under the AGPL-3.0 License - see the [LICENSE](LICENSE) file for details.
+AGPL-3.0 — See [LICENSE](LICENSE) for details.
 
 ## OS1 Branch Enhancements
 
@@ -340,4 +278,4 @@ For complete details, see `docs/OS1_README.md`.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions welcome! Please submit a Pull Request.

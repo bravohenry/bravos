@@ -8,6 +8,8 @@ import {
 import { useThemeStore } from "@/stores/useThemeStore";
 import { cn } from "@/lib/utils";
 import { ThemedIcon } from "@/components/shared/ThemedIcon";
+import { useTranslation } from "react-i18next";
+import { getTranslatedAppName, AppId } from "@/utils/i18n";
 
 interface AboutDialogProps {
   isOpen: boolean;
@@ -22,15 +24,21 @@ interface AboutDialogProps {
     github: string;
     icon: string;
   };
+  appId?: AppId;
 }
 
 export function AboutDialog({
   isOpen,
   onOpenChange,
   metadata,
+  appId,
 }: AboutDialogProps) {
+  const { t } = useTranslation();
   const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
+  
+  // Use translated app name if appId is provided, otherwise fall back to metadata.name
+  const displayName = appId ? getTranslatedAppName(appId) : metadata.name;
 
   const dialogContent = (
     <div className="flex flex-col items-center justify-center space-y-2 py-8">
@@ -48,6 +56,12 @@ export function AboutDialog({
             ? "font-['Pixelated_MS_Sans_Serif',Arial] text-[11px]"
             : "font-geneva-12 text-[10px]"
         )}
+        style={{
+          fontFamily: isXpTheme
+            ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
+            : undefined,
+          fontSize: isXpTheme ? "11px" : undefined,
+        }}
       >
         <div
           className={cn(
@@ -57,11 +71,11 @@ export function AboutDialog({
               : "font-apple-garamond"
           )}
         >
-          {metadata.name}
+          {displayName}
         </div>
-        <p className="text-gray-500 mb-2">Version {metadata.version}</p>
+        <p className="text-gray-500 mb-2">{t("common.dialog.version")} {metadata.version}</p>
         <p>
-          Made by{" "}
+          {t("common.dialog.madeBy")}{" "}
           <a
             href={metadata.creator.url}
             target="_blank"
@@ -78,7 +92,7 @@ export function AboutDialog({
             rel="noopener noreferrer"
             className="text-blue-500 hover:underline"
           >
-            Open in GitHub
+            {t("common.dialog.openInGitHub")}
           </a>
         </p>
       </div>
@@ -88,29 +102,29 @@ export function AboutDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
-        className={cn("max-w-[280px]", isXpTheme && "p-0 overflow-hidden")}
+        className={cn("max-w-[400px]", isXpTheme && "p-0 overflow-hidden")}
         style={isXpTheme ? { fontSize: "11px" } : undefined}
       >
         {isXpTheme ? (
           <>
-            <DialogHeader>About</DialogHeader>
+            <DialogHeader>{t("common.dialog.about")}</DialogHeader>
             <div className={`window-body ${isXpTheme ? "p-2 px-4" : "p-4"}`}>
               {dialogContent}
             </div>
           </>
         ) : currentTheme === "macosx" ? (
           <>
-            <DialogHeader>About</DialogHeader>
+            <DialogHeader>{t("common.dialog.about")}</DialogHeader>
             {dialogContent}
           </>
         ) : (
           <>
             <DialogHeader>
               <DialogTitle className="font-normal text-[16px]">
-                About
+                {t("common.dialog.about")}
               </DialogTitle>
               <DialogDescription className="sr-only">
-                Information about the application
+                {t("common.dialog.informationAboutApp")}
               </DialogDescription>
             </DialogHeader>
             {dialogContent}

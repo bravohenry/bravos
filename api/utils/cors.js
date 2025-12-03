@@ -4,6 +4,8 @@ export const ALLOWED_ORIGINS = new Set([
   "https://os.bravohenry.com",
   "http://localhost:3000",
   "http://localhost:5173",
+  "http://100.110.251.60",
+  "http://100.110.251.60:3000",
 ]);
 
 export function getEffectiveOrigin(req) {
@@ -22,10 +24,14 @@ export function isAllowedOrigin(origin) {
   if (!origin) return false;
   // Check explicit allowed origins
   if (ALLOWED_ORIGINS.has(origin)) return true;
-  // Allow any localhost port number
+  // Allow any localhost port number, local network IPs, or Vercel preview links
   try {
     const url = new URL(origin);
-    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+    if (url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "100.110.251.60") {
+      return true;
+    }
+    // Allow Vercel preview deployments (e.g., ryos-git-main-ryo-lus-projects.vercel.app)
+    if (url.hostname.endsWith("-ryo-lus-projects.vercel.app")) {
       return true;
     }
   } catch {

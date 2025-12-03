@@ -16,6 +16,8 @@ export const DIRECT_PASSTHROUGH_DOMAINS = [
   "bravohenry.com",
   "hcsimulator.com",
   "os.rocorgi.wang",
+  "iso-city.com",
+  "shaoruu.io",
 ];
 
 export interface HistoryEntry {
@@ -121,6 +123,13 @@ export const DEFAULT_FAVORITES: Favorite[] = [
     title: "Teenage Engineering",
     url: "https://teenage.engineering/designs",
     favicon: "https://www.google.com/s2/favicons?domain=teenage.engineering&sz=32",
+    year: "current",
+    isDirectory: false,
+  },
+  {
+    title: "ISOCITY",
+    url: "https://iso-city.com",
+    favicon: "https://www.google.com/s2/favicons?domain=iso-city.com&sz=32",
     year: "current",
     isDirectory: false,
   },
@@ -284,7 +293,7 @@ export const DEFAULT_FAVORITES: Favorite[] = [
 ];
 
 // Define the current version for the store
-const CURRENT_IE_STORE_VERSION = 3;
+const CURRENT_IE_STORE_VERSION = 4;
 
 // Helper function to classify year into navigation mode
 function classifyYear(year: string): NavigationMode {

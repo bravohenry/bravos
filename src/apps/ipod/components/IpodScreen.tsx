@@ -7,6 +7,7 @@ import { useAppStore } from "@/stores/useAppStore";
 import { LyricsDisplay } from "./LyricsDisplay";
 import { useLyrics } from "@/hooks/useLyrics";
 import { LyricsAlignment, ChineseVariant, KoreanDisplay } from "@/types/lyrics";
+import { useTranslation } from "react-i18next";
 
 // Minimal BatteryManager interface for browsers that expose navigator.getBattery
 interface BatteryManager {
@@ -103,7 +104,9 @@ function Scrollbar({
   backlightOn,
   menuMode,
 }: {
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef:
+    | React.RefObject<HTMLDivElement | null>
+    | React.MutableRefObject<HTMLDivElement | null>;
   backlightOn: boolean;
   menuMode: boolean;
 }) {
@@ -349,7 +352,7 @@ interface IpodScreenProps {
   menuDirection: "forward" | "backward";
   onMenuItemAction: (action: () => void) => void;
   showVideo: boolean;
-  playerRef: React.RefObject<ReactPlayer>;
+  playerRef: React.RefObject<ReactPlayer | null>;
   handleTrackEnd: () => void;
   handleProgress: (state: { playedSeconds: number }) => void;
   handleDuration: (duration: number) => void;
@@ -412,6 +415,7 @@ export function IpodScreen({
   isFullScreen,
   lyricsControls,
 }: IpodScreenProps) {
+  const { t } = useTranslation();
   // Animation variants for menu transitions
   const menuVariants = {
     enter: (direction: "forward" | "backward") => ({
@@ -429,8 +433,8 @@ export function IpodScreen({
   const currentMenuTitle = menuMode
     ? menuHistory.length > 0
       ? menuHistory[menuHistory.length - 1].title
-      : "iPod"
-    : "Now Playing";
+      : t("apps.ipod.menuItems.ipod")
+    : t("apps.ipod.menuItems.nowPlaying");
 
   // Refs
   const menuScrollRef = useRef<HTMLDivElement>(null);
@@ -695,7 +699,7 @@ export function IpodScreen({
                 const newOffset = lyricOffset + deltaMs;
                 const sign = newOffset > 0 ? "+" : newOffset < 0 ? "" : "";
                 showStatusCallback(
-                  `Offset ${sign}${(newOffset / 1000).toFixed(2)}s`
+                  `${t("apps.ipod.status.offset")} ${sign}${(newOffset / 1000).toFixed(2)}s`
                 );
                 // Force immediate update of lyrics display with new offset
                 const updatedTime = elapsedTime + newOffset / 1000;
@@ -752,7 +756,9 @@ export function IpodScreen({
                       (item, index) => (
                         <div
                           key={index}
-                          ref={(el) => (menuItemsRef.current[index] = el)}
+                          ref={(el) => {
+                            menuItemsRef.current[index] = el;
+                          }}
                           className={`ipod-menu-item ${
                             index === selectedMenuItem ? "selected" : ""
                           }`}

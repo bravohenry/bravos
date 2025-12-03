@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLaunchApp } from "@/hooks/useLaunchApp";
 import { useThemeStore } from "@/stores/useThemeStore";
 import {
@@ -10,14 +11,15 @@ import {
 import { AboutFinderDialog } from "@/components/dialogs/AboutFinderDialog";
 import { AnyApp } from "@/apps/base/types";
 import { AppId } from "@/config/appIds";
-import { getAppIconPath } from "@/config/appRegistry";
 import { ThemedIcon } from "@/components/shared/ThemedIcon";
+import { getTranslatedAppName } from "@/utils/i18n";
 
 interface StartMenuProps {
   apps: AnyApp[];
 }
 
 export function StartMenu({ apps }: StartMenuProps) {
+  const { t } = useTranslation();
   const launchApp = useLaunchApp();
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false);
   const [aboutFinderOpen, setAboutFinderOpen] = useState(false);
@@ -35,7 +37,8 @@ export function StartMenu({ apps }: StartMenuProps) {
           <button
             className="flex items-center gap-1 px-2 text-white font-bold transition-all"
             style={{
-              width: currentTheme === "xp" ? "100px" : "auto",
+              width: currentTheme === "xp" ? "auto" : "auto",
+              minWidth: currentTheme === "xp" ? "100px" : "auto",
               height: currentTheme === "xp" ? "100%" : "85%",
               marginTop: currentTheme === "win98" ? "2px" : "0px",
               marginLeft: currentTheme === "win98" ? "4px" : "0px",
@@ -90,7 +93,7 @@ export function StartMenu({ apps }: StartMenuProps) {
               }}
             />
             <span
-              className={`tracking-wider ${
+              className={`tracking-wider whitespace-nowrap ${
                 currentTheme === "xp" ? "pr-2" : ""
               }`}
               style={{
@@ -100,7 +103,7 @@ export function StartMenu({ apps }: StartMenuProps) {
                     : "none",
               }}
             >
-              {currentTheme === "xp" ? "start" : "Start"}
+              {currentTheme === "xp" ? t("common.startMenu.start").toLowerCase() : t("common.startMenu.start")}
             </span>
           </button>
         </DropdownMenuTrigger>
@@ -152,9 +155,9 @@ export function StartMenu({ apps }: StartMenuProps) {
                     textAlign: "left",
                   }}
                 >
-                  ZiOS{" "}
+                  ryOS{" "}
                   <span style={{ fontWeight: "100" }}>
-                    {currentTheme === "xp" ? "Professional" : "98"}
+                    {currentTheme === "xp" ? t("common.startMenu.ryosProfessional") : t("common.startMenu.ryos98")}
                   </span>
                 </div>
               </div>
@@ -189,7 +192,7 @@ export function StartMenu({ apps }: StartMenuProps) {
                     alt="About"
                     className="w-6 h-6 [image-rendering:pixelated]"
                   />
-                  About This Computer
+                  {t("common.startMenu.aboutThisComputer")}
                 </DropdownMenuItem>
 
                 {/* Separator */}
@@ -199,46 +202,40 @@ export function StartMenu({ apps }: StartMenuProps) {
                 />
 
                 {/* Apps */}
-                {apps.map((app) => {
-                  // Use getAppIconPath to get theme-aware icon path (e.g., console icon for control-panels in OS1)
-                  const iconPath = typeof app.icon === "string" 
-                    ? (app.icon.startsWith("/icons/") ? app.icon : app.icon)
-                    : getAppIconPath(app.id as AppId);
-                  return (
-                    <DropdownMenuItem
-                      key={app.id}
-                      onClick={() => handleAppClick(app.id)}
-                      className="h-8 px-3 flex items-center gap-2 hover:bg-blue-500 hover:text-white"
-                      style={{
-                        fontSize: "11px",
-                        color: "#000000",
-                        fontFamily: "var(--font-ms-sans)",
-                        imageRendering: "pixelated",
-                      }}
-                    >
-                      {typeof app.icon === "string" ? (
-                        app.icon.startsWith("/icons/") ? (
-                          <ThemedIcon
-                            name={iconPath}
-                            alt={app.name}
-                            className="w-6 h-6 [image-rendering:pixelated]"
-                          />
-                        ) : (
-                          <div className="w-6 h-6 flex items-center justify-center">
-                            {app.icon}
-                          </div>
-                        )
-                      ) : (
+                {apps.map((app) => (
+                  <DropdownMenuItem
+                    key={app.id}
+                    onClick={() => handleAppClick(app.id)}
+                    className="h-8 px-3 flex items-center gap-2 hover:bg-blue-500 hover:text-white"
+                    style={{
+                      fontSize: "11px",
+                      color: "#000000",
+                      fontFamily: "var(--font-ms-sans)",
+                      imageRendering: "pixelated",
+                    }}
+                  >
+                    {typeof app.icon === "string" ? (
+                      app.icon.startsWith("/icons/") ? (
                         <ThemedIcon
-                          name={iconPath}
+                          name={app.icon}
                           alt={app.name}
                           className="w-6 h-6 [image-rendering:pixelated]"
                         />
-                      )}
-                      {app.name}
-                    </DropdownMenuItem>
-                  );
-                })}
+                      ) : (
+                        <div className="w-6 h-6 flex items-center justify-center">
+                          {app.icon}
+                        </div>
+                      )
+                    ) : (
+                      <ThemedIcon
+                        name={app.icon.src}
+                        alt={app.name}
+                        className="w-6 h-6 [image-rendering:pixelated]"
+                      />
+                    )}
+                    {getTranslatedAppName(app.id as AppId)}
+                  </DropdownMenuItem>
+                ))}
               </div>
             </div>
           </div>

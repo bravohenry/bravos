@@ -13,6 +13,9 @@ import { useFilesStore, FileSystemItem } from "@/stores/useFilesStore";
 import { useLaunchApp } from "@/hooks/useLaunchApp";
 import { dbOperations } from "@/apps/finder/hooks/useFileSystem";
 import { STORES } from "@/utils/indexedDB";
+import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
+import { useTranslation } from "react-i18next";
+import { getTranslatedAppName } from "@/utils/i18n";
 
 interface DesktopStyles {
   backgroundImage?: string;
@@ -36,6 +39,7 @@ export function Desktop({
   onClick,
   desktopStyles,
 }: DesktopProps) {
+  const { t } = useTranslation();
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
   const [selectedShortcutPath, setSelectedShortcutPath] = useState<string | null>(null);
   const { wallpaperSource, isVideoWallpaper } = useWallpaper();
@@ -47,6 +51,7 @@ export function Desktop({
   } | null>(null);
   const [contextMenuAppId, setContextMenuAppId] = useState<string | null>(null);
   const [contextMenuShortcutPath, setContextMenuShortcutPath] = useState<string | null>(null);
+  const [isEmptyTrashDialogOpen, setIsEmptyTrashDialogOpen] = useState(false);
 
   // Get current theme for layout adjustments
   const currentTheme = useThemeStore((state) => state.current);
@@ -113,10 +118,14 @@ export function Desktop({
       return a.name.localeCompare(b.name);
     });
 
-  // Remove file extension from display name (for desktop shortcuts)
-  const getDisplayName = (name: string): string => {
-    // Remove common file extensions
-    return name.replace(/\.[^/.]+$/, "");
+  // Get display name for desktop shortcuts (with translation)
+  const getDisplayName = (shortcut: FileSystemItem): string => {
+    // For app aliases, use translated app name
+    if (shortcut.aliasType === "app" && shortcut.aliasTarget) {
+      return getTranslatedAppName(shortcut.aliasTarget as AppId);
+    }
+    // For file aliases, remove file extension
+    return shortcut.name.replace(/\.[^/.]+$/, "");
   };
 
   // Resolve and open alias target
@@ -452,6 +461,28 @@ export function Desktop({
     setContextMenuPos(null);
   };
 
+  const handleEmptyTrash = () => {
+    setIsEmptyTrashDialogOpen(true);
+  };
+
+  const confirmEmptyTrash = async () => {
+    // 1. Permanently delete metadata from FileStore and get UUIDs of files whose content needs deletion
+    const contentUUIDsToDelete = fileStore.emptyTrash();
+
+    // 2. Clear corresponding content from TRASH IndexedDB store
+    try {
+      // Delete content based on UUIDs collected from fileStore.emptyTrash()
+      for (const uuid of contentUUIDsToDelete) {
+        await dbOperations.delete(STORES.TRASH, uuid);
+      }
+      console.log("[Desktop] Cleared trash content from IndexedDB.");
+    } catch (err) {
+      console.error("Error clearing trash content from IndexedDB:", err);
+    }
+    
+    setIsEmptyTrashDialogOpen(false);
+  };
+
   // Compute sorted apps based on selected sort type
   const sortedApps = [...apps]
     .filter(
@@ -480,120 +511,9 @@ export function Desktop({
       : sortedApps;
 
   // Create default shortcuts based on theme
-  useEffect(() => {
-    // Ensure apps are loaded and Desktop folder exists
-    if (!apps || apps.length === 0) return;
-    
-    const desktopFolder = fileStore.getItem("/Desktop");
-    if (!desktopFolder || !desktopFolder.isDirectory) {
-      // Desktop folder doesn't exist yet, wait for it to be initialized
-      return;
-    }
+  // Note: Logic moved to useFilesStore.ts (ensureDefaultDesktopShortcuts)
+  // to handle initialization race conditions.
 
-    // Get current desktop shortcuts (active) and trashed items
-    const desktopItems = fileStore.getItemsInPath("/Desktop");
-    const trashedItems = fileStore.getTrashItems();
-    
-    // Define the default order for desktop shortcuts
-    const defaultOrder: AppId[] = [
-      "ipod",
-      "chats",
-      "applet-viewer",
-      "internet-explorer",
-      "textedit",
-      "photo-booth",
-      "videos",
-      "paint",
-      "soundboard",
-      "minesweeper",
-      "synth",
-      "terminal",
-      "pc",
-    ];
-
-    // Determine which apps should have shortcuts based on theme
-    let appsToShortcut: typeof apps;
-    if (currentTheme === "macosx") {
-      // macOS X: only iPod and Applet Store (applet-viewer) as default shortcuts
-      appsToShortcut = apps.filter(
-        (app) => app.id === "ipod" || app.id === "applet-viewer"
-      );
-    } else {
-      // Other themes: all apps except Finder and Control Panels
-      appsToShortcut = apps.filter(
-        (app) => app.id !== "finder" && app.id !== "control-panels"
-      );
-    }
-
-    // Sort apps according to default order, then alphabetically for any not in the list
-    const sortedAppsToShortcut = [...appsToShortcut].sort((a, b) => {
-      const aIndex = defaultOrder.indexOf(a.id as AppId);
-      const bIndex = defaultOrder.indexOf(b.id as AppId);
-      
-      // If both are in the order list, sort by their position
-      if (aIndex !== -1 && bIndex !== -1) {
-        return aIndex - bIndex;
-      }
-      // If only one is in the list, prioritize it
-      if (aIndex !== -1) return -1;
-      if (bIndex !== -1) return 1;
-      // If neither is in the list, sort alphabetically
-      return a.name.localeCompare(b.name);
-    });
-
-    // Create shortcuts for apps that don't have them yet, in the specified order.
-    // We consider both active and previously trashed shortcuts so that if the
-    // user deletes a default icon, it is not auto-added back on theme changes.
-    sortedAppsToShortcut.forEach((app) => {
-      const appId = app.id as AppId;
-
-      const hasActiveShortcut = desktopItems.some(
-        (item) => item.aliasType === "app" && item.aliasTarget === appId
-      );
-
-      const hasTrashedShortcut = trashedItems.some(
-        (item) =>
-          item.aliasType === "app" &&
-          item.aliasTarget === appId &&
-          item.originalPath?.startsWith("/Desktop/")
-      );
-
-      if (hasActiveShortcut || hasTrashedShortcut) {
-        return;
-      }
-
-      // Use app path if available
-      const appPath = `/Applications/${app.name}`;
-      fileStore.createAlias(appPath, app.name, "app", appId);
-
-      // Mark default shortcuts as theme-conditional by hiding them on macOS X
-      // unless they are iPod or Applet Store, which should always be visible.
-      const latestDesktopItems = fileStore.getItemsInPath("/Desktop");
-      const createdShortcut = latestDesktopItems.find(
-        (item) =>
-          item.aliasType === "app" &&
-          item.aliasTarget === appId &&
-          item.status === "active"
-      );
-
-      if (!createdShortcut) {
-        return;
-      }
-
-      // Only apply theme-conditional hiding for non-macOS themes and only for
-      // apps that are NOT iPod or Applet Store.
-      if (
-        currentTheme !== "macosx" &&
-        appId !== "ipod" &&
-        appId !== "applet-viewer"
-      ) {
-        fileStore.updateItemMetadata(createdShortcut.path, {
-          hiddenOnThemes: ["macosx"],
-        });
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apps, currentTheme]);
 
   const getContextMenuItems = (): MenuItem[] => {
     if (contextMenuShortcutPath) {
@@ -601,7 +521,7 @@ export function Desktop({
       return [
         {
           type: "item",
-          label: "Open",
+          label: t("apps.finder.contextMenu.open"),
           onSelect: () => {
             const shortcut = fileStore.getItem(contextMenuShortcutPath);
             if (shortcut) {
@@ -614,7 +534,7 @@ export function Desktop({
         { type: "separator" },
         {
           type: "item",
-          label: "Move to Trash",
+          label: t("apps.finder.contextMenu.moveToTrash"),
           onSelect: handleShortcutDelete,
         },
       ];
@@ -624,7 +544,7 @@ export function Desktop({
         return [
           {
             type: "item",
-            label: "Open",
+            label: t("apps.finder.contextMenu.open"),
             onSelect: () => {
               localStorage.setItem("app_finder_initialPath", "/Trash");
               const finderApp = apps.find((app) => app.id === "finder");
@@ -640,24 +560,27 @@ export function Desktop({
       return [
         {
           type: "item",
-          label: "Open",
+          label: t("apps.finder.contextMenu.open"),
           onSelect: () => handleOpenApp(contextMenuAppId),
         },
       ];
     } else {
       // Blank desktop context menu
+      const trashItems = fileStore.getTrashItems();
+      const isTrashEmpty = trashItems.length === 0;
+      
       return [
         {
           type: "submenu",
-          label: "Sort By",
+          label: t("apps.finder.contextMenu.sortBy"),
           items: [
             {
               type: "radioGroup",
               value: sortType,
               onChange: (val) => setSortType(val as SortType),
               items: [
-                { label: "Name", value: "name" },
-                { label: "Kind", value: "kind" },
+                { label: t("apps.finder.contextMenu.name"), value: "name" },
+                { label: t("apps.finder.contextMenu.kind"), value: "kind" },
               ],
             },
           ],
@@ -665,7 +588,14 @@ export function Desktop({
         { type: "separator" },
         {
           type: "item",
-          label: "Set Wallpaper…",
+          label: t("apps.finder.contextMenu.emptyTrash"),
+          onSelect: handleEmptyTrash,
+          disabled: isTrashEmpty,
+        },
+        { type: "separator" },
+        {
+          type: "item",
+          label: t("common.desktop.setWallpaper"),
           onSelect: () => toggleApp("control-panels"),
         },
       ];
@@ -757,7 +687,7 @@ export function Desktop({
           }
         >
           <FileIcon
-            name={isXpTheme ? "My Computer" : "Macintosh HD"}
+            name={isXpTheme ? t("common.desktop.myComputer") : t("apps.finder.window.macintoshHd")}
             isDirectory={true}
             icon={
               isXpTheme ? "/icons/default/pc.png" : "/icons/default/disk.png"
@@ -800,7 +730,7 @@ export function Desktop({
               }}
             >
               <FileIcon
-                name={getDisplayName(shortcut.name)}
+                name={getDisplayName(shortcut)}
                 isDirectory={false}
                 icon={getShortcutIcon(shortcut)}
                 onClick={(e) => {
@@ -850,7 +780,7 @@ export function Desktop({
           {/* Display Trash icon at the end for non-macOS X themes */}
           {currentTheme !== "macosx" && (
             <FileIcon
-              name="Trash"
+              name={t("common.menu.trash")}
               isDirectory={true}
               icon={trashIcon}
               onClick={(e) => {
@@ -889,6 +819,13 @@ export function Desktop({
           setContextMenuShortcutPath(null);
         }}
         items={getContextMenuItems()}
+      />
+      <ConfirmDialog
+        isOpen={isEmptyTrashDialogOpen}
+        onOpenChange={setIsEmptyTrashDialogOpen}
+        onConfirm={confirmEmptyTrash}
+        title={t("apps.finder.dialogs.emptyTrash.title")}
+        description={t("apps.finder.dialogs.emptyTrash.description")}
       />
     </div>
   );

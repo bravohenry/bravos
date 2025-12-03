@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface InputDialogProps {
   isOpen: boolean;
@@ -44,12 +45,14 @@ export function InputDialog({
   isLoading = false,
   errorMessage = null,
   additionalActions = [],
-  submitLabel = "Save",
+  submitLabel,
   showCancel = true,
 }: InputDialogProps) {
+  const { t } = useTranslation();
   const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
   const isMacTheme = currentTheme === "macosx";
+  const defaultSubmitLabel = submitLabel || t("common.dialog.save");
 
   const handleSubmit = () => {
     if (!isLoading) {
@@ -68,7 +71,7 @@ export function InputDialog({
         )}
         style={{
           fontFamily: isXpTheme
-            ? '"Pixelated MS Sans Serif", Arial'
+            ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
             : undefined,
           fontSize: isXpTheme ? "11px" : undefined,
         }}
@@ -94,7 +97,7 @@ export function InputDialog({
         )}
         style={{
           fontFamily: isXpTheme
-            ? '"Pixelated MS Sans Serif", Arial'
+            ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
             : undefined,
           fontSize: isXpTheme ? "11px" : undefined,
         }}
@@ -121,7 +124,7 @@ export function InputDialog({
                 )}
                 style={{
                   fontFamily: isXpTheme
-                    ? '"Pixelated MS Sans Serif", Arial'
+                    ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
                     : undefined,
                   fontSize: isXpTheme ? "11px" : undefined,
                 }}
@@ -147,7 +150,7 @@ export function InputDialog({
                 )}
                 style={{
                   fontFamily: isXpTheme
-                    ? '"Pixelated MS Sans Serif", Arial'
+                    ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
                     : undefined,
                   fontSize: isXpTheme ? "11px" : undefined,
                 }}
@@ -169,12 +172,12 @@ export function InputDialog({
               )}
               style={{
                 fontFamily: isXpTheme
-                  ? '"Pixelated MS Sans Serif", Arial'
+                  ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
                   : undefined,
                 fontSize: isXpTheme ? "11px" : undefined,
               }}
             >
-              Cancel
+              {t("common.dialog.cancel")}
             </Button>
           )}
           <Button
@@ -190,12 +193,12 @@ export function InputDialog({
             )}
             style={{
               fontFamily: isXpTheme
-                ? '"Pixelated MS Sans Serif", Arial'
+                ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
                 : undefined,
               fontSize: isXpTheme ? "11px" : undefined,
             }}
           >
-            {isLoading ? "Adding..." : submitLabel}
+            {isLoading ? t("common.dialog.adding") : defaultSubmitLabel}
           </Button>
         </div>
       </DialogFooter>

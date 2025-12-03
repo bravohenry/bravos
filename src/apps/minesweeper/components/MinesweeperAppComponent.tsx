@@ -7,9 +7,12 @@ import { AboutDialog } from "@/components/dialogs/AboutDialog";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { helpItems, appMetadata } from "..";
+import { useTranslatedHelpItems } from "@/hooks/useTranslatedHelpItems";
 import { useSound, Sounds } from "@/hooks/useSound";
 import { isMobileDevice } from "@/utils/device";
 import { useThemeStore } from "@/stores/useThemeStore";
+import { getTranslatedAppName } from "@/utils/i18n";
+import { useTranslation } from "react-i18next";
 
 const BOARD_SIZE = 9;
 const MINES_COUNT = 10;
@@ -180,6 +183,8 @@ export function MinesweeperAppComponent({
   onNavigateNext,
   onNavigatePrevious,
 }: AppProps) {
+  const { t } = useTranslation();
+  const translatedHelpItems = useTranslatedHelpItems("minesweeper", helpItems || []);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
   const [isNewGameDialogOpen, setIsNewGameDialogOpen] = useState(false);
@@ -462,7 +467,7 @@ export function MinesweeperAppComponent({
       <style>{minesweeperStyles}</style>
       {!isXpTheme && isForeground && menuBar}
       <WindowFrame
-        title="Minesweeper"
+        title={getTranslatedAppName("minesweeper")}
         onClose={onClose}
         isForeground={isForeground}
         appId="minesweeper"
@@ -494,7 +499,7 @@ export function MinesweeperAppComponent({
                       isMacTheme ? "text-xs" : "text-[16px]"
                     } mt-[-6px]`}
                   >
-                    Left
+                    {t("apps.minesweeper.lcd.left")}
                   </span>
                 </div>
                 <div className="flex flex-col items-center absolute left-1/2 -translate-x-1/2">
@@ -528,7 +533,7 @@ export function MinesweeperAppComponent({
                       isMacTheme ? "text-xs" : "text-[16px]"
                     } mt-[-6px]`}
                   >
-                    Total
+                    {t("apps.minesweeper.lcd.total")}
                   </span>
                 </div>
               </div>
@@ -553,8 +558,8 @@ export function MinesweeperAppComponent({
         <HelpDialog
           isOpen={isHelpDialogOpen}
           onOpenChange={setIsHelpDialogOpen}
-          helpItems={helpItems || []}
-          appName="Minesweeper"
+          helpItems={translatedHelpItems}
+          appId="minesweeper"
         />
         <AboutDialog
           isOpen={isAboutDialogOpen}
@@ -568,6 +573,7 @@ export function MinesweeperAppComponent({
               icon: "/icons/default/minesweeper.png",
             }
           }
+          appId="minesweeper"
         />
         <ConfirmDialog
           isOpen={isNewGameDialogOpen}

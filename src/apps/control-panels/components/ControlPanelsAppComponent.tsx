@@ -8,6 +8,8 @@ import { LoginDialog } from "@/components/dialogs/LoginDialog";
 import { InputDialog } from "@/components/dialogs/InputDialog";
 import { LogoutDialog } from "@/components/dialogs/LogoutDialog";
 import { helpItems, appMetadata } from "..";
+import { useTranslatedHelpItems } from "@/hooks/useTranslatedHelpItems";
+import { getTranslatedAppName } from "@/utils/i18n";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -27,6 +29,7 @@ import { SYNTH_PRESETS } from "@/hooks/useChatSynth";
 import { useFileSystem } from "@/apps/finder/hooks/useFileSystem";
 import { useAppStoreShallow } from "@/stores/helpers";
 import { setNextBootMessage, clearNextBootMessage } from "@/utils/bootMessage";
+import { clearPrefetchFlag, forceRefreshCache } from "@/utils/prefetch";
 import { AIModel, AI_MODEL_METADATA } from "@/types/aiModels";
 import { VolumeMixer } from "./VolumeMixer";
 import { v4 as uuidv4 } from "uuid";
@@ -37,6 +40,8 @@ import { useThemeStore } from "@/stores/useThemeStore";
 import { themes } from "@/themes";
 import { OsThemeId } from "@/themes/types";
 import { getTabStyles } from "@/utils/tabStyles";
+import { useLanguageStore, type LanguageCode } from "@/stores/useLanguageStore";
+import { useTranslation } from "react-i18next";
 
 interface StoreItem {
   name: string;
@@ -54,14 +59,11 @@ interface StoreItemWithKey {
 
 type PhotoCategory =
   | "3d_graphics"
-  | "aqua"
   | "convergency"
   | "foliage"
-  | "graphics"
   | "landscapes"
   | "nostalgia"
   | "objects"
-  | "os1"
   | "structures";
 
 const PHOTO_WALLPAPERS: Record<PhotoCategory, string[]> = {
@@ -76,7 +78,6 @@ const PHOTO_WALLPAPERS: Record<PhotoCategory, string[]> = {
     "ufo_2",
     "ufo_3",
   ],
-  aqua: [], // Aqua 主题壁纸，从 manifest 动态加载
   convergency: Array.from({ length: 15 }, (_, i) => `convergence_${i + 1}`),
   foliage: [
     "blue_flowers",
@@ -88,17 +89,6 @@ const PHOTO_WALLPAPERS: Record<PhotoCategory, string[]> = {
     "spider_lily",
     "waterdrops_on_leaf",
     "yellow_tulips",
-  ],
-  graphics: [
-    "capsule",
-    "capsule_azul",
-    "capsule_pistachio",
-    "tub",
-    "tub_azul",
-    "tub_bondi",
-    "ufo_1",
-    "ufo_2",
-    "ufo_3",
   ],
   landscapes: [
     "beach",
@@ -158,7 +148,6 @@ const PHOTO_WALLPAPERS: Record<PhotoCategory, string[]> = {
     "stone_wall",
     "wall_of_stones",
   ],
-  os1: [], // OS1 主题壁纸，从 manifest 动态加载
 };
 
 // Transform photo paths
@@ -196,6 +185,23 @@ const base64ToBlob = (dataUrl: string): Blob => {
   return new Blob([array], { type: mime });
 };
 
+// Version display component that reads from app store
+function VersionDisplay() {
+  const { ryOSVersion, ryOSBuildNumber } = useAppStoreShallow((state) => ({
+    ryOSVersion: state.ryOSVersion,
+    ryOSBuildNumber: state.ryOSBuildNumber,
+  }));
+  
+  const displayVersion = ryOSVersion || "...";
+  const displayBuild = ryOSBuildNumber ? ` (${ryOSBuildNumber})` : "";
+  
+  return (
+    <p className="text-[11px] text-gray-600 font-geneva-12">
+      Current version: ryOS {displayVersion}{displayBuild}
+    </p>
+  );
+}
+
 export function ControlPanelsAppComponent({
   isWindowOpen,
   onClose,
@@ -206,6 +212,7 @@ export function ControlPanelsAppComponent({
   onNavigateNext,
   onNavigatePrevious,
 }: AppProps<ControlPanelsInitialData>) {
+  const translatedHelpItems = useTranslatedHelpItems("control-panels", helpItems);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
   const [isConfirmResetOpen, setIsConfirmResetOpen] = useState(false);
@@ -277,6 +284,10 @@ export function ControlPanelsAppComponent({
 
   // Theme state
   const { current: currentTheme, setTheme } = useThemeStore();
+  
+  // Language state
+  const { current: currentLanguage, setLanguage } = useLanguageStore();
+  const { t } = useTranslation();
 
   // Use auth hook
   const {
@@ -488,20 +499,21 @@ export function ControlPanelsAppComponent({
 
   const handleConfirmReset = () => {
     setIsConfirmResetOpen(false);
-    setNextBootMessage("Resetting System...");
+    setNextBootMessage(t("common.system.resettingSystem"));
     performReset();
   };
 
   const performReset = () => {
     // Preserve critical recovery keys while clearing everything else
-    const fileMetadataStore = localStorage.getItem("zios:files");
+    const fileMetadataStore = localStorage.getItem("ryos:files");
     const usernameRecovery = localStorage.getItem("_usr_recovery_key_");
     const authTokenRecovery = localStorage.getItem("_auth_recovery_key_");
 
     clearAllAppStates();
+    clearPrefetchFlag(); // Force re-prefetch on next boot
 
     if (fileMetadataStore) {
-      localStorage.setItem("zios:files", fileMetadataStore);
+      localStorage.setItem("ryos:files", fileMetadataStore);
     }
     if (usernameRecovery) {
       localStorage.setItem("_usr_recovery_key_", usernameRecovery);
@@ -662,7 +674,7 @@ export function ControlPanelsAppComponent({
       }
 
       // Combine chunks into a single blob
-      const compressedBlob = new Blob(chunks, { type: "application/gzip" });
+      const compressedBlob = new Blob(chunks as BlobPart[], { type: "application/gzip" });
 
       // Create download link
       const url = URL.createObjectURL(compressedBlob);
@@ -674,7 +686,7 @@ export function ControlPanelsAppComponent({
         .split("T")
         .join("-")
         .slice(0, -5);
-      a.download = `ZiOS-backup-${timestamp}.gz`;
+      a.download = `ryOS-backup-${timestamp}.gz`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -773,10 +785,10 @@ export function ControlPanelsAppComponent({
           console.log(
             "[Restore] Detected old backup format (no version or version < 2)"
           );
-        } else if (backup.localStorage && backup.localStorage["zios:files"]) {
+        } else if (backup.localStorage && backup.localStorage["ryos:files"]) {
           // For newer backups, also check if files lack UUIDs
           try {
-            const filesDataStr = backup.localStorage["zios:files"];
+            const filesDataStr = backup.localStorage["ryos:files"];
             const filesData = filesDataStr ? JSON.parse(filesDataStr) : {};
             if (filesData.state && filesData.state.items) {
               // Check if any files lack UUIDs
@@ -937,7 +949,7 @@ export function ControlPanelsAppComponent({
           /* Synchronize files store metadata with IndexedDB content after restore */
           try {
             const db = await ensureIndexedDBInitialized();
-            const persistedKey = "zios:files";
+            const persistedKey = "ryos:files";
             let raw = localStorage.getItem(persistedKey);
 
             // Handle case where files store doesn't exist yet (very old backups)
@@ -1361,7 +1373,7 @@ export function ControlPanelsAppComponent({
 
               // Clear any migration flag to ensure migration doesn't run again
               localStorage.setItem(
-                "zios:indexeddb-uuid-migration-v1",
+                "ryos:indexeddb-uuid-migration-v1",
                 "completed"
               );
               console.log("[Restore] UUID migration completed during restore");
@@ -1376,7 +1388,7 @@ export function ControlPanelsAppComponent({
 
             // Emergency fallback: ensure library state is set to prevent auto-init even on error
             try {
-              const persistedKey = "zios:files";
+              const persistedKey = "ryos:files";
               const raw = localStorage.getItem(persistedKey);
               if (raw) {
                 const parsed = JSON.parse(raw);
@@ -1416,7 +1428,7 @@ export function ControlPanelsAppComponent({
             }
           }
         }
-        setNextBootMessage("Restoring System...");
+        setNextBootMessage(t("common.system.restoringSystem"));
         window.location.reload();
       } catch (err) {
         console.error("Backup restore failed:", err);
@@ -1448,19 +1460,19 @@ export function ControlPanelsAppComponent({
     // Reset wallpaper to default before formatting
     setCurrentWallpaper("/wallpapers/photos/aqua/water.jpg");
     await formatFileSystem();
-    setNextBootMessage("Formatting File System...");
+    clearPrefetchFlag(); // Force re-prefetch on next boot
+    setNextBootMessage(t("common.system.formattingFileSystem"));
     window.location.reload();
   };
 
   const handleConfirmFormat = () => {
     setIsConfirmFormatOpen(false);
-    setNextBootMessage("Formatting File System...");
+    setNextBootMessage(t("common.system.formattingFileSystem"));
     performFormat();
   };
 
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
   const isMacOSXTheme = currentTheme === "macosx";
-  const isOS1Theme = currentTheme === "os1";
   const isSystem7Theme = currentTheme === "system7";
   const isClassicMacTheme = isMacOSXTheme || isSystem7Theme;
   const isWindowsLegacyTheme = isXpTheme;
@@ -1481,7 +1493,7 @@ export function ControlPanelsAppComponent({
     <>
       {!isXpTheme && isForeground && menuBar}
       <WindowFrame
-        title="Control Panels"
+        title={getTranslatedAppName("control-panels")}
         onClose={onClose}
         isForeground={isForeground}
         appId="control-panels"
@@ -1492,21 +1504,15 @@ export function ControlPanelsAppComponent({
         menuBar={isXpTheme ? menuBar : undefined}
       >
         <div
-          className={`flex flex-col h-full w-full control-panels-os1 ${
+          className={`flex flex-col h-full w-full ${
             isWindowsLegacyTheme ? "pt-0 pb-2 px-2" : ""
           } ${
             isClassicMacTheme
               ? isMacOSXTheme
                 ? "p-4 pt-2"
                 : "p-4 bg-[#E3E3E3]"
-              : isOS1Theme
-              ? "bg-white/85 backdrop-blur-xl"
               : ""
           }`}
-          style={isOS1Theme ? {
-            backdropFilter: "blur(30px) saturate(180%)",
-            WebkitBackdropFilter: "blur(30px) saturate(180%)",
-          } : undefined}
         >
           <Tabs
             defaultValue={initialData?.defaultTab || "appearance"}
@@ -1518,9 +1524,9 @@ export function ControlPanelsAppComponent({
                   role="tablist"
                   className="h-7! flex justify-start! p-0 -mt-1 -mb-[2px] bg-transparent shadow-none /* Windows XP/98 tab strip */"
                 >
-                  <TabsTrigger value="appearance">Appearance</TabsTrigger>
-                  <TabsTrigger value="sound">Sound</TabsTrigger>
-                  <TabsTrigger value="system">System</TabsTrigger>
+                  <TabsTrigger value="appearance">{t("apps.control-panels.appearance")}</TabsTrigger>
+                  <TabsTrigger value="sound">{t("apps.control-panels.sound")}</TabsTrigger>
+                  <TabsTrigger value="system">{t("apps.control-panels.system")}</TabsTrigger>
                 </menu>
               </TabsList>
             ) : (
@@ -1529,19 +1535,19 @@ export function ControlPanelsAppComponent({
                   value="appearance"
                   className={tabStyles.tabTriggerClasses}
                 >
-                  Appearance
+                  {t("apps.control-panels.appearance")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="sound"
                   className={tabStyles.tabTriggerClasses}
                 >
-                  Sound
+                  {t("apps.control-panels.sound")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="system"
                   className={tabStyles.tabTriggerClasses}
                 >
-                  System
+                  {t("apps.control-panels.system")}
                 </TabsTrigger>
               </TabsList>
             )}
@@ -1554,18 +1560,18 @@ export function ControlPanelsAppComponent({
                 {/* Theme Selector */}
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col gap-1">
-                    <Label>Theme</Label>
+                    <Label>{t("apps.control-panels.theme")}</Label>
                     <Label className="text-[11px] text-gray-600 font-geneva-12">
-                      Changes the appearance of windows, menus, and controls
+                      {t("apps.control-panels.themeDescription")}
                     </Label>
                   </div>
                   <Select
                     value={currentTheme}
                     onValueChange={(value) => setTheme(value as OsThemeId)}
                   >
-                    <SelectTrigger className="w-[160px]">
-                      <SelectValue placeholder="Select">
-                        {themes[currentTheme]?.name || "Select"}
+                    <SelectTrigger className="w-[120px]">
+                      <SelectValue placeholder={t("apps.control-panels.select")}>
+                        {themes[currentTheme]?.name || t("apps.control-panels.select")}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
@@ -1574,6 +1580,49 @@ export function ControlPanelsAppComponent({
                           {theme.name}
                         </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Language Selector */}
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-1">
+                    <Label>{t("settings.language.title")}</Label>
+                    <Label className="text-[11px] text-gray-600 font-geneva-12">
+                      {t("settings.language.description")}
+                    </Label>
+                  </div>
+                  <Select
+                    value={currentLanguage}
+                    onValueChange={(value) => setLanguage(value as LanguageCode)}
+                  >
+                    <SelectTrigger className="w-[120px]">
+                      <SelectValue>
+                        {t(`settings.language.${
+                          currentLanguage === "zh-TW" ? "chineseTraditional" :
+                          currentLanguage === "ja" ? "japanese" :
+                          currentLanguage === "ko" ? "korean" :
+                          currentLanguage === "es" ? "spanish" :
+                          currentLanguage === "fr" ? "french" :
+                          currentLanguage === "de" ? "german" :
+                          currentLanguage === "pt" ? "portuguese" :
+                          currentLanguage === "it" ? "italian" :
+                          currentLanguage === "ru" ? "russian" :
+                          "english"
+                        }`)}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">{t("settings.language.english")}</SelectItem>
+                      <SelectItem value="zh-TW">{t("settings.language.chineseTraditional")}</SelectItem>
+                      <SelectItem value="ja">{t("settings.language.japanese")}</SelectItem>
+                      <SelectItem value="ko">{t("settings.language.korean")}</SelectItem>
+                      <SelectItem value="es">{t("settings.language.spanish")}</SelectItem>
+                      <SelectItem value="fr">{t("settings.language.french")}</SelectItem>
+                      <SelectItem value="de">{t("settings.language.german")}</SelectItem>
+                      <SelectItem value="pt">{t("settings.language.portuguese")}</SelectItem>
+                      <SelectItem value="it">{t("settings.language.italian")}</SelectItem>
+                      <SelectItem value="ru">{t("settings.language.russian")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1592,7 +1641,7 @@ export function ControlPanelsAppComponent({
                 {/* UI Sounds toggle + volume */}
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center justify-between">
-                    <Label>UI Sounds</Label>
+                    <Label>{t("apps.control-panels.uiSounds")}</Label>
                     <Switch
                       checked={uiSoundsEnabled}
                       onCheckedChange={handleUISoundsChange}
@@ -1603,7 +1652,7 @@ export function ControlPanelsAppComponent({
 
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center justify-between">
-                    <Label>Speech</Label>
+                    <Label>{t("apps.control-panels.speech")}</Label>
                     <Switch
                       checked={speechEnabled}
                       onCheckedChange={handleSpeechChange}
@@ -1614,7 +1663,7 @@ export function ControlPanelsAppComponent({
 
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col gap-1">
-                    <Label>Terminal & IE Ambient Synth</Label>
+                    <Label>{t("apps.control-panels.terminalIeAmbientSynth")}</Label>
                   </div>
                   <Switch
                     checked={terminalSoundsEnabled}
@@ -1626,13 +1675,13 @@ export function ControlPanelsAppComponent({
                 {/* Chat Synth preset */}
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center justify-between">
-                    <Label>Chat Synth</Label>
+                    <Label>{t("apps.control-panels.chatSynth")}</Label>
                     <Select
                       value={synthPreset}
                       onValueChange={handleSynthPresetChange}
                     >
                       <SelectTrigger className="w-[120px]">
-                        <SelectValue placeholder="Select a preset" />
+                        <SelectValue placeholder={t("apps.control-panels.selectAPreset")} />
                       </SelectTrigger>
                       <SelectContent>
                         {Object.entries(SYNTH_PRESETS).map(([key, preset]) => (
@@ -1690,7 +1739,7 @@ export function ControlPanelsAppComponent({
                             @{username}
                           </span>
                           <span className="text-[11px] text-gray-600 font-geneva-12">
-                            Logged in to ZiOS
+                            {t("apps.control-panels.loggedInToRyOS")}
                           </span>
                         </div>
                         <div className="flex gap-2">
@@ -1700,7 +1749,7 @@ export function ControlPanelsAppComponent({
                               onClick={promptVerifyToken}
                               className="h-7"
                             >
-                              Log In
+                              {t("apps.control-panels.logIn")}
                             </Button>
                           )}
                           {hasPassword === false ? (
@@ -1713,7 +1762,7 @@ export function ControlPanelsAppComponent({
                               }}
                               className="h-7"
                             >
-                              Set Password
+                              {t("apps.control-panels.setPassword")}
                             </Button>
                           ) : (
                             <Button
@@ -1721,7 +1770,7 @@ export function ControlPanelsAppComponent({
                               onClick={logout}
                               className="h-7"
                             >
-                              Log Out
+                              {t("apps.control-panels.logOut")}
                             </Button>
                           )}
                         </div>
@@ -1735,8 +1784,8 @@ export function ControlPanelsAppComponent({
                             className="w-full"
                           >
                             {isLoggingOutAllDevices
-                              ? "Logging out..."
-                              : "Log Out of All Devices"}
+                              ? t("apps.control-panels.loggingOut")
+                              : t("apps.control-panels.logOutOfAllDevices")}
                           </Button>
                         </div>
                       )}
@@ -1746,10 +1795,10 @@ export function ControlPanelsAppComponent({
                       <div className="flex items-center justify-between">
                         <div className="flex flex-col">
                           <span className="text-[13px] font-geneva-12 font-medium">
-                            ZiOS Account
+                            {t("apps.control-panels.ryOSAccount")}
                           </span>
                           <span className="text-[11px] text-gray-600 font-geneva-12">
-                            Login to send messages and more
+                            {t("apps.control-panels.loginToSendMessages")}
                           </span>
                         </div>
                         <Button
@@ -1757,7 +1806,7 @@ export function ControlPanelsAppComponent({
                           onClick={promptSetUsername}
                           className="h-7"
                         >
-                          Login
+                          {t("apps.control-panels.login")}
                         </Button>
                       </div>
                     </div>
@@ -1770,20 +1819,33 @@ export function ControlPanelsAppComponent({
                 />
 
                 <div className="space-y-2">
+                  <Button
+                    variant="retro"
+                    onClick={() => {
+                      forceRefreshCache();
+                    }}
+                    className="w-full"
+                  >
+                    {t("apps.control-panels.checkForUpdates")}
+                  </Button>
+                  <VersionDisplay />
+                </div>
+
+                <div className="space-y-2">
                   <div className="flex gap-2">
                     <Button
                       variant="retro"
                       onClick={handleBackup}
                       className="flex-1"
                     >
-                      Backup
+                      {t("apps.control-panels.backup")}
                     </Button>
                     <Button
                       variant="retro"
                       onClick={() => fileInputRef.current?.click()}
                       className="flex-1"
                     >
-                      Restore
+                      {t("apps.control-panels.restore")}
                     </Button>
                     <input
                       type="file"
@@ -1794,7 +1856,7 @@ export function ControlPanelsAppComponent({
                     />
                   </div>
                   <p className="text-[11px] text-gray-600 font-geneva-12">
-                    Backup or restore all app settings and files
+                    {t("apps.control-panels.backupRestoreDescription")}
                   </p>
                 </div>
 
@@ -1804,11 +1866,10 @@ export function ControlPanelsAppComponent({
                     onClick={handleResetAll}
                     className="w-full"
                   >
-                    Reset All Settings
+                    {t("apps.control-panels.resetAllSettings")}
                   </Button>
                   <p className="text-[11px] text-gray-600 font-geneva-12">
-                    This will clear all saved settings and restore default
-                    states.
+                    {t("apps.control-panels.resetAllSettingsDescription")}
                   </p>
                 </div>
 
@@ -1820,11 +1881,10 @@ export function ControlPanelsAppComponent({
                     }}
                     className="w-full"
                   >
-                    Format File System
+                    {t("apps.control-panels.formatFileSystem")}
                   </Button>
                   <p className="text-[11px] text-gray-600 font-geneva-12">
-                    This will clear all files (except sample docs), images, and
-                    custom wallpapers. ZiOS will restart after format.
+                    {t("apps.control-panels.formatFileSystemDescription")}
                   </p>
                 </div>
 
@@ -1835,9 +1895,9 @@ export function ControlPanelsAppComponent({
 
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col gap-1">
-                    <Label>Debug Mode</Label>
+                    <Label>{t("apps.control-panels.debugMode")}</Label>
                     <Label className="text-[11px] text-gray-600 font-geneva-12">
-                      Enable debugging settings
+                      {t("apps.control-panels.debugModeDescription")}
                     </Label>
                   </div>
                   <Switch
@@ -1850,9 +1910,9 @@ export function ControlPanelsAppComponent({
                 {debugMode && (
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-1">
-                      <Label>Shader Effect</Label>
+                      <Label>{t("apps.control-panels.shaderEffect")}</Label>
                       <Label className="text-[11px] text-gray-600 font-geneva-12">
-                        Performance intensive background effect
+                        {t("apps.control-panels.shaderEffectDescription")}
                       </Label>
                     </div>
                     <Switch
@@ -1866,9 +1926,9 @@ export function ControlPanelsAppComponent({
                 {debugMode && (
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-1">
-                      <Label>AI Model</Label>
+                      <Label>{t("apps.control-panels.aiModel")}</Label>
                       <Label className="text-[11px] text-gray-600 font-geneva-12">
-                        Used in Chats, IE, and more
+                        {t("apps.control-panels.aiModelDescription")}
                       </Label>
                     </div>
                     <Select
@@ -1880,12 +1940,12 @@ export function ControlPanelsAppComponent({
                       }
                     >
                       <SelectTrigger className="w-[120px]">
-                        <SelectValue placeholder="Select">
-                          {aiModel || "Select"}
+                        <SelectValue placeholder={t("apps.control-panels.select")}>
+                          {aiModel || t("apps.control-panels.select")}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__null__">Default</SelectItem>
+                        <SelectItem value="__null__">{t("apps.control-panels.default")}</SelectItem>
                         {AI_MODELS.map((model) => (
                           <SelectItem key={model.id} value={model.id as string}>
                             {model.name}
@@ -1899,9 +1959,9 @@ export function ControlPanelsAppComponent({
                 {debugMode && (
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-1">
-                      <Label>TTS Model</Label>
+                      <Label>{t("apps.control-panels.ttsModel")}</Label>
                       <Label className="text-[11px] text-gray-600 font-geneva-12">
-                        Text-to-speech provider
+                        {t("apps.control-panels.ttsModelDescription")}
                       </Label>
                     </div>
                     <Select
@@ -1915,14 +1975,14 @@ export function ControlPanelsAppComponent({
                       }
                     >
                       <SelectTrigger className="w-[120px]">
-                        <SelectValue placeholder="Select">
-                          {ttsModel || "Select"}
+                        <SelectValue placeholder={t("apps.control-panels.select")}>
+                          {ttsModel || t("apps.control-panels.select")}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__null__">Default</SelectItem>
-                        <SelectItem value="openai">OpenAI</SelectItem>
-                        <SelectItem value="elevenlabs">ElevenLabs</SelectItem>
+                        <SelectItem value="__null__">{t("apps.control-panels.default")}</SelectItem>
+                        <SelectItem value="openai">{t("apps.control-panels.openai")}</SelectItem>
+                        <SelectItem value="elevenlabs">{t("apps.control-panels.elevenlabs")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1931,11 +1991,11 @@ export function ControlPanelsAppComponent({
                 {debugMode && ttsModel && (
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-1">
-                      <Label>TTS Voice</Label>
+                      <Label>{t("apps.control-panels.ttsVoice")}</Label>
                       <Label className="text-[11px] text-gray-600 font-geneva-12">
                         {ttsModel === "elevenlabs"
-                          ? "ElevenLabs Voice ID"
-                          : "OpenAI Voice"}
+                          ? t("apps.control-panels.elevenlabsVoiceId")
+                          : t("apps.control-panels.openaiVoice")}
                       </Label>
                     </div>
                     {ttsModel === "elevenlabs" ? (
@@ -1946,26 +2006,26 @@ export function ControlPanelsAppComponent({
                         }
                       >
                         <SelectTrigger className="w-[120px]">
-                          <SelectValue placeholder="Select">
+                          <SelectValue placeholder={t("apps.control-panels.select")}>
                             {ttsVoice === "YC3iw27qriLq7UUaqAyi"
-                              ? "Zi v3"
+                              ? "Ryo v3"
                               : ttsVoice === "kAyjEabBEu68HYYYRAHR"
-                              ? "Zi v2"
+                              ? "Ryo v2"
                               : ttsVoice === "G0mlS0y8ByHjGAOxBgvV"
-                              ? "Zi"
-                              : "Select"}
+                              ? "Ryo"
+                              : t("apps.control-panels.select")}
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="__null__">Select</SelectItem>
+                          <SelectItem value="__null__">{t("apps.control-panels.select")}</SelectItem>
                           <SelectItem value="YC3iw27qriLq7UUaqAyi">
-                            Zi v3
+                            Ryo v3
                           </SelectItem>
                           <SelectItem value="kAyjEabBEu68HYYYRAHR">
-                            Zi v2
+                            Ryo v2
                           </SelectItem>
                           <SelectItem value="G0mlS0y8ByHjGAOxBgvV">
-                            Zi
+                            Ryo
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -1977,12 +2037,12 @@ export function ControlPanelsAppComponent({
                         }
                       >
                         <SelectTrigger className="w-[120px]">
-                          <SelectValue placeholder="Select">
-                            {ttsVoice || "Select"}
+                          <SelectValue placeholder={t("apps.control-panels.select")}>
+                            {ttsVoice || t("apps.control-panels.select")}
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="__null__">Select</SelectItem>
+                          <SelectItem value="__null__">{t("apps.control-panels.select")}</SelectItem>
                           <SelectItem value="alloy">Alloy</SelectItem>
                           <SelectItem value="echo">Echo</SelectItem>
                           <SelectItem value="fable">Fable</SelectItem>
@@ -1998,20 +2058,20 @@ export function ControlPanelsAppComponent({
                 {debugMode && (
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-1">
-                      <Label>Boot Screen</Label>
+                      <Label>{t("apps.control-panels.bootScreen")}</Label>
                       <Label className="text-[11px] text-gray-600 font-geneva-12">
-                        Test the boot screen animation
+                        {t("apps.control-panels.bootScreenDescription")}
                       </Label>
                     </div>
                     <Button
                       variant="retro"
                       onClick={() => {
-                        setNextBootMessage("Debug Boot Screen Test...");
+                        setNextBootMessage(t("common.system.debugBootScreenTest"));
                         window.location.reload();
                       }}
                       className="w-fit"
                     >
-                      Show
+                      {t("apps.control-panels.show")}
                     </Button>
                   </div>
                 )}
@@ -2023,27 +2083,28 @@ export function ControlPanelsAppComponent({
         <HelpDialog
           isOpen={isHelpDialogOpen}
           onOpenChange={setIsHelpDialogOpen}
-          helpItems={helpItems}
-          appName="Control Panels"
+          helpItems={translatedHelpItems}
+          appId="control-panels"
         />
         <AboutDialog
           isOpen={isAboutDialogOpen}
           onOpenChange={setIsAboutDialogOpen}
           metadata={appMetadata}
+          appId="control-panels"
         />
         <ConfirmDialog
           isOpen={isConfirmResetOpen}
           onOpenChange={setIsConfirmResetOpen}
           onConfirm={handleConfirmReset}
-          title="Reset All Settings"
-          description="Are you sure you want to reset all settings? This will clear all saved settings and restore default states. ZiOS will restart after reset."
+          title={t("common.system.resetAllSettings")}
+          description={t("common.system.resetAllSettingsDesc")}
         />
         <ConfirmDialog
           isOpen={isConfirmFormatOpen}
           onOpenChange={setIsConfirmFormatOpen}
           onConfirm={handleConfirmFormat}
-          title="Format File System"
-          description="Are you sure you want to format the file system? This will permanently delete all documents (except sample documents), images, and custom wallpapers. ZiOS will restart after format."
+          title={t("common.system.formatFileSystem")}
+          description={t("common.system.formatFileSystemDesc")}
         />
         {/* Sign Up Dialog (was SetUsernameDialog) */}
         <LoginDialog

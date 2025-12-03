@@ -17,6 +17,7 @@ import { X, Loader2 } from "lucide-react";
 import { type User } from "@/types/chat";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface CreateRoomDialogProps {
   isOpen: boolean;
@@ -39,6 +40,7 @@ export function CreateRoomDialog({
   currentUsername,
   initialUsers = [],
 }: CreateRoomDialogProps) {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [roomName, setRoomName] = useState("");
@@ -112,7 +114,7 @@ export function CreateRoomDialog({
       if (result.ok) {
         onOpenChange(false);
       } else {
-        setError(result.error || "Failed to create room");
+        setError(result.error || t("apps.chats.dialogs.failedToCreateRoom"));
       }
     } finally {
       setIsLoading(false);
@@ -140,8 +142,8 @@ export function CreateRoomDialog({
                 role="tablist"
                 className="h-7! flex justify-start p-0 -mt-1 -mb-[2px] bg-transparent shadow-none /* Windows XP/98 tab strip */"
               >
-                <TabsTrigger value="private">Private</TabsTrigger>
-                <TabsTrigger value="public">Public</TabsTrigger>
+                <TabsTrigger value="private">{t("apps.chats.sidebar.private")}</TabsTrigger>
+                <TabsTrigger value="public">{t("apps.chats.dialogs.public")}</TabsTrigger>
               </menu>
             </TabsList>
           ) : (
@@ -150,13 +152,13 @@ export function CreateRoomDialog({
                 value="private"
                 className="relative px-4 py-1.5 rounded-none bg-white data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:z-10 data-[state=inactive]:border-r-0 font-geneva-12 text-[12px]"
               >
-                Private
+                {t("apps.chats.sidebar.private")}
               </TabsTrigger>
               <TabsTrigger
                 value="public"
                 className="relative px-4 py-1.5 rounded-none bg-white data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:z-10 font-geneva-12 text-[12px]"
               >
-                Public
+                {t("apps.chats.dialogs.public")}
               </TabsTrigger>
             </TabsList>
           ))}
@@ -180,12 +182,12 @@ export function CreateRoomDialog({
                 )}
                 style={{
                   fontFamily: isXpTheme
-                    ? '"Pixelated MS Sans Serif", Arial'
+                    ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
                     : undefined,
                   fontSize: isXpTheme ? "11px" : undefined,
                 }}
               >
-                Room Name
+                {t("apps.chats.dialogs.roomName")}
               </Label>
               <div className="relative">
                 <span
@@ -197,7 +199,7 @@ export function CreateRoomDialog({
                   )}
                   style={{
                     fontFamily: isXpTheme
-                      ? '"Pixelated MS Sans Serif", Arial'
+                      ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
                       : undefined,
                     fontSize: isXpTheme ? "11px" : undefined,
                   }}
@@ -212,7 +214,7 @@ export function CreateRoomDialog({
                     const value = e.target.value.replace(/^#/, "");
                     setRoomName(value);
                   }}
-                  placeholder="general"
+                  placeholder={t("apps.chats.dialogs.roomNamePlaceholder")}
                   className={cn(
                     "shadow-none h-8 pl-6",
                     isXpTheme
@@ -221,7 +223,7 @@ export function CreateRoomDialog({
                   )}
                   style={{
                     fontFamily: isXpTheme
-                      ? '"Pixelated MS Sans Serif", Arial'
+                      ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
                       : undefined,
                     fontSize: isXpTheme ? "11px" : undefined,
                   }}
@@ -251,17 +253,17 @@ export function CreateRoomDialog({
                 )}
                 style={{
                   fontFamily: isXpTheme
-                    ? '"Pixelated MS Sans Serif", Arial'
+                    ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
                     : undefined,
                   fontSize: isXpTheme ? "11px" : undefined,
                 }}
               >
-                Add Users to Private Chat
+                {t("apps.chats.dialogs.addUsersToPrivateChat")}
               </Label>
               <div className="relative">
                 <Input
                   id="search-users"
-                  placeholder="Search username..."
+                  placeholder={t("apps.chats.dialogs.searchUsernamePlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className={cn(
@@ -272,7 +274,7 @@ export function CreateRoomDialog({
                   )}
                   style={{
                     fontFamily: isXpTheme
-                      ? '"Pixelated MS Sans Serif", Arial'
+                      ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
                       : undefined,
                     fontSize: isXpTheme ? "11px" : undefined,
                   }}
@@ -298,7 +300,7 @@ export function CreateRoomDialog({
                       )}
                       style={{
                         fontFamily: isXpTheme
-                          ? '"Pixelated MS Sans Serif", Arial'
+                          ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
                           : undefined,
                         fontSize: isXpTheme ? "10px" : undefined,
                       }}
@@ -333,7 +335,7 @@ export function CreateRoomDialog({
                       )}
                       style={{
                         fontFamily: isXpTheme
-                          ? '"Pixelated MS Sans Serif", Arial'
+                          ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
                           : undefined,
                         fontSize: isXpTheme ? "11px" : undefined,
                       }}
@@ -366,7 +368,7 @@ export function CreateRoomDialog({
           )}
           style={{
             fontFamily: isXpTheme
-              ? '"Pixelated MS Sans Serif", Arial'
+                      ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
               : undefined,
             fontSize: isXpTheme ? "11px" : undefined,
           }}
@@ -388,12 +390,12 @@ export function CreateRoomDialog({
           )}
           style={{
             fontFamily: isXpTheme
-              ? '"Pixelated MS Sans Serif", Arial'
+                      ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
               : undefined,
             fontSize: isXpTheme ? "11px" : undefined,
           }}
         >
-          Cancel
+          {t("apps.chats.dialogs.cancel")}
         </Button>
         <Button
           variant="retro"
@@ -411,12 +413,12 @@ export function CreateRoomDialog({
           )}
           style={{
             fontFamily: isXpTheme
-              ? '"Pixelated MS Sans Serif", Arial'
+                      ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
               : undefined,
             fontSize: isXpTheme ? "11px" : undefined,
           }}
         >
-          {isLoading ? "Creating..." : "Create"}
+          {isLoading ? t("apps.chats.dialogs.creating") : t("apps.chats.dialogs.create")}
         </Button>
       </DialogFooter>
     </div>
@@ -437,24 +439,24 @@ export function CreateRoomDialog({
       >
         {isXpTheme ? (
           <>
-            <DialogHeader>New Chat</DialogHeader>
+            <DialogHeader>{t("apps.chats.dialogs.newChatTitle")}</DialogHeader>
             <div className="window-body">{dialogContent}</div>
           </>
         ) : currentTheme === "macosx" ? (
           <>
-            <DialogHeader>New Chat</DialogHeader>
+            <DialogHeader>{t("apps.chats.dialogs.newChatTitle")}</DialogHeader>
             {dialogContent}
           </>
         ) : (
           <>
             <DialogHeader>
               <DialogTitle className="font-normal text-[16px]">
-                New Chat
+                {t("apps.chats.dialogs.newChatTitle")}
               </DialogTitle>
               <DialogDescription className="sr-only">
                 {isAdmin
-                  ? "Create a public chat room or start a private conversation"
-                  : "Start a private conversation"}
+                  ? t("apps.chats.dialogs.newChatDescription")
+                  : t("apps.chats.dialogs.newChatDescriptionPrivate")}
               </DialogDescription>
             </DialogHeader>
             {dialogContent}

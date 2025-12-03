@@ -3,18 +3,13 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
-@font-face {
-  font-family: "ChicagoKare";
-  src: url("/fonts/ChicagoKare-Regular.woff") format("woff");
-  font-weight: normal;
-  font-style: normal;
-}
-
+/* Additional fonts not in fonts.css */
 @font-face {
   font-family: "ArkPixel";
   src: url("/fonts/fusion-pixel-12px-proportional-ja.woff2") format("woff2");
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @supports not (font: -apple-system-body) {
@@ -23,6 +18,7 @@
     src: url("/fonts/SerenityOS-Emoji.ttf") format("truetype");
     font-weight: normal;
     font-style: normal;
+    font-display: swap;
   }
 }
 
@@ -31,55 +27,7 @@
   src: url("/fonts/geneva-9.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
-}
-
-@font-face {
-  font-family: "Geneva-12";
-  src: url("/fonts/geneva-12.otf") format("opentype");
-  font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "AppleGaramond";
-  src: url("/fonts/AppleGaramond-Light.ttf") format("truetype");
-  font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "Monaco";
-  src: url("/fonts/monacottf.otf") format("opentype");
-  font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "Mondwest";
-  src: url("/fonts/Mondwest-Regular.woff2") format("woff2");
-  font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "Mondwest";
-  src: url("/fonts/Mondwest-Bold.woff2") format("woff2");
-  font-weight: bold;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "NeueBit";
-  src: url("/fonts/NeueBit-Regular.woff2") format("woff2");
-  font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "NeueBit";
-  src: url("/fonts/NeueBit-Bold.woff2") format("woff2");
-  font-weight: bold;
-  font-style: normal;
+  font-display: swap;
 }
 
 @layer base {
@@ -105,8 +53,8 @@
     --radius: 0px;
     --sat-safe-area-bottom: env(safe-area-inset-bottom, 0px);
     --font-geneva-12: "Geneva-12", "ArkPixel", "SerenityOS-Emoji", system-ui;
-    --font-apple-garamond: "AppleGaramond", "ArkPixel", "SerenityOS-Emoji",
-      system-ui;
+    --font-apple-garamond: "AppleGaramond", "Hiragino Mincho ProN", "SerenityOS-Emoji",
+      serif;
     --font-mondwest: "Mondwest", "ArkPixel", "SerenityOS-Emoji", system-ui;
     --font-neuebit: "NeueBit", "ArkPixel", "SerenityOS-Emoji", system-ui;
     --font-monaco: "Monaco", "ArkPixel", "SerenityOS-Emoji", system-ui;
@@ -416,7 +364,7 @@ button.piano-key.piano-key[class*="bg-[#ff33ff]"] {
   }
 
   .font-apple-garamond {
-    font-family: "Apple Garamond", "Georgia", "Palatino", serif;
+    font-family: var(--font-apple-garamond);
     -webkit-font-smoothing: antialiased;
     font-smooth: always;
   }
@@ -778,4 +726,128 @@ button.piano-key.piano-key[class*="bg-[#ff33ff]"] {
 :root[data-os-theme="macosx"] canvas,
 :root[data-os-theme="macosx"] video {
   image-rendering: auto !important;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Sonner toast positioning and animations                                   */
+/* ------------------------------------------------------------------------- */
+
+/* Reduce right margin for right-positioned toasts */
+[data-sonner-toaster][data-x-position="right"] {
+  right: 12px !important;
+}
+
+/* Mobile bottom-positioned toasts: account for dock height and safe area */
+@media (max-width: 768px) {
+  [data-sonner-toaster][data-y-position="bottom"] {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 16px) !important;
+  }
+  
+  /* macOS X theme: add dock height (56px) */
+  :root[data-os-theme="macosx"] [data-sonner-toaster][data-y-position="bottom"] {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 72px) !important;
+  }
+}
+
+/* System 7 theme: square corners, black border, drop shadow, smaller body text */
+:root[data-os-theme="system7"] [data-sonner-toast] {
+  border-radius: 0 !important;
+  border: 1px solid #000 !important;
+  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Smaller body text for System 7 toasts */
+:root[data-os-theme="system7"] [data-sonner-toast] .text-sm,
+:root[data-os-theme="system7"] [data-sonner-toast] [data-content] {
+  font-size: 12px !important;
+}
+
+/* Retro button style for System 7 toasts */
+:root[data-os-theme="system7"] [data-sonner-toast] button {
+  font-size: 12px !important;
+  border: 5px solid transparent !important;
+  border-image: url('/assets/button.svg') 30 stretch !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  color: #000 !important;
+}
+
+:root[data-os-theme="system7"] [data-sonner-toast] button:active {
+  border-image: url('/assets/button-default.svg') 60 stretch !important;
+}
+
+
+
+/* Windows XP theme: yellow XP background, no shadows, rounded corners */
+:root[data-os-theme="xp"] [data-sonner-toast] {
+  background: #ECE9D8 !important;
+  border-radius: 4px !important;
+  border: 1px solid rgba(0, 0, 0, 0.7) !important;
+  box-shadow: none !important;
+  color: #000 !important;
+}
+
+:root[data-os-theme="xp"] [data-sonner-toast] [data-title],
+:root[data-os-theme="xp"] [data-sonner-toast] [data-description],
+:root[data-os-theme="xp"] [data-sonner-toast] .text-sm,
+:root[data-os-theme="xp"] [data-sonner-toast] [data-content] {
+  color: #000 !important;
+  font-family: "Pixelated MS Sans Serif", "ArkPixel", Tahoma, sans-serif !important;
+  font-size: 11px !important;
+  -webkit-font-smoothing: none !important;
+  font-smooth: never !important;
+}
+
+:root[data-os-theme="xp"] [data-sonner-toast] button {
+  font-family: "Pixelated MS Sans Serif", "ArkPixel", Tahoma, sans-serif !important;
+  font-size: 11px !important;
+  background: #ECE9D8 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #888, inset 2px 2px #dfdfdf !important;
+  color: #000 !important;
+  padding: 4px 12px !important;
+  -webkit-font-smoothing: none !important;
+  font-smooth: never !important;
+}
+
+:root[data-os-theme="xp"] [data-sonner-toast] button:active {
+  box-shadow: inset 1px 1px #0a0a0a, inset -1px -1px #fff, inset 2px 2px #888, inset -2px -2px #dfdfdf !important;
+}
+
+/* Windows 98 theme: silver background, classic beveled 3D effect */
+:root[data-os-theme="win98"] [data-sonner-toast] {
+  background: #C0C0C0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf !important;
+  color: #000 !important;
+}
+
+:root[data-os-theme="win98"] [data-sonner-toast] [data-title],
+:root[data-os-theme="win98"] [data-sonner-toast] [data-description],
+:root[data-os-theme="win98"] [data-sonner-toast] .text-sm,
+:root[data-os-theme="win98"] [data-sonner-toast] [data-content] {
+  color: #000 !important;
+  font-size: 12px !important;
+  -webkit-font-smoothing: none !important;
+  font-smooth: never !important;
+}
+
+:root[data-os-theme="win98"] [data-sonner-toast] button {
+  font-family: "Pixelated MS Sans Serif", "ArkPixel", Tahoma, sans-serif !important;
+  font-size: 11px !important;
+  background: #C0C0C0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf !important;
+  color: #000 !important;
+  padding: 4px 12px !important;
+  -webkit-font-smoothing: none !important;
+  font-smooth: never !important;
+}
+
+:root[data-os-theme="win98"] [data-sonner-toast] button:active {
+  box-shadow: inset 1px 1px #0a0a0a, inset -1px -1px #fff, inset 2px 2px grey, inset -2px -2px #dfdfdf !important;
 }

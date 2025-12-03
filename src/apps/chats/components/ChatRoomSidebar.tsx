@@ -13,66 +13,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-
-// 头像组件 - macOS 26 风格，直接显示 emoji（无圆框）
-const CircularAvatar: React.FC<{ name: string; className?: string }> = ({
-  name,
-  className,
-}) => {
-  // 检查是否是 Zi
-  const normalizedName = name.toLowerCase().trim();
-  const isZi = normalizedName === "zi" || normalizedName === "zihan" || normalizedName === "@zi";
-  
-  // 如果是 Zi，使用 🗿 emoji
-  if (isZi) {
-    return (
-      <div
-        className={cn(
-          "flex items-center justify-center flex-shrink-0 chat-avatar-emoji",
-          className
-        )}
-        style={{
-          fontSize: "32px",
-          lineHeight: "1",
-        }}
-      >
-        🗿
-      </div>
-    );
-  }
-  
-  // Food & Drink emoji 列表
-  const foodEmojis = [
-    "🍎", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🍒",
-    "🍑", "🥭", "🍍", "🥥", "🥝", "🍅", "🥑", "🌽",
-    "🥕", "🥔", "🍠", "🥐", "🥯", "🍞", "🥖", "🧀",
-    "🥚", "🍳", "🥞", "🧇", "🥓", "🍗", "🌭", "🍔",
-    "🍟", "🍕", "🥪", "🌮", "🌯", "🥗", "🍝", "🍜",
-    "🍲", "🍛", "🍣", "🍱", "🍤", "🍙", "🍚", "🥟",
-    "🍢", "🍡", "🍧", "🍨", "🍦", "🥧", "🧁", "🍰",
-    "🎂", "🍮", "🍭", "🍬", "🍫", "🍿", "🍩", "🍪",
-    "🥜", "🍯", "🥛", "☕", "🍵", "🧃", "🥤", "🍷",
-  ];
-  
-  // 根据名字生成 emoji 索引
-  const hash = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const emoji = foodEmojis[hash % foodEmojis.length];
-
-  return (
-    <div
-      className={cn(
-        "flex items-center justify-center flex-shrink-0 chat-avatar-emoji",
-        className
-      )}
-      style={{
-        fontSize: "32px",
-        lineHeight: "1",
-      }}
-    >
-      {emoji}
-    </div>
-  );
-};
+import { useTranslation } from "react-i18next";
 
 // Extracted ChatRoomSidebar component
 interface ChatRoomSidebarProps {
@@ -99,6 +40,7 @@ export const ChatRoomSidebar: React.FC<ChatRoomSidebarProps> = ({
   isOverlay = false,
   username,
 }) => {
+  const { t } = useTranslation();
   const { play: playButtonClick } = useSound(Sounds.BUTTON_CLICK);
   const unreadCounts = useChatsStore((state) => state.unreadCounts);
 
@@ -106,7 +48,6 @@ export const ChatRoomSidebar: React.FC<ChatRoomSidebarProps> = ({
   const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
   const isWindowsLegacyTheme = isXpTheme;
-  const isOS1Theme = currentTheme === "os1";
 
   // Section headings are non-interactive; show all lists by default
 
@@ -124,29 +65,16 @@ export const ChatRoomSidebar: React.FC<ChatRoomSidebarProps> = ({
     const unreadCount = unreadCounts[room.id] || 0;
     const hasUnread = unreadCount > 0;
     const isSelected = currentRoom?.id === room.id;
-    
-    // 获取显示名称
-    const displayName = room.type === "private"
-      ? getPrivateRoomDisplayName(room, username ?? null)
-      : room.name;
 
     return (
       <div
         key={room.id}
         className={cn(
-          "group relative py-2 px-3 cursor-pointer transition-all",
-          isOS1Theme && "rounded-lg mx-2 my-0.5",
-          isOS1Theme && isSelected && "chat-room-selected",
-          isSelected 
-            ? isOS1Theme 
-              ? "bg-[#0091FF] text-white"
-              : ""
-            : isOS1Theme
-            ? "hover:bg-black/5"
-            : "hover:bg-black/5"
+          "group relative py-1 px-5",
+          isSelected ? "" : "hover:bg-black/5"
         )}
         style={
-          isSelected && !isOS1Theme
+          isSelected
             ? {
                 background: "var(--os-color-selection-bg)",
                 color: "var(--os-color-selection-text)",
@@ -158,59 +86,40 @@ export const ChatRoomSidebar: React.FC<ChatRoomSidebarProps> = ({
           onRoomSelect(room);
         }}
       >
-        <div className="flex items-center gap-2">
-          {/* 圆形头像 - 仅在 OS1 主题下显示 */}
-          {isOS1Theme && (
-            <CircularAvatar 
-              name={displayName} 
-              className="w-7 h-7"
-            />
-          )}
-          
-          <div className="flex-1 min-w-0 flex items-center gap-2">
-            <span className={cn(
-              "truncate font-medium",
-              isOS1Theme && "text-sm",
-              isOS1Theme && isSelected && "text-white"
-            )}>
-              {room.type === "private" ? displayName : `#${displayName}`}
+        <div className="flex items-center">
+          <span>
+            {room.type === "private"
+              ? getPrivateRoomDisplayName(room, username ?? null)
+              : `#${room.name}`}
+          </span>
+          {(hasUnread || room.type !== "private") && (
+            <span
+              className={cn(
+                "text-[10px] ml-1.5 transition-opacity",
+                hasUnread
+                  ? "text-orange-600"
+                  : currentRoom?.id === room.id
+                  ? "text-white/40"
+                  : "text-black/40",
+                hasUnread || room.userCount > 0
+                  ? "opacity-100"
+                  : currentRoom?.id === room.id
+                  ? "opacity-100"
+                  : "opacity-0 group-hover:opacity-100"
+              )}
+            >
+              {hasUnread
+                ? `${unreadCount >= 20 ? "20+" : unreadCount} ${t("apps.chats.sidebar.new")}`
+                : `${room.userCount} ${t("apps.chats.sidebar.online")}`}
             </span>
-            {(hasUnread || room.type !== "private") && (
-              <span
-                className={cn(
-                  "text-[10px] transition-opacity flex-shrink-0",
-                  isOS1Theme && isSelected
-                    ? "text-white/60"
-                    : hasUnread
-                    ? "text-orange-600"
-                    : isSelected
-                    ? "text-white/40"
-                    : "text-black/40",
-                  hasUnread || room.userCount > 0
-                    ? "opacity-100"
-                    : isSelected
-                    ? "opacity-100"
-                    : "opacity-0 group-hover:opacity-100"
-                )}
-              >
-                {hasUnread
-                  ? `${unreadCount >= 20 ? "20+" : unreadCount} new`
-                  : `${room.userCount} online`}
-              </span>
-            )}
-          </div>
+          )}
         </div>
         {((isAdmin && room.type !== "private") || room.type === "private") &&
           onDeleteRoom && (
             <button
               className={cn(
-                "absolute right-2 top-1/2 transform -translate-y-1/2 transition-opacity p-1 rounded",
-                isOS1Theme 
-                  ? isSelected
-                    ? "text-white/60 hover:text-white hover:bg-white/20"
-                    : "text-gray-500 hover:text-red-500 hover:bg-black/5"
-                  : "text-gray-500 hover:text-red-500 hover:bg-black/5",
-                isSelected
+                "absolute right-1 top-1/2 transform -translate-y-1/2 transition-opacity text-gray-500 hover:text-red-500 p-1 rounded hover:bg-black/5",
+                currentRoom?.id === room.id
                   ? "opacity-100"
                   : "opacity-0 group-hover:opacity-100"
               )}
@@ -220,13 +129,13 @@ export const ChatRoomSidebar: React.FC<ChatRoomSidebarProps> = ({
                 onDeleteRoom(room);
               }}
               aria-label={
-                room.type === "private" ? "Leave conversation" : "Delete room"
+                room.type === "private" ? t("apps.chats.ariaLabels.leaveConversation") : t("apps.chats.ariaLabels.deleteRoom")
               }
               title={
-                room.type === "private" ? "Leave conversation" : "Delete room"
+                room.type === "private" ? t("apps.chats.ariaLabels.leaveConversation") : t("apps.chats.ariaLabels.deleteRoom")
               }
             >
-              <Trash className="w-3 h-3" />
+              <Trash className="w-3 h-3 text-black/30" />
             </button>
           )}
       </div>
@@ -236,18 +145,13 @@ export const ChatRoomSidebar: React.FC<ChatRoomSidebarProps> = ({
   return (
     <div
       className={cn(
-        "flex flex-col font-geneva-12 text-[12px] chat-room-sidebar",
-        isOS1Theme 
-          ? "bg-white/85 backdrop-blur-lg" 
-          : "bg-neutral-100",
+        "flex flex-col font-geneva-12 text-[12px] bg-neutral-100",
         isOverlay
           ? `w-full border-b ${
               isWindowsLegacyTheme
                 ? "border-[#919b9c]"
                 : currentTheme === "macosx"
                 ? "border-black/10"
-                : isOS1Theme
-                ? "border-black/8"
                 : "border-black"
             }`
           : `w-56 border-r h-full overflow-hidden ${
@@ -255,16 +159,9 @@ export const ChatRoomSidebar: React.FC<ChatRoomSidebarProps> = ({
                 ? "border-[#919b9c]"
                 : currentTheme === "macosx"
                 ? "border-black/10"
-                : isOS1Theme
-                ? "border-black/8"
                 : "border-black"
-            }`,
-        isOS1Theme && !isOverlay && "rounded-tl-xl"
+            }`
       )}
-      style={isOS1Theme ? {
-        backdropFilter: "blur(20px) saturate(180%)",
-        WebkitBackdropFilter: "blur(20px) saturate(180%)",
-      } : undefined}
     >
       <div
         className={cn(
@@ -274,7 +171,7 @@ export const ChatRoomSidebar: React.FC<ChatRoomSidebarProps> = ({
       >
         <div className="flex justify-between items-center mb-2 flex-shrink-0 px-3">
           <div className="flex items-baseline gap-1.5">
-            <h2 className="text-[14px] pl-1">Chats</h2>
+            <h2 className="text-[14px] pl-1">{t("apps.chats.sidebar.chats")}</h2>
           </div>
           <TooltipProvider>
             <Tooltip>
@@ -289,7 +186,7 @@ export const ChatRoomSidebar: React.FC<ChatRoomSidebarProps> = ({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>New Chat</p>
+                <p>{t("apps.chats.ariaLabels.newChat")}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -303,22 +200,14 @@ export const ChatRoomSidebar: React.FC<ChatRoomSidebarProps> = ({
           )}
           style={{ WebkitOverflowScrolling: "touch" }}
         >
-          {/* Zi (@zi) Chat Selection */}
+          {/* Ryo (@ryo) Chat Selection */}
           <div
             className={cn(
-              "py-2 px-3 cursor-pointer transition-all",
-              isOS1Theme && "rounded-lg mx-2 my-0.5",
-              isOS1Theme && currentRoom === null && "chat-room-selected",
-              currentRoom === null 
-                ? isOS1Theme 
-                  ? "bg-[#0091FF] text-white"
-                  : ""
-                : isOS1Theme
-                ? "hover:bg-black/5"
-                : "hover:bg-black/5"
+              "py-1 px-5",
+              currentRoom === null ? "" : "hover:bg-black/5"
             )}
             style={
-              currentRoom === null && !isOS1Theme
+              currentRoom === null
                 ? {
                     background: "var(--os-color-selection-bg)",
                     color: "var(--os-color-selection-text)",
@@ -330,22 +219,7 @@ export const ChatRoomSidebar: React.FC<ChatRoomSidebarProps> = ({
               onRoomSelect(null);
             }}
           >
-            <div className="flex items-center gap-2">
-              {/* 圆形头像 - 仅在 OS1 主题下显示 */}
-              {isOS1Theme && (
-                <CircularAvatar 
-                  name="zi" 
-                  className="w-7 h-7"
-                />
-              )}
-              <span className={cn(
-                "font-medium",
-                isOS1Theme && "text-sm",
-                isOS1Theme && currentRoom === null && "text-white"
-              )}>
-                @zi
-              </span>
-            </div>
+            {t("apps.chats.status.ryo")}
           </div>
           {/* Chat Rooms List (Sections) */}
           {Array.isArray(rooms) && (
@@ -381,7 +255,7 @@ export const ChatRoomSidebar: React.FC<ChatRoomSidebarProps> = ({
                             role="button"
                             aria-expanded={isChannelsOpen}
                           >
-                            <span>Channels</span>
+                            <span>{t("apps.chats.sidebar.channels")}</span>
                             {hasPrivate && (
                               <span className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <ChevronRight
@@ -409,7 +283,7 @@ export const ChatRoomSidebar: React.FC<ChatRoomSidebarProps> = ({
                             role="button"
                             aria-expanded={isPrivateOpen}
                           >
-                            <span>Private</span>
+                            <span>{t("apps.chats.sidebar.private")}</span>
                             <span className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <ChevronRight
                                 className={cn(

@@ -132,7 +132,7 @@ export default async function handler(req: Request) {
         } while (cursor !== 0);
         
         // Fetch applet metadata for all IDs
-        let applets: Array<{
+        const applets: {
           id: string;
           title?: string;
           name?: string;
@@ -140,7 +140,7 @@ export default async function handler(req: Request) {
           createdAt: number;
           featured: boolean;
           createdBy?: string;
-        }> = [];
+        }[] = [];
         
         if (appletIds.length > 0) {
           const appletKeys = appletIds.map((id) => `${APPLET_SHARE_PREFIX}${id}`);
@@ -344,12 +344,13 @@ export default async function handler(req: Request) {
               id = generateId();
             }
           } catch (parseError) {
-            // If we can't parse, treat as new share
+            // If we can't parse, we can't verify author - generate new ID for security
             id = generateId();
           }
         } else {
-          // Applet doesn't exist, create new share
-          id = generateId();
+          // Applet doesn't exist on server, but client has shareId - reuse it to recreate
+          // This handles cases where the applet was deleted from server but local file still has the ID
+          id = shareId;
         }
       } else {
         // No shareId provided, generate new ID
@@ -424,7 +425,7 @@ export default async function handler(req: Request) {
       );
     }
 
-    // DELETE: Delete applet (admin only - zi)
+    // DELETE: Delete applet (admin only - ryo)
     if (req.method === "DELETE") {
       const authHeader = req.headers.get("Authorization");
       const usernameHeader = req.headers.get("X-Username");
@@ -447,8 +448,8 @@ export default async function handler(req: Request) {
         );
       }
 
-      // Check if user is zi
-      if (username?.toLowerCase() !== "zihan") {
+      // Check if user is ryo
+      if (username?.toLowerCase() !== "ryo") {
         return new Response(
           JSON.stringify({ error: "Forbidden" }),
           {
@@ -505,7 +506,7 @@ export default async function handler(req: Request) {
       );
     }
 
-    // PATCH: Update applet (admin only - zi) - for setting featured status
+    // PATCH: Update applet (admin only - ryo) - for setting featured status
     if (req.method === "PATCH") {
       const authHeader = req.headers.get("Authorization");
       const usernameHeader = req.headers.get("X-Username");
@@ -528,8 +529,8 @@ export default async function handler(req: Request) {
         );
       }
 
-      // Check if user is zi
-      if (username?.toLowerCase() !== "zihan") {
+      // Check if user is ryo
+      if (username?.toLowerCase() !== "ryo") {
         return new Response(
           JSON.stringify({ error: "Forbidden" }),
           {

@@ -9,6 +9,7 @@ import { LogoutDialog } from "@/components/dialogs/LogoutDialog";
 import { InputDialog } from "@/components/dialogs/InputDialog";
 import { CreateRoomDialog } from "./CreateRoomDialog";
 import { helpItems, appMetadata } from "..";
+import { useTranslatedHelpItems } from "@/hooks/useTranslatedHelpItems";
 import { useChatRoom } from "../hooks/useChatRoom";
 import { useAiChat } from "../hooks/useAiChat";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,13 +24,16 @@ import {
   type ChatRoom,
 } from "@/types/chat";
 import { Button } from "@/components/ui/button";
-import { useZiChat } from "../hooks/useZiChat";
+import { useRyoChat } from "../hooks/useRyoChat";
 import { ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getPrivateRoomDisplayName } from "@/utils/chat";
 import { LoginDialog } from "@/components/dialogs/LoginDialog";
 import { toast } from "sonner";
 import { useThemeStore } from "@/stores/useThemeStore";
+import { useOffline } from "@/hooks/useOffline";
+import { checkOfflineAndShowError } from "@/utils/offline";
+import { useTranslation } from "react-i18next";
 
 // Define the expected message structure locally, matching ChatMessages internal type
 interface DisplayMessage extends Omit<AIChatMessage, "role"> {
@@ -47,6 +51,8 @@ export function ChatsAppComponent({
   onNavigateNext,
   onNavigatePrevious,
 }: AppProps) {
+  const { t } = useTranslation();
+  const translatedHelpItems = useTranslatedHelpItems("chats", helpItems);
   const { aiMessages } = useChatsStore();
 
   // Use auth hook for authentication functionality
@@ -170,9 +176,9 @@ export function ChatsAppComponent({
     displayNames.join(", ") +
     (remainingCount > 0 ? `, ${remainingCount}+` : "");
 
-  // Use the @zi chat hook
-  const { isZiLoading, stopZi, handleZiMention, detectAndProcessMention } =
-    useZiChat({
+  // Use the @ryo chat hook
+  const { isRyoLoading, stopRyo, handleRyoMention, detectAndProcessMention } =
+    useRyoChat({
       currentRoomId,
       onScrollToBottom: () => setScrollToBottomTrigger((prev) => prev + 1),
       roomMessages: currentRoomMessages?.map((msg: AppChatMessage) => ({
@@ -218,10 +224,15 @@ export function ChatsAppComponent({
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
 
+      // Check if offline and show error
+      if (checkOfflineAndShowError(t("apps.chats.status.chatRequiresInternet"))) {
+        return;
+      }
+
       if (currentRoomId && username) {
         const trimmedInput = input.trim();
 
-        // Detect if this is an @zi mention
+        // Detect if this is an @ryo mention
         const { isMention, messageContent } =
           detectAndProcessMention(trimmedInput);
 
@@ -231,11 +242,11 @@ export function ChatsAppComponent({
             target: { value: "" },
           } as React.ChangeEvent<HTMLInputElement>);
 
-          // Send the user's message to the chat room first (showing @zi)
+          // Send the user's message to the chat room first (showing @ryo)
           sendRoomMessage(input);
 
           // Then send to AI (doesn't affect input clearing)
-          handleZiMention(messageContent);
+          handleRyoMention(messageContent);
 
           // Trigger scroll
           setScrollToBottomTrigger((prev) => prev + 1);
@@ -262,7 +273,7 @@ export function ChatsAppComponent({
       handleAiSubmit,
       input,
       handleInputChange,
-      handleZiMention,
+      handleRyoMention,
       detectAndProcessMention,
     ]
   );
@@ -286,11 +297,11 @@ export function ChatsAppComponent({
     setScrollToBottomTrigger((prev) => prev + 1);
   }, [handleNudge]);
 
-  // Combined stop function for both AI chat and @zi mentions
+  // Combined stop function for both AI chat and @ryo mentions
   const handleStop = useCallback(() => {
     stop(); // Stop regular AI chat
-    stopZi(); // Stop @zi chat
-  }, [stop, stopZi]);
+    stopRyo(); // Stop @ryo chat
+  }, [stop, stopRyo]);
 
   // Font size handlers using store action
   const handleIncreaseFontSize = useCallback(() => {
@@ -411,7 +422,7 @@ export function ChatsAppComponent({
     setPasswordError(null);
 
     if (!password || password.length < 8) {
-      setPasswordError("Password must be at least 8 characters");
+      setPasswordError(t("apps.chats.dialogs.passwordMinLengthError"));
       setIsSettingPassword(false);
       return;
     }
@@ -419,13 +430,13 @@ export function ChatsAppComponent({
     const result = await setPassword(password);
 
     if (result.ok) {
-      toast.success("Password Set", {
-        description: "You can now use your password to recover your account",
+      toast.success(t("apps.chats.dialogs.passwordSetSuccess"), {
+        description: t("apps.chats.dialogs.passwordSetSuccessDescription"),
       });
       setIsPasswordDialogOpen(false);
       setPasswordInput("");
     } else {
-      setPasswordError(result.error || "Failed to set password");
+      setPasswordError(result.error || t("apps.chats.dialogs.passwordSetFailed"));
     }
 
     setIsSettingPassword(false);
@@ -448,7 +459,7 @@ export function ChatsAppComponent({
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
   const isWindowsLegacyTheme = isXpTheme;
   const isMacTheme = currentTheme === "macosx";
-  const isOS1Theme = currentTheme === "os1";
+  const isOffline = useOffline();
 
   const menuBar = (
     <ChatsMenuBar
@@ -501,7 +512,7 @@ export function ChatsAppComponent({
     : messages.map((msg: AIChatMessage) => ({
         ...msg,
         // metadata with createdAt is already present from AIChatMessage
-        username: msg.role === "user" ? username || "You" : "Zi",
+        username: msg.role === "user" ? username || "You" : "Ryo",
       }));
 
   return (
@@ -513,7 +524,7 @@ export function ChatsAppComponent({
             ? currentRoom.type === "private"
               ? getPrivateRoomDisplayName(currentRoom, username)
               : `#${currentRoom.name}`
-            : "@zi"
+            : "@ryo"
         }
         onClose={onClose}
         isForeground={isForeground}
@@ -624,44 +635,27 @@ export function ChatsAppComponent({
             </div>
 
             {/* Chat area */}
-            <div 
-              className={`relative flex flex-col flex-1 h-full ${
-                isOS1Theme 
-                  ? "bg-white/85 backdrop-blur-xl" 
-                  : "bg-white/85"
-              }`}
-              style={isOS1Theme ? {
-                backdropFilter: "blur(30px) saturate(180%)",
-                WebkitBackdropFilter: "blur(30px) saturate(180%)",
-              } : undefined}
-            >
+            <div className="relative flex flex-col flex-1 h-full bg-white/85">
               {/* Mobile chat title bar */}
               <div
                 className={`sticky top-0 z-10 flex items-center justify-between px-2 py-1 border-b ${
                   // Layer pinstripes with semi-transparent white via backgroundImage for macOS
-                  isMacTheme || isOS1Theme ? "" : "bg-neutral-200/90 backdrop-blur-lg"
+                  isMacTheme ? "" : "bg-neutral-200/90 backdrop-blur-lg"
                 } ${
                   isWindowsLegacyTheme
                     ? "border-[#919b9c]"
-                    : isMacTheme || isOS1Theme
+                    : isMacTheme
                     ? ""
                     : "border-black"
                 }`}
                 style={
-                  isMacTheme || isOS1Theme
-                    ? isOS1Theme
-                      ? {
-                          background: "rgba(255, 255, 255, 0.8)",
-                          backdropFilter: "blur(20px) saturate(180%)",
-                          WebkitBackdropFilter: "blur(20px) saturate(180%)",
-                          borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
-                        }
-                      : {
-                          backgroundImage: "var(--os-pinstripe-window)",
-                          opacity: 0.95,
-                          borderBottom:
-                            "var(--os-metrics-titlebar-border-width, 1px) solid var(--os-color-titlebar-border-inactive, rgba(0, 0, 0, 0.2))",
-                        }
+                  isMacTheme
+                    ? {
+                        backgroundImage: "var(--os-pinstripe-window)",
+                        opacity: 0.95,
+                        borderBottom:
+                          "var(--os-metrics-titlebar-border-width, 1px) solid var(--os-color-titlebar-border-inactive, rgba(0, 0, 0, 0.2))",
+                      }
                     : undefined
                 }
               >
@@ -676,7 +670,7 @@ export function ChatsAppComponent({
                         ? currentRoom.type === "private"
                           ? getPrivateRoomDisplayName(currentRoom, username)
                           : `#${currentRoom.name}`
-                        : "@zi"}
+                        : "@ryo"}
                     </h2>
                     <ChevronDown className="h-3 w-3 transform transition-transform duration-200 text-neutral-400" />
                   </Button>
@@ -690,7 +684,7 @@ export function ChatsAppComponent({
                     )}
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* Create Account button shown only in @zi view when no username is set */}
+                  {/* Create Account button shown only in @ryo view when no username is set */}
                   {!currentRoom && !username && (
                     <Button
                       variant="ghost"
@@ -698,19 +692,19 @@ export function ChatsAppComponent({
                       className="flex items-center gap-1 px-2 py-1 h-7"
                     >
                       <span className="font-geneva-12 text-[11px] text-orange-600 hover:text-orange-700">
-                        Login to ZiOS
+                        {t("apps.chats.status.loginToRyOS")}
                       </span>
                     </Button>
                   )}
 
-                  {/* Clear chat button shown only in @zi (no current room) */}
+                  {/* Clear chat button shown only in @ryo (no current room) */}
                   {!currentRoom && (
                     <Button
                       variant="ghost"
                       onClick={() => setIsClearDialogOpen(true)}
                       className="flex items-center gap-1 px-2 py-1 h-7"
                     >
-                      <span className="font-geneva-12 text-[11px]">Clear</span>
+                      <span className="font-geneva-12 text-[11px]">{t("apps.chats.status.clear")}</span>
                     </Button>
                   )}
 
@@ -721,7 +715,7 @@ export function ChatsAppComponent({
                       onClick={() => promptDeleteRoom(currentRoom)}
                       className="flex items-center gap-1 px-2 py-1 h-7"
                     >
-                      <span className="font-geneva-12 text-[11px]">Leave</span>
+                      <span className="font-geneva-12 text-[11px]">{t("apps.chats.status.leave")}</span>
                     </Button>
                   )}
                 </div>
@@ -739,11 +733,11 @@ export function ChatsAppComponent({
                   ref={messagesContainerRef}
                 >
                   <ChatMessages
-                    key={currentRoomId || "zi"}
+                    key={currentRoomId || "ryo"}
                     messages={currentMessagesToDisplay}
                     isLoading={
                       (isLoading && !currentRoomId) ||
-                      (!!currentRoomId && isZiLoading)
+                      (!!currentRoomId && isRyoLoading)
                     }
                     error={!currentRoomId ? error : undefined}
                     onRetry={reload}
@@ -774,7 +768,7 @@ export function ChatsAppComponent({
                 >
                   {/* Show "Create Account" button in two cases:
                       1. In a chat room without username
-                      2. In @zi chat when rate limit is hit for anonymous users */}
+                      2. In @ryo chat when rate limit is hit for anonymous users */}
                   {(currentRoomId && !username) ||
                   (!currentRoomId && needsUsername && !username) ? (
                     isMacTheme ? (
@@ -783,7 +777,7 @@ export function ChatsAppComponent({
                         onClick={promptSetUsername}
                         className="w-full !h-9 !rounded-full orange"
                       >
-                        {"Login to Chat"}
+                        {t("apps.chats.status.loginToChat")}
                       </Button>
                     ) : (
                       <Button
@@ -794,7 +788,7 @@ export function ChatsAppComponent({
                             : "bg-orange-600 text-white hover:bg-orange-700 transition-all duration-200"
                         }`}
                       >
-                        {"Login to Chat"}
+                        {t("apps.chats.status.loginToChat")}
                       </Button>
                     )
                   ) : (
@@ -825,7 +819,7 @@ export function ChatsAppComponent({
                       return (
                         <ChatInput
                           input={input}
-                          isLoading={isLoading || isZiLoading}
+                          isLoading={isLoading || isRyoLoading}
                           isForeground={isForeground}
                           onInputChange={handleInputChange}
                           onSubmit={handleSubmit}
@@ -837,6 +831,7 @@ export function ChatsAppComponent({
                           showNudgeButton={!currentRoomId}
                           isInChatRoom={!!currentRoomId}
                           rateLimitError={rateLimitError}
+                          isOffline={isOffline}
                           needsUsername={needsUsername && !username}
                         />
                       );
@@ -850,27 +845,28 @@ export function ChatsAppComponent({
         <HelpDialog
           isOpen={isHelpDialogOpen}
           onOpenChange={setIsHelpDialogOpen}
-          helpItems={helpItems}
-          appName="Chats"
+          helpItems={translatedHelpItems}
+          appId="chats"
         />
         <AboutDialog
           isOpen={isAboutDialogOpen}
           onOpenChange={setIsAboutDialogOpen}
           metadata={appMetadata}
+          appId="chats"
         />
         <ConfirmDialog
           isOpen={isClearDialogOpen}
           onOpenChange={setIsClearDialogOpen}
           onConfirm={confirmClearChats}
-          title="Clear Chats"
-          description="Are you sure you want to clear this chat? This action cannot be undone."
+          title={t("apps.chats.dialogs.clearChatsTitle")}
+          description={t("apps.chats.dialogs.clearChatsDescription")}
         />
         <InputDialog
           isOpen={isSaveDialogOpen}
           onOpenChange={setIsSaveDialogOpen}
           onSubmit={handleSaveSubmit}
-          title="Save Transcript"
-          description="Enter a name for your chat transcript file"
+          title={t("apps.chats.dialogs.saveTranscriptTitle")}
+          description={t("apps.chats.dialogs.saveTranscriptDescription")}
           value={saveFileName}
           onChange={setSaveFileName}
         />
@@ -921,13 +917,13 @@ export function ChatsAppComponent({
           onConfirm={confirmDeleteRoom}
           title={
             roomToDelete?.type === "private"
-              ? "Leave Conversation"
-              : "Delete Chat Room"
+              ? t("apps.chats.dialogs.leaveConversationTitle")
+              : t("apps.chats.dialogs.deleteChatRoomTitle")
           }
           description={
             roomToDelete?.type === "private"
-              ? `Are you sure you want to leave "${roomToDelete.name}"? You will no longer see messages in this conversation.`
-              : `Are you sure you want to delete the room "${roomToDelete?.name}"? This action cannot be undone.`
+              ? t("apps.chats.dialogs.leaveConversationDescription", { name: roomToDelete.name })
+              : t("apps.chats.dialogs.deleteChatRoomDescription", { name: roomToDelete?.name })
           }
         />
         <LogoutDialog
@@ -941,8 +937,8 @@ export function ChatsAppComponent({
           isOpen={isPasswordDialogOpen}
           onOpenChange={setIsPasswordDialogOpen}
           onSubmit={handleSetPassword}
-          title="Set Password"
-          description="Set a password to enable account recovery. You can use this password to get a new token if you lose access."
+          title={t("apps.chats.dialogs.setPasswordTitle")}
+          description={t("apps.chats.dialogs.setPasswordDescription")}
           value={passwordInput}
           onChange={(value) => {
             setPasswordInput(value);
@@ -950,7 +946,7 @@ export function ChatsAppComponent({
           }}
           isLoading={isSettingPassword}
           errorMessage={passwordError}
-          submitLabel="Set Password"
+          submitLabel={t("apps.chats.dialogs.setPasswordButton")}
         />
       </WindowFrame>
     </>

@@ -4,14 +4,27 @@ import { ChatsAppComponent } from "./components/ChatsAppComponent";
 export const helpItems = [
   {
     icon: "💬",
-    title: "Chat with Zi",
+    title: "Chat with Ryo",
     description:
-      "Type your message to chat with Zi, generate code, or help with ZiOS.",
+      "Type your message to chat with Ryo, generate code, or get help with ryOS.",
+  },
+  {
+    icon: "📝",
+    title: "Create & Edit Files",
+    description:
+      "Ask Ryo to create HTML applets, edit documents, read files, or search the Applets Store.",
+  },
+  {
+    icon: "🚀",
+    title: "Control Apps",
+    description:
+      "Ask Ryo to launch or close apps, switch themes, or control iPod playback.",
   },
   {
     icon: "#️⃣",
     title: "Join Chat Rooms",
-    description: "Connect with netizens in public chat rooms.",
+    description:
+      "Connect with others in public chat rooms. Mention @ryo for AI responses.",
   },
   {
     icon: "🎤",
@@ -20,22 +33,10 @@ export const helpItems = [
       "Hold Space or tap the microphone button to record and send voice messages.",
   },
   {
-    icon: "📝",
-    title: "Control TextEdit",
+    icon: "👋",
+    title: "Nudge & DJ Mode",
     description:
-      "Ask Zi to read, insert, replace, or delete lines in your open TextEdit document.",
-  },
-  {
-    icon: "🚀",
-    title: "Control Apps",
-    description:
-      "Ask Zi to launch or close other applications like Internet Explorer or Video Player.",
-  },
-  {
-    icon: "💾",
-    title: "Save Transcript",
-    description:
-      "Save your current chat conversation with Zi as a Markdown file.",
+      "Send 👋 nudge for context-aware tips. Ryo becomes a DJ when music is playing.",
   },
 ];
 
@@ -43,10 +44,10 @@ export const appMetadata = {
   name: "Chats",
   version: "1.0",
   creator: {
-    name: "Zihan Huang",
-    url: "https://bravohenry.com",
+    name: "Ryo Lu",
+    url: "https://ryo.lu",
   },
-  github: "https://github.com/bravohenry/bravos",
+  github: "https://github.com/ryokun6/ryos",
   icon: "/icons/default/question.png",
 };
 
@@ -54,7 +55,7 @@ export const ChatsApp: BaseApp = {
   id: "chats",
   name: "Chats",
   icon: { type: "image", src: appMetadata.icon },
-  description: "Chat with Zi, your personal AI assistant",
+  description: "Chat with Ryo, your personal AI assistant",
   component: ChatsAppComponent,
   helpItems,
   metadata: appMetadata,

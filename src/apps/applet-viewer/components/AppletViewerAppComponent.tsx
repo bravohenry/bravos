@@ -8,6 +8,7 @@ import { LoginDialog } from "@/components/dialogs/LoginDialog";
 import { AppletViewerMenuBar } from "./AppletViewerMenuBar";
 import { AppStore } from "./AppStore";
 import { appMetadata, helpItems, AppletViewerInitialData } from "../index";
+import { useTranslatedHelpItems } from "@/hooks/useTranslatedHelpItems";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { useAppletStore } from "@/stores/useAppletStore";
 import { useAppStore } from "@/stores/useAppStore";
@@ -29,6 +30,11 @@ import {
 import { useFilesStore, FileSystemItem } from "@/stores/useFilesStore";
 import { generateAppletShareUrl } from "@/utils/sharedUrl";
 import { STORES } from "@/utils/indexedDB";
+import { track } from "@vercel/analytics";
+import { APPLET_ANALYTICS } from "@/utils/analytics";
+import { extractMetadataFromHtml } from "@/utils/appletMetadata";
+import { exportAppletAsHtml } from "@/utils/appletImportExport";
+import { useTranslation } from "react-i18next";
 
 export function AppletViewerAppComponent({
   onClose,
@@ -38,6 +44,7 @@ export function AppletViewerAppComponent({
   instanceId,
   initialData,
 }: AppProps<AppletViewerInitialData>) {
+  const translatedHelpItems = useTranslatedHelpItems("applet-viewer", helpItems);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
@@ -52,6 +59,7 @@ export function AppletViewerAppComponent({
   const isMacTheme = currentTheme === "macosx";
   const username = useChatsStore((state) => state.username);
   const authToken = useChatsStore((state) => state.authToken);
+  const { t } = useTranslation();
   
   // Use auth hook for authentication functionality
   const authResult = useAuth();
@@ -299,6 +307,12 @@ export function AppletViewerAppComponent({
         return null;
       }
 
+      // Check if offline
+      if (typeof navigator !== "undefined" && "onLine" in navigator && !navigator.onLine) {
+        console.warn("[AppletViewer] Cannot fetch applet: offline");
+        return null;
+      }
+
       try {
         const response = await fetch(
           `/api/share-applet?id=${encodeURIComponent(shareId)}`
@@ -486,6 +500,37 @@ export function AppletViewerAppComponent({
 
   const fileItem = appletPath ? fileStore.getItem(appletPath) : undefined;
 
+  // Track applet view analytics when content is loaded
+  const trackedViewsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    // Only track if we have both a path and content (not store view)
+    if (!appletPath || !htmlContent || htmlContent.trim().length === 0) {
+      return;
+    }
+
+    // Track once per applet path per session
+    if (trackedViewsRef.current.has(appletPath)) {
+      return;
+    }
+
+    trackedViewsRef.current.add(appletPath);
+
+    // Get metadata for tracking
+    const shareId = fileItem?.shareId;
+    // Extract filename from path (inline to avoid dependency issues)
+    const parts = appletPath.split("/");
+    const fileName = parts[parts.length - 1];
+    const title = fileItem?.name || fileName.replace(/\.(html|app)$/i, "");
+    const createdBy = fileItem?.createdBy || "";
+
+    // Track applet view
+    track(APPLET_ANALYTICS.VIEW, {
+      appletId: shareId || appletPath,
+      title: title,
+      createdBy: createdBy,
+    });
+  }, [appletPath, htmlContent, fileItem]);
+
   // Check for updates when applet window is launched (only once per applet)
   const updateCheckedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -513,13 +558,13 @@ export function AppletViewerAppComponent({
       const updateApplet = await checkForAppletUpdate(shareId);
       
       if (updateApplet) {
-        const appletName = updateApplet.title || updateApplet.name || "this applet";
-        toast.info("Applet update available", {
-          description: `${appletName} has an update available.`,
+        const appletName = updateApplet.title || updateApplet.name || t("apps.applet-viewer.dialogs.untitledApplet");
+        toast.info(t("apps.applet-viewer.dialogs.appletUpdateAvailable"), {
+          description: t("apps.applet-viewer.dialogs.appletUpdateAvailableDescription", { appletName }),
           action: {
-            label: "Update",
+            label: t("apps.applet-viewer.status.update"),
             onClick: async () => {
-              const loadingToastId = toast.loading("Updating applet...", {
+              const loadingToastId = toast.loading(t("apps.applet-viewer.dialogs.updatingApplet"), {
                 duration: Infinity,
               });
 
@@ -545,7 +590,7 @@ export function AppletViewerAppComponent({
                   }
                 }
 
-                toast.success("Applet updated", {
+                toast.success(t("apps.applet-viewer.dialogs.appletUpdated"), {
                   id: loadingToastId,
                   duration: 3000,
                 });
@@ -554,9 +599,9 @@ export function AppletViewerAppComponent({
                 updateCheckedRef.current.delete(shareId);
               } catch (error) {
                 console.error("Error updating applet:", error);
-                toast.error("Failed to update applet", {
+                toast.error(t("apps.applet-viewer.dialogs.failedToUpdateApplet"), {
                   description:
-                    error instanceof Error ? error.message : "Please try again later.",
+                    error instanceof Error ? error.message : t("apps.applet-viewer.dialogs.pleaseTryAgainLater"),
                   id: loadingToastId,
                 });
                 // Remove from checked set on error so user can retry
@@ -572,7 +617,7 @@ export function AppletViewerAppComponent({
     // Delay to ensure fileItem is loaded from store (especially when opening from Finder)
     const timeoutId = setTimeout(() => checkUpdate(0), 1000);
     return () => clearTimeout(timeoutId);
-  }, [appletPath, loadedContent, checkForAppletUpdate, actions, fileStore]);
+  }, [appletPath, loadedContent, checkForAppletUpdate, actions, fileStore, t]);
   const { getAppletWindowSize, setAppletWindowSize } = useAppletStore();
   
   // Get saved size from file metadata first, fallback to applet store
@@ -856,8 +901,20 @@ export function AppletViewerAppComponent({
           }
         } catch {
           // Not JSON, treat as plain HTML/App file
-          content = fileText;
+          // Try to extract metadata from HTML comments
+          const { metadata, content: extractedContent } = extractMetadataFromHtml(fileText);
+          content = extractedContent;
           importFileName = file.name;
+          
+          // Use metadata from HTML comments if available
+          if (metadata.shareId) shareId = metadata.shareId;
+          if (metadata.name) importFileName = metadata.name;
+          if (metadata.icon) icon = metadata.icon;
+          if (metadata.createdBy) createdBy = metadata.createdBy;
+          if (metadata.windowWidth !== undefined) windowWidth = metadata.windowWidth;
+          if (metadata.windowHeight !== undefined) windowHeight = metadata.windowHeight;
+          if (metadata.createdAt !== undefined) createdAt = metadata.createdAt;
+          if (metadata.modifiedAt !== undefined) modifiedAt = metadata.modifiedAt;
         }
 
         // Extract emoji from filename BEFORE processing extension
@@ -1013,7 +1070,7 @@ export function AppletViewerAppComponent({
       }
 
       // Combine chunks into a single blob
-      const compressedBlob = new Blob(chunks, { type: "application/gzip" });
+      const compressedBlob = new Blob(chunks as BlobPart[], { type: "application/gzip" });
 
       // Create download link
       const url = URL.createObjectURL(compressedBlob);
@@ -1041,28 +1098,7 @@ export function AppletViewerAppComponent({
   // Export as HTML handler (without emoji prefix)
   const handleExportAsHtml = () => {
     if (!hasAppletContent) return;
-
-    // Get base filename without extension
-    const filename = appletPath
-      ? appletPath
-          .split("/")
-          .pop()
-          ?.replace(/\.(html|app)$/i, "") || "Untitled"
-      : "Untitled";
-
-    const blob = new Blob([htmlContent], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${filename}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    toast.success("HTML exported!", {
-      description: `${filename}.html exported successfully.`,
-    });
+    exportAppletAsHtml(htmlContent, appletPath);
   };
 
   // Share applet handler
@@ -1137,16 +1173,21 @@ export function AppletViewerAppComponent({
       setIsShareDialogOpen(true);
 
       // Update the file metadata with the shareId (preserve existing createdBy)
+      // Only update shareId if: (1) this was an update (user is author), or (2) there was no existing shareId
+      // This preserves the original shareId from imported .app files when user is not the author
       if (appletPath && data.id) {
         const currentFileItem = fileStore.getItem(appletPath);
         if (currentFileItem) {
+          // Only update shareId if it was successfully updated (user is author) or if there was no existing shareId
+          const shouldUpdateShareId = data.updated || !existingShareId;
+          
           await saveFile({
             path: appletPath,
             name: currentFileItem.name,
             content: htmlContent,
             type: "html",
             icon: currentFileItem.icon,
-            shareId: data.id,
+            shareId: shouldUpdateShareId ? data.id : existingShareId || data.id,
             createdBy: currentFileItem.createdBy || username,
           });
           
@@ -1409,11 +1450,11 @@ export function AppletViewerAppComponent({
   // Determine window title - prefer applet title, then shared name/title, then filename, then default
   const windowTitle = hasAppletContent
     ? shareCode
-      ? getAppletTitle(htmlContent, true) || sharedTitle || sharedName || "Shared Applet"
+      ? getAppletTitle(htmlContent, true) || sharedTitle || sharedName || t("apps.applet-viewer.dialogs.sharedApplet")
       : appletPath
       ? getFileName(appletPath)
-              : getAppletTitle(htmlContent, false) || "Applet Store"
-    : "Applet Store";
+              : getAppletTitle(htmlContent, false) || t("common.dock.appletStore")
+    : t("common.dock.appletStore");
 
   return (
     <>
@@ -1498,13 +1539,14 @@ export function AppletViewerAppComponent({
       <HelpDialog
         isOpen={isHelpDialogOpen}
         onOpenChange={setIsHelpDialogOpen}
-        appName="Applet Store"
-        helpItems={helpItems}
+        appId="applet-viewer"
+        helpItems={translatedHelpItems}
       />
       <AboutDialog
         isOpen={isAboutDialogOpen}
         onOpenChange={setIsAboutDialogOpen}
         metadata={appMetadata}
+        appId="applet-viewer"
       />
       <ShareItemDialog
         isOpen={isShareDialogOpen}

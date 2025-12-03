@@ -10,6 +10,7 @@ import { AboutDialog } from "@/components/dialogs/AboutDialog";
 import { InputDialog } from "@/components/dialogs/InputDialog";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
 import { helpItems, appMetadata } from "..";
+import { useTranslatedHelpItems } from "@/hooks/useTranslatedHelpItems";
 import { useSound, Sounds } from "@/hooks/useSound";
 import { useVibration } from "@/hooks/useVibration";
 import { IpodScreen } from "./IpodScreen";
@@ -27,6 +28,11 @@ import { useLibraryUpdateChecker } from "../hooks/useLibraryUpdateChecker";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { LyricsAlignment, KoreanDisplay } from "@/types/lyrics";
 import { isMobileSafari } from "@/utils/device";
+import { track } from "@vercel/analytics";
+import { getTranslatedAppName } from "@/utils/i18n";
+import { IPOD_ANALYTICS } from "@/utils/analytics";
+import { useOffline } from "@/hooks/useOffline";
+import { useTranslation } from "react-i18next";
 // Globe icon removed; using text label "Aあ" for translate
 
 // Add this component definition before the IpodAppComponent
@@ -43,6 +49,7 @@ interface FullScreenPortalProps {
   previousTrack: () => void;
   seekTime: (delta: number) => void;
   showStatus: (message: string) => void;
+  showOfflineStatus: () => void;
   registerActivity: () => void;
   isPlaying: boolean;
   statusMessage: string | null;
@@ -54,7 +61,7 @@ interface FullScreenPortalProps {
   currentKoreanDisplay: import("@/types/lyrics").KoreanDisplay;
   onToggleKoreanDisplay: () => void;
   // Player ref for mobile Safari handling
-  fullScreenPlayerRef: React.RefObject<ReactPlayer>;
+  fullScreenPlayerRef: React.RefObject<ReactPlayer | null>;
 }
 
 function FullScreenPortal({
@@ -65,6 +72,7 @@ function FullScreenPortal({
   previousTrack,
   seekTime,
   showStatus,
+  showOfflineStatus,
   registerActivity,
   isPlaying,
   statusMessage,
@@ -76,10 +84,12 @@ function FullScreenPortal({
   onToggleKoreanDisplay,
   fullScreenPlayerRef,
 }: FullScreenPortalProps) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const hideControlsTimeoutRef = useRef<number | null>(null);
+  const isOffline = useOffline();
   // Removed pointer coarse check; controls now autohide on all devices
   
   // Track if user has interacted to enable gesture handling after first interaction
@@ -87,6 +97,24 @@ function FullScreenPortal({
   
   // Detect mobile Safari for gesture control
   const isMobileSafariDevice = useMemo(() => isMobileSafari(), []);
+
+  // Translation languages (same set as menu bar)
+  const translationLanguages = useMemo(
+    () => [
+      { label: t("apps.ipod.translationLanguages.original"), code: null as string | null },
+      { label: "English", code: "en" },
+      { label: "中文", code: "zh-TW" },
+      { label: "日本語", code: "ja" },
+      { label: "한국어", code: "ko" },
+      { label: "Español", code: "es" },
+      { label: "Français", code: "fr" },
+      { label: "Deutsch", code: "de" },
+      { label: "Português", code: "pt" },
+      { label: "Italiano", code: "it" },
+      { label: "Русский", code: "ru" },
+    ],
+    [t]
+  );
 
   // Helper function to get actual player playing state
   const getActualPlayerState = useCallback(() => {
@@ -296,24 +324,6 @@ function FullScreenPortal({
     return () => clearTimeout(timeoutId);
   }, []);
 
-  // Translation languages (same set as menu bar)
-  const translationLanguages = useMemo(
-    () => [
-      { label: "Original", code: null as string | null },
-      { label: "English", code: "en" },
-      { label: "中文", code: "zh-TW" },
-      { label: "日本語", code: "ja" },
-      { label: "한국어", code: "ko" },
-      { label: "Español", code: "es" },
-      { label: "Français", code: "fr" },
-      { label: "Deutsch", code: "de" },
-      { label: "Português", code: "pt" },
-      { label: "Italiano", code: "it" },
-      { label: "Русский", code: "ru" },
-    ],
-    []
-  );
-
   const translationBadge = useMemo(() => {
     if (!currentTranslationCode) return null;
     switch (currentTranslationCode) {
@@ -430,8 +440,12 @@ function FullScreenPortal({
         handlers.onClose();
       } else if (e.key === " ") {
         e.preventDefault(); // Prevent scrolling if space is pressed
-        handlers.togglePlay();
-        handlers.showStatus(isPlaying ? "⏸" : "▶");
+        if (isOffline) {
+          showOfflineStatus();
+        } else {
+          handlers.togglePlay();
+          handlers.showStatus(isPlaying ? "⏸" : "▶");
+        }
       } else if (e.key === "ArrowLeft") {
         // Seek backward instead of previous track
         handlers.seekTime(-5);
@@ -501,8 +515,12 @@ function FullScreenPortal({
         if (!shouldDisableClick && !actuallyPlaying) {
           const handlers = handlersRef.current;
           handlers.registerActivity();
-          handlers.togglePlay();
-          handlers.showStatus("▶");
+          if (isOffline) {
+            showOfflineStatus();
+          } else {
+            handlers.togglePlay();
+            handlers.showStatus("▶");
+          }
         }
         
         // Special case: On mobile Safari, if we just entered fullscreen and expect to be playing
@@ -616,9 +634,9 @@ function FullScreenPortal({
                   }
                 }, 100);
               }}
-              aria-label="Previous track"
+              aria-label={t("apps.ipod.ariaLabels.previousTrack")}
               className="w-9 h-9 md:w-12 md:h-12 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors focus:outline-none"
-              title="Previous"
+              title={t("apps.ipod.menu.previous")}
             >
               <span className="text-[18px] md:text-[22px]">⏮</span>
             </button>
@@ -628,18 +646,22 @@ function FullScreenPortal({
                 e.stopPropagation();
                 registerActivity();
                 const wasPlaying = getActualPlayerState();
-                togglePlay();
-                // Use actual player state for status message
-                const actuallyPlaying = getActualPlayerState();
-                showStatus(actuallyPlaying ? "⏸" : "▶");
-                // Restart auto-hide timer when switching from pause to play
-                if (!wasPlaying) {
-                  setTimeout(() => restartAutoHideTimer(), 100);
+                if (isOffline) {
+                  showOfflineStatus();
+                } else {
+                  togglePlay();
+                  // Use actual player state for status message
+                  const actuallyPlaying = getActualPlayerState();
+                  showStatus(actuallyPlaying ? "⏸" : "▶");
+                  // Restart auto-hide timer when switching from pause to play
+                  if (!wasPlaying) {
+                    setTimeout(() => restartAutoHideTimer(), 100);
+                  }
                 }
               }}
-              aria-label="Play/Pause"
+              aria-label={t("apps.ipod.ariaLabels.playPause")}
               className="w-9 h-9 md:w-12 md:h-12 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors focus:outline-none"
-              title="Play/Pause"
+              title={t("apps.ipod.ariaLabels.playPause")}
             >
               <span className="text-[18px] md:text-[22px]">
                 {getActualPlayerState() ? "⏸" : "▶"}
@@ -664,9 +686,9 @@ function FullScreenPortal({
                   }
                 }, 100);
               }}
-              aria-label="Next track"
+              aria-label={t("apps.ipod.ariaLabels.nextTrack")}
               className="w-9 h-9 md:w-12 md:h-12 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors focus:outline-none"
-              title="Next"
+              title={t("apps.ipod.menu.next")}
             >
               <span className="text-[18px] md:text-[22px]">⏭</span>
             </button>
@@ -678,7 +700,7 @@ function FullScreenPortal({
                 registerActivity();
                 onCycleAlignment();
               }}
-              aria-label="Cycle lyric layout"
+              aria-label={t("apps.ipod.ariaLabels.cycleLyricLayout")}
               className="w-9 h-9 md:w-12 md:h-12 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors focus:outline-none"
               title={currentAlignment}
             >
@@ -740,7 +762,7 @@ function FullScreenPortal({
                 registerActivity();
                 onToggleKoreanDisplay();
               }}
-              aria-label="Toggle Hangul / Romanization"
+              aria-label={t("apps.ipod.ariaLabels.toggleHangulRomanization")}
               className="w-9 h-9 md:w-12 md:h-12 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors focus:outline-none"
             >
               <span className="text-[16px] md:text-[18px]">
@@ -755,7 +777,7 @@ function FullScreenPortal({
                 setIsLangMenuOpen((v) => !v);
                 registerActivity();
               }}
-              aria-label="Translate lyrics"
+              aria-label={t("apps.ipod.ariaLabels.translateLyrics")}
               className="w-9 h-9 md:w-12 md:h-12 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors focus:outline-none"
             >
               {translationBadge ? (
@@ -773,8 +795,8 @@ function FullScreenPortal({
             <button
               onClick={onClose}
               className="w-9 h-9 md:w-12 md:h-12 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors focus:outline-none"
-              aria-label="Close fullscreen"
-              title="Close"
+              aria-label={t("apps.ipod.ariaLabels.closeFullscreen")}
+              title={t("common.dialog.close")}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -856,6 +878,7 @@ export function IpodAppComponent({
   const { play: playClickSound } = useSound(Sounds.BUTTON_CLICK);
   const { play: playScrollSound } = useSound(Sounds.IPOD_CLICK_WHEEL);
   const vibrate = useVibration(100, 50);
+  const isOffline = useOffline();
 
   const {
     tracks,
@@ -924,17 +947,22 @@ export function IpodAppComponent({
     previousTrack: s.previousTrack,
   }));
 
+  const { t } = useTranslation();
+  const translatedHelpItems = useTranslatedHelpItems("ipod", helpItems);
   const lyricOffset = useIpodStore(
     (s) => s.tracks[s.currentIndex]?.lyricOffset ?? 0
   );
 
   const prevIsForeground = useRef(isForeground);
-  const { bringToForeground, clearIpodInitialData } = useAppStoreShallow(
+  const { bringToForeground, clearIpodInitialData, instances } = useAppStoreShallow(
     (state) => ({
       bringToForeground: state.bringToForeground,
       clearIpodInitialData: state.clearInstanceInitialData,
+      instances: state.instances,
     })
   );
+  // Track minimized state for this instance
+  const isMinimized = instanceId ? instances[instanceId]?.isMinimized ?? false : false;
   // Track the last processed initialData to avoid duplicates
   const lastProcessedInitialDataRef = useRef<unknown>(null);
 
@@ -985,9 +1013,11 @@ export function IpodAppComponent({
   const [cameFromNowPlayingMenuItem, setCameFromNowPlayingMenuItem] =
     useState(false);
   // Ref for the in-window (small) player inside IpodScreen
-  const playerRef = useRef<ReactPlayer>(null);
+  const playerRef = useRef<ReactPlayer | null>(null);
   // Separate ref for the full-screen player rendered in the portal
-  const fullScreenPlayerRef = useRef<ReactPlayer>(null);
+  const fullScreenPlayerRef = useRef<ReactPlayer | null>(null);
+  // Ref to track the last song that was tracked for analytics
+  const lastTrackedSongRef = useRef<{ trackId: string; elapsedTime: number } | null>(null);
   const skipOperationRef = useRef(false);
   const userHasInteractedRef = useRef(false);
 
@@ -1011,6 +1041,14 @@ export function IpodAppComponent({
     }, 2000);
   }, []);
 
+  const showOfflineStatus = useCallback(() => {
+    toast.error(t("apps.ipod.dialogs.youreOffline"), {
+      id: "ipod-offline",
+      description: t("apps.ipod.dialogs.ipodRequiresInternet"),
+    });
+    showStatus("🚫");
+  }, [showStatus, t]);
+
   const registerActivity = useCallback(() => {
     setLastActivityTime(Date.now());
     userHasInteractedRef.current = true;
@@ -1022,15 +1060,15 @@ export function IpodAppComponent({
   const memoizedToggleShuffle = useCallback(() => {
     toggleShuffle();
     showStatus(
-      useIpodStore.getState().isShuffled ? "Shuffle ON" : "Shuffle OFF"
+      useIpodStore.getState().isShuffled ? t("apps.ipod.status.shuffleOn") : t("apps.ipod.status.shuffleOff")
     );
     registerActivity();
-  }, [toggleShuffle, showStatus, registerActivity]);
+  }, [toggleShuffle, showStatus, registerActivity, t]);
 
   const memoizedToggleBacklight = useCallback(() => {
     toggleBacklight();
     const isOn = useIpodStore.getState().backlightOn;
-    showStatus(isOn ? "Light ON" : "Light OFF");
+    showStatus(isOn ? t("apps.ipod.status.lightOn") : t("apps.ipod.status.lightOff"));
 
     // Only call registerActivity when turning the backlight on to avoid
     // immediately re-enabling it after the user turns it off via the menu.
@@ -1041,21 +1079,21 @@ export function IpodAppComponent({
       setLastActivityTime(Date.now());
       userHasInteractedRef.current = true;
     }
-  }, [toggleBacklight, showStatus, registerActivity, setLastActivityTime]);
+  }, [toggleBacklight, showStatus, registerActivity, setLastActivityTime, t]);
 
   const memoizedChangeTheme = useCallback(
     (newTheme: "classic" | "black" | "u2") => {
       setTheme(newTheme);
       showStatus(
         newTheme === "classic"
-          ? "Theme: Classic"
+          ? t("apps.ipod.status.themeClassic")
           : newTheme === "black"
-          ? "Theme: Black"
-          : "Theme: U2"
+          ? t("apps.ipod.status.themeBlack")
+          : t("apps.ipod.status.themeU2")
       );
       registerActivity();
     },
-    [setTheme, showStatus, registerActivity]
+    [setTheme, showStatus, registerActivity, t]
   );
 
   const handleMenuItemAction = useCallback(
@@ -1077,16 +1115,16 @@ export function IpodAppComponent({
 
     if (currentLoopCurrent) {
       toggleLoopCurrent();
-      showStatus("Repeat OFF");
+      showStatus(t("apps.ipod.status.repeatOff"));
     } else if (currentLoopAll) {
       toggleLoopAll();
       toggleLoopCurrent();
-      showStatus("Repeat ONE");
+      showStatus(t("apps.ipod.status.repeatOne"));
     } else {
       toggleLoopAll();
-      showStatus("Repeat ALL");
+      showStatus(t("apps.ipod.status.repeatAll"));
     }
-  }, [registerActivity, toggleLoopAll, toggleLoopCurrent, showStatus]);
+  }, [registerActivity, toggleLoopAll, toggleLoopCurrent, showStatus, t]);
 
   const memoizedHandleThemeChange = useCallback(() => {
     const currentTheme = useIpodStore.getState().theme;
@@ -1166,7 +1204,7 @@ export function IpodAppComponent({
         track: (typeof tracks)[0],
         index: number
       ) => {
-        const artist = track.artist || "Unknown Artist";
+        const artist = track.artist || t("apps.ipod.menu.unknownArtist");
         if (!acc[artist]) {
           acc[artist] = [];
         }
@@ -1183,21 +1221,27 @@ export function IpodAppComponent({
 
     return [
       {
-        label: "All Songs",
+        label: t("apps.ipod.menuItems.allSongs"),
         action: () => {
           registerActivity();
           setMenuDirection("forward");
+          const allSongsLabel = t("apps.ipod.menuItems.allSongs");
+          const musicLabel = t("apps.ipod.menuItems.music");
           const allTracksMenu = tracks.map(
             (track: (typeof tracks)[0], index: number) => ({
               label: track.title,
               action: () => {
                 registerActivity();
+                if (isOffline) {
+                  showOfflineStatus();
+                  return;
+                }
                 setCurrentIndex(index);
                 setIsPlaying(true);
                 setMenuDirection("forward");
                 setMenuMode(false);
                 setCameFromNowPlayingMenuItem(false);
-                setLastPlayedMenuPath(["Music", "All Songs"]);
+                setLastPlayedMenuPath([musicLabel, allSongsLabel]);
                 if (useIpodStore.getState().showVideo) {
                   toggleVideo();
                 }
@@ -1208,7 +1252,7 @@ export function IpodAppComponent({
           setMenuHistory((prev) => [
             ...prev,
             {
-              title: "All Songs",
+              title: allSongsLabel,
               items: allTracksMenu,
               selectedIndex: 0,
             },
@@ -1238,7 +1282,7 @@ export function IpodAppComponent({
                 setMenuDirection("forward");
                 setMenuMode(false);
                 setCameFromNowPlayingMenuItem(false);
-                setLastPlayedMenuPath(["Music", artist]);
+                setLastPlayedMenuPath([t("apps.ipod.menuItems.music"), artist]);
                 if (useIpodStore.getState().showVideo) {
                   toggleVideo();
                 }
@@ -1266,6 +1310,7 @@ export function IpodAppComponent({
     setIsPlaying,
     toggleVideo,
     showStatus,
+    t,
   ]);
 
   const settingsMenuItems = useMemo(() => {
@@ -1277,33 +1322,33 @@ export function IpodAppComponent({
 
     return [
       {
-        label: "Repeat",
+        label: t("apps.ipod.menuItems.repeat"),
         action: memoizedToggleRepeat,
         showChevron: false,
-        value: currentLoopCurrent ? "One" : currentLoopAll ? "All" : "Off",
+        value: currentLoopCurrent ? t("apps.ipod.menuItems.one") : currentLoopAll ? t("apps.ipod.menuItems.all") : t("apps.ipod.menuItems.off"),
       },
       {
-        label: "Shuffle",
+        label: t("apps.ipod.menuItems.shuffle"),
         action: memoizedToggleShuffle,
         showChevron: false,
-        value: currentIsShuffled ? "On" : "Off",
+        value: currentIsShuffled ? t("apps.ipod.menuItems.on") : t("apps.ipod.menuItems.off"),
       },
       {
-        label: "Backlight",
+        label: t("apps.ipod.menuItems.backlight"),
         action: memoizedToggleBacklight,
         showChevron: false,
-        value: currentBacklightOn ? "On" : "Off",
+        value: currentBacklightOn ? t("apps.ipod.menuItems.on") : t("apps.ipod.menuItems.off"),
       },
       {
-        label: "Theme",
+        label: t("apps.ipod.menuItems.theme"),
         action: memoizedHandleThemeChange,
         showChevron: false,
         value:
           currentTheme === "classic"
-            ? "Classic"
+            ? t("apps.ipod.menu.classic")
             : currentTheme === "black"
-            ? "Black"
-            : "U2",
+            ? t("apps.ipod.menu.black")
+            : t("apps.ipod.menu.u2"),
       },
     ];
   }, [
@@ -1316,12 +1361,15 @@ export function IpodAppComponent({
     memoizedToggleShuffle,
     memoizedToggleBacklight,
     memoizedHandleThemeChange,
+    t,
   ]);
 
   const mainMenuItems = useMemo(() => {
+    const musicLabel = t("apps.ipod.menuItems.music");
+    const settingsLabel = t("apps.ipod.menuItems.settings");
     return [
       {
-        label: "Music",
+        label: musicLabel,
         action: () => {
           registerActivity();
           if (useIpodStore.getState().showVideo) {
@@ -1331,7 +1379,7 @@ export function IpodAppComponent({
           setMenuHistory((prev) => [
             ...prev,
             {
-              title: "Music",
+              title: musicLabel,
               items: musicMenuItems,
               selectedIndex: 0,
             },
@@ -1341,7 +1389,7 @@ export function IpodAppComponent({
         showChevron: true,
       },
       {
-        label: "Extras",
+        label: t("apps.ipod.menuItems.extras"),
         action: () => {
           registerActivity();
           if (useIpodStore.getState().showVideo) {
@@ -1352,7 +1400,7 @@ export function IpodAppComponent({
         showChevron: true,
       },
       {
-        label: "Settings",
+        label: settingsLabel,
         action: () => {
           registerActivity();
           if (useIpodStore.getState().showVideo) {
@@ -1362,7 +1410,7 @@ export function IpodAppComponent({
           setMenuHistory((prev) => [
             ...prev,
             {
-              title: "Settings",
+              title: settingsLabel,
               items: settingsMenuItems,
               selectedIndex: 0,
             },
@@ -1372,7 +1420,7 @@ export function IpodAppComponent({
         showChevron: true,
       },
       {
-        label: "Shuffle Songs",
+        label: t("apps.ipod.menuItems.shuffleSongs"),
         action: () => {
           registerActivity();
           if (useIpodStore.getState().showVideo) {
@@ -1384,14 +1432,14 @@ export function IpodAppComponent({
         showChevron: false,
       },
       {
-        label: "Backlight",
+        label: t("apps.ipod.menuItems.backlight"),
         action: () => {
           memoizedToggleBacklight();
         },
         showChevron: false,
       },
       {
-        label: "Now Playing",
+        label: t("apps.ipod.menuItems.nowPlaying"),
         action: () => {
           registerActivity();
           setMenuDirection("forward");
@@ -1409,15 +1457,16 @@ export function IpodAppComponent({
     memoizedToggleShuffle,
     memoizedToggleBacklight,
     showStatus,
+    t,
   ]);
 
   useEffect(() => {
     if (menuHistory.length === 0) {
       setMenuHistory([
-        { title: "iPod", items: mainMenuItems, selectedIndex: 0 },
+        { title: t("apps.ipod.menuItems.ipod"), items: mainMenuItems, selectedIndex: 0 },
       ]);
     }
-  }, []);
+  }, [t, mainMenuItems, menuHistory.length]);
 
   useEffect(() => {
     setMenuHistory((prevHistory) => {
@@ -1426,14 +1475,18 @@ export function IpodAppComponent({
       const currentMenuIndex = prevHistory.length - 1;
       const currentMenu = prevHistory[currentMenuIndex];
       let latestItems: typeof currentMenu.items | null = null;
+      const ipodLabel = t("apps.ipod.menuItems.ipod");
+      const musicLabel = t("apps.ipod.menuItems.music");
+      const settingsLabel = t("apps.ipod.menuItems.settings");
+      const allSongsLabel = t("apps.ipod.menuItems.allSongs");
 
-      if (currentMenu.title === "iPod") {
+      if (currentMenu.title === ipodLabel) {
         latestItems = mainMenuItems;
-      } else if (currentMenu.title === "Music") {
+      } else if (currentMenu.title === musicLabel) {
         latestItems = musicMenuItems;
-      } else if (currentMenu.title === "Settings") {
+      } else if (currentMenu.title === settingsLabel) {
         latestItems = settingsMenuItems;
-      } else if (currentMenu.title === "All Songs") {
+      } else if (currentMenu.title === allSongsLabel) {
         // Regenerate All Songs menu when tracks change
         latestItems = tracks.map(
           (track: (typeof tracks)[0], index: number) => ({
@@ -1445,7 +1498,7 @@ export function IpodAppComponent({
               setMenuDirection("forward");
               setMenuMode(false);
               setCameFromNowPlayingMenuItem(false);
-              setLastPlayedMenuPath(["Music", "All Songs"]);
+                setLastPlayedMenuPath([t("apps.ipod.menuItems.music"), t("apps.ipod.menuItems.allSongs")]);
               if (useIpodStore.getState().showVideo) {
                 toggleVideo();
               }
@@ -1463,7 +1516,7 @@ export function IpodAppComponent({
             track: (typeof tracks)[0],
             index: number
           ) => {
-            const artist = track.artist || "Unknown Artist";
+            const artist = track.artist || t("apps.ipod.menu.unknownArtist");
             if (!acc[artist]) {
               acc[artist] = [];
             }
@@ -1492,7 +1545,7 @@ export function IpodAppComponent({
                 setMenuDirection("forward");
                 setMenuMode(false);
                 setCameFromNowPlayingMenuItem(false);
-                setLastPlayedMenuPath(["Music", currentMenu.title]);
+                setLastPlayedMenuPath([t("apps.ipod.menuItems.music"), currentMenu.title]);
                 if (useIpodStore.getState().showVideo) {
                   toggleVideo();
                 }
@@ -1524,6 +1577,7 @@ export function IpodAppComponent({
     setCurrentIndex,
     setIsPlaying,
     toggleVideo,
+    t,
   ]);
 
   const handleAddTrack = useCallback(
@@ -1534,7 +1588,7 @@ export function IpodAppComponent({
           .getState()
           .addTrackFromVideoId(url);
         if (addedTrack) {
-          showStatus("♬ Added");
+          showStatus(t("apps.ipod.status.added"));
           setUrlInput("");
           setIsAddDialogOpen(false);
         } else {
@@ -1587,12 +1641,7 @@ export function IpodAppComponent({
       const shouldAutoplay = !(isIOS || isSafari);
 
       if (existingTrackIndex !== -1) {
-        toast.info(
-          <>
-            Opened shared track. Press <span className="font-chicago">⏯</span>{" "}
-            to start playing.
-          </>
-        );
+        toast.info(t("apps.ipod.dialogs.openedSharedTrack"));
         console.log(`[iPod] Video ID ${videoId} found in tracks. Playing.`);
         setCurrentIndex(existingTrackIndex);
         if (shouldAutoplay) {
@@ -1600,12 +1649,12 @@ export function IpodAppComponent({
         }
         setMenuMode(false);
       } else {
-        toast.info("Adding new track from URL...");
+        toast.info(t("apps.ipod.dialogs.addingNewTrack"));
         console.log(
           `[iPod] Video ID ${videoId} not found. Adding and playing.`
         );
         await handleAddAndPlayTrackByVideoId(videoId);
-        if (shouldAutoplay) {
+        if (shouldAutoplay && !isOffline) {
           const newIndex = useIpodStore.getState().currentIndex;
           const addedTrack = useIpodStore.getState().tracks[newIndex];
           if (addedTrack?.id === videoId) {
@@ -1615,6 +1664,8 @@ export function IpodAppComponent({
               "[iPod] Index mismatch after adding track, autoplay skipped."
             );
           }
+        } else if (isOffline) {
+          showOfflineStatus();
         }
       }
     },
@@ -1725,7 +1776,31 @@ export function IpodAppComponent({
       showStatus("▶");
     }
     skipOperationRef.current = false;
-  }, [isPlaying, setIsPlaying, showStatus]);
+
+    // Track song play analytics when a song actually starts playing
+    const currentTrack = tracks[currentIndex];
+    if (currentTrack) {
+      const lastTracked = lastTrackedSongRef.current;
+      
+      // Track if:
+      // 1. This is a new track (different track ID) - always track new songs
+      // 2. Or playback is starting from the beginning (elapsedTime < 1 second) - track restarts
+      const isNewTrack = !lastTracked || lastTracked.trackId !== currentTrack.id;
+      const isStartingFromBeginning = elapsedTime < 1;
+
+      if (isNewTrack || isStartingFromBeginning) {
+        track(IPOD_ANALYTICS.SONG_PLAY, {
+          trackId: currentTrack.id,
+          title: currentTrack.title,
+          artist: currentTrack.artist || "",
+        });
+        lastTrackedSongRef.current = {
+          trackId: currentTrack.id,
+          elapsedTime: elapsedTime,
+        };
+      }
+    }
+  }, [setIsPlaying, showStatus, tracks, currentIndex, elapsedTime]);
 
   const handlePause = useCallback(() => {
     // Always sync playing state when ReactPlayer reports a pause.
@@ -1787,7 +1862,7 @@ export function IpodAppComponent({
       const mainMenu =
         menuHistory.length > 0
           ? menuHistory[0]
-          : { title: "iPod", items: mainMenuItems, selectedIndex: 0 };
+          : { title: t("apps.ipod.menuItems.ipod"), items: mainMenuItems, selectedIndex: 0 };
 
       const musicSubmenu = musicMenuItems;
 
@@ -1805,7 +1880,7 @@ export function IpodAppComponent({
             track: (typeof tracks)[0],
             index: number
           ) => {
-            const artist = track.artist || "Unknown Artist";
+            const artist = track.artist || t("apps.ipod.menu.unknownArtist");
             if (!acc[artist]) {
               acc[artist] = [];
             }
@@ -1817,7 +1892,7 @@ export function IpodAppComponent({
 
         // Create track menus
         const allTracksMenu = {
-          title: "All Songs",
+          title: t("apps.ipod.menuItems.allSongs"),
           items: tracks.map((track: (typeof tracks)[0], index: number) => ({
             label: track.title,
             action: () => {
@@ -1827,7 +1902,7 @@ export function IpodAppComponent({
               setMenuDirection("forward");
               setMenuMode(false);
               setCameFromNowPlayingMenuItem(false);
-              setLastPlayedMenuPath(["Music", "All Songs"]);
+                setLastPlayedMenuPath([t("apps.ipod.menuItems.music"), t("apps.ipod.menuItems.allSongs")]);
               if (useIpodStore.getState().showVideo) {
                 toggleVideo();
               }
@@ -1840,7 +1915,7 @@ export function IpodAppComponent({
         // If we have a lastPlayedMenuPath, use it to determine where to go back to
         if (
           lastPlayedMenuPath.length > 0 &&
-          lastPlayedMenuPath[1] !== "All Songs"
+          lastPlayedMenuPath[1] !== t("apps.ipod.menuItems.allSongs")
         ) {
           // We should return to an artist menu
           const artist = lastPlayedMenuPath[1];
@@ -1873,7 +1948,7 @@ export function IpodAppComponent({
                     setMenuDirection("forward");
                     setMenuMode(false);
                     setCameFromNowPlayingMenuItem(false);
-                    setLastPlayedMenuPath(["Music", artist]);
+                    setLastPlayedMenuPath([t("apps.ipod.menuItems.music"), artist]);
                     if (useIpodStore.getState().showVideo) {
                       toggleVideo();
                     }
@@ -1887,7 +1962,7 @@ export function IpodAppComponent({
             setMenuHistory([
               mainMenu,
               {
-                title: "Music",
+                title: t("apps.ipod.menuItems.music"),
                 items: musicSubmenu,
                 selectedIndex: musicSubmenu.findIndex(
                   (item) => item.label === artist
@@ -1902,7 +1977,7 @@ export function IpodAppComponent({
             setMenuHistory([
               mainMenu,
               {
-                title: "Music",
+                title: t("apps.ipod.menuItems.music"),
                 items: musicSubmenu,
                 selectedIndex: 0,
               },
@@ -1915,7 +1990,7 @@ export function IpodAppComponent({
           setMenuHistory([
             mainMenu,
             {
-              title: "Music",
+              title: t("apps.ipod.menuItems.music"),
               items: musicSubmenu,
               selectedIndex: 0,
             },
@@ -1939,6 +2014,7 @@ export function IpodAppComponent({
     tracks,
     cameFromNowPlayingMenuItem,
     lastPlayedMenuPath,
+    t,
   ]);
 
   const handleWheelClick = useCallback(
@@ -1951,18 +2027,30 @@ export function IpodAppComponent({
           handleMenuButton();
           break;
         case "right":
-          skipOperationRef.current = true;
-          nextTrack();
-          showStatus("⏭");
+          if (isOffline) {
+            showOfflineStatus();
+          } else {
+            skipOperationRef.current = true;
+            nextTrack();
+            showStatus("⏭");
+          }
           break;
         case "bottom":
-          togglePlay();
-          showStatus(useIpodStore.getState().isPlaying ? "▶" : "⏸");
+          if (isOffline) {
+            showOfflineStatus();
+          } else {
+            togglePlay();
+            showStatus(useIpodStore.getState().isPlaying ? "▶" : "⏸");
+          }
           break;
         case "left":
-          skipOperationRef.current = true;
-          previousTrack();
-          showStatus("⏮");
+          if (isOffline) {
+            showOfflineStatus();
+          } else {
+            skipOperationRef.current = true;
+            previousTrack();
+            showStatus("⏮");
+          }
           break;
         case "center":
           if (menuMode) {
@@ -1973,15 +2061,23 @@ export function IpodAppComponent({
           } else {
             if (tracks[currentIndex]) {
               if (!isPlaying) {
-                togglePlay();
-                showStatus("▶");
-                setTimeout(() => {
-                  if (!useIpodStore.getState().showVideo) {
-                    toggleVideo();
-                  }
-                }, 200);
+                if (isOffline) {
+                  showOfflineStatus();
+                } else {
+                  togglePlay();
+                  showStatus("▶");
+                  setTimeout(() => {
+                    if (!useIpodStore.getState().showVideo) {
+                      toggleVideo();
+                    }
+                  }, 200);
+                }
               } else {
-                toggleVideo();
+                if (isOffline) {
+                  showOfflineStatus();
+                } else {
+                  toggleVideo();
+                }
               }
             }
           }
@@ -2004,6 +2100,8 @@ export function IpodAppComponent({
       isPlaying,
       toggleVideo,
       handleMenuButton,
+      isOffline,
+      showOfflineStatus,
     ]
   );
 
@@ -2086,6 +2184,9 @@ export function IpodAppComponent({
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
+  // Track previous minimized state to detect restore
+  const prevMinimizedRef = useRef(isMinimized);
+
   useEffect(() => {
     let timeoutId: number;
 
@@ -2120,6 +2221,17 @@ export function IpodAppComponent({
     // Initial resize with a small delay to ensure DOM is ready
     timeoutId = window.setTimeout(handleResize, 10);
 
+    // Detect restore from minimize - trigger resize with longer delays
+    // to ensure the window has fully animated back to its position
+    if (prevMinimizedRef.current && !isMinimized) {
+      // Schedule multiple resize attempts after restore
+      const delays = [50, 100, 200, 300, 500];
+      delays.forEach((delay) => {
+        window.setTimeout(handleResize, delay);
+      });
+    }
+    prevMinimizedRef.current = isMinimized;
+
     const resizeObserver = new ResizeObserver(() => {
       // Debounce resize events
       clearTimeout(timeoutId);
@@ -2134,7 +2246,7 @@ export function IpodAppComponent({
       clearTimeout(timeoutId);
       resizeObserver.disconnect();
     };
-  }, [isWindowOpen]);
+  }, [isWindowOpen, isMinimized]);
 
   const handleShareSong = useCallback(() => {
     if (tracks.length > 0 && currentIndex >= 0) {
@@ -2251,12 +2363,12 @@ export function IpodAppComponent({
     store.setLyricsAlignment(next);
     showStatus(
       next === LyricsAlignment.FocusThree
-        ? "Layout: Focus"
+        ? t("apps.ipod.status.layoutFocus")
         : next === LyricsAlignment.Center
-        ? "Layout: Center"
-        : "Layout: Alternating"
+        ? t("apps.ipod.status.layoutCenter")
+        : t("apps.ipod.status.layoutAlternating")
     );
-  }, [showStatus]);
+  }, [showStatus, t]);
 
   const toggleKorean = useCallback(() => {
     const store = useIpodStore.getState();
@@ -2267,9 +2379,9 @@ export function IpodAppComponent({
         : KoreanDisplay.Original;
     store.setKoreanDisplay(next);
     showStatus(
-      next === KoreanDisplay.Romanized ? "Romanization On" : "Hangul On"
+      next === KoreanDisplay.Romanized ? t("apps.ipod.status.romanizationOn") : t("apps.ipod.status.hangulOn")
     );
-  }, [showStatus]);
+  }, [showStatus, t]);
 
   // Add fullscreen change event handler
   useEffect(() => {
@@ -2310,7 +2422,7 @@ export function IpodAppComponent({
     <>
       {!isXpTheme && isForeground && menuBar}
       <WindowFrame
-        title="iPod"
+        title={getTranslatedAppName("ipod")}
         onClose={onClose}
         isForeground={isForeground}
         appId="ipod"
@@ -2320,6 +2432,7 @@ export function IpodAppComponent({
         onNavigateNext={onNavigateNext}
         onNavigatePrevious={onNavigatePrevious}
         menuBar={isXpTheme ? menuBar : undefined}
+        keepMountedWhenMinimized
       >
         <div
           ref={containerRef}
@@ -2459,6 +2572,7 @@ export function IpodAppComponent({
             }}
             seekTime={seekTime}
             showStatus={showStatus}
+            showOfflineStatus={showOfflineStatus}
             registerActivity={registerActivity}
             isPlaying={isPlaying}
             statusMessage={statusMessage}
@@ -2560,7 +2674,7 @@ export function IpodAppComponent({
                                 const sign =
                                   newOffset > 0 ? "+" : newOffset < 0 ? "" : "";
                                 showStatus(
-                                  `Offset ${sign}${(newOffset / 1000).toFixed(
+                                  `${t("apps.ipod.status.offset")} ${sign}${(newOffset / 1000).toFixed(
                                     2
                                   )}s`
                                 );
@@ -2604,7 +2718,7 @@ export function IpodAppComponent({
                                   "font-lyrics-rounded"
                                 )}
                               >
-                                Translating lyrics…
+                                {t("apps.ipod.status.translatingLyrics")}
                               </div>
                             </div>
                           )}
@@ -2620,13 +2734,14 @@ export function IpodAppComponent({
         <HelpDialog
           isOpen={isHelpDialogOpen}
           onOpenChange={setIsHelpDialogOpen}
-          helpItems={helpItems}
-          appName="iPod"
+          helpItems={translatedHelpItems}
+          appId="ipod"
         />
         <AboutDialog
           isOpen={isAboutDialogOpen}
           onOpenChange={setIsAboutDialogOpen}
           metadata={appMetadata}
+          appId="ipod"
         />
         <ConfirmDialog
           isOpen={isConfirmClearOpen}
@@ -2634,18 +2749,18 @@ export function IpodAppComponent({
           onConfirm={() => {
             clearLibrary();
             setIsConfirmClearOpen(false);
-            showStatus("Library Cleared");
+            showStatus(t("apps.ipod.status.libraryCleared"));
           }}
-          title="Clear Library"
-          description="Are you sure you want to clear your entire music library? This action cannot be undone."
+          title={t("apps.ipod.dialogs.clearLibraryTitle")}
+          description={t("apps.ipod.dialogs.clearLibraryDescription")}
         />
 
         <InputDialog
           isOpen={isAddDialogOpen}
           onOpenChange={setIsAddDialogOpen}
           onSubmit={handleAddTrack}
-          title="Add Song"
-          description="Paste a YouTube link to add to your iPod"
+          title={t("apps.ipod.dialogs.addSongTitle")}
+          description={t("apps.ipod.dialogs.addSongDescription")}
           value={urlInput}
           onChange={setUrlInput}
           isLoading={isAddingTrack}

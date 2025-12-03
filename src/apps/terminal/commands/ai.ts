@@ -1,19 +1,13 @@
 import { Command, CommandResult } from "../types";
 import { useTerminalStore } from "@/stores/useTerminalStore";
 import { useChatsStore } from "@/stores/useChatsStore";
-import { track } from "@/utils/analytics";
-
-// Analytics event namespace for terminal AI events
-export const TERMINAL_ANALYTICS = {
-  AI_COMMAND: "terminal:ai_command",
-  CHAT_START: "terminal:chat_start",
-  CHAT_EXIT: "terminal:chat_exit",
-  CHAT_CLEAR: "terminal:chat_clear",
-};
+import { track } from "@vercel/analytics";
+import { TERMINAL_ANALYTICS } from "@/utils/analytics";
+import i18n from "@/lib/i18n";
 
 export const aiCommand: Command = {
   name: "ai",
-  description: "Enter AI chat mode with zi",
+  description: "apps.terminal.commands.ai",
   usage: "ai [initial prompt]",
   handler: (args: string[]): CommandResult => {
     // Get terminal store instance
@@ -40,13 +34,13 @@ export const aiCommand: Command = {
       terminalStore.setInitialAiPrompt(initialPrompt);
 
       return {
-        output: `ask zi anything. type 'exit' to return to terminal.\n→ from your command: ${initialPrompt}`,
+        output: i18n.t("apps.terminal.output.askRyoWithPrompt", { prompt: initialPrompt }),
         isError: false,
       };
     }
 
     return {
-      output: `ask zi anything. type 'exit' to return to terminal.`,
+      output: i18n.t("apps.terminal.output.askRyoAnything"),
       isError: false,
     };
   },
@@ -58,7 +52,7 @@ export const chatCommand: Command = {
   name: "chat",
 };
 
-export const ziCommand: Command = {
+export const ryoCommand: Command = {
   ...aiCommand,
-  name: "zi",
+  name: "ryo",
 };

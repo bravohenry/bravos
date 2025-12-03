@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MenuBar } from "@/components/layout/MenuBar";
 import {
@@ -8,9 +9,11 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { generateAppShareUrl } from "@/utils/sharedUrl";
 import { useThemeStore } from "@/stores/useThemeStore";
+import { ShareItemDialog } from "@/components/dialogs/ShareItemDialog";
+import { appRegistry } from "@/config/appRegistry";
+import { useTranslation } from "react-i18next";
 
 export interface TerminalMenuBarProps {
   onClose: () => void;
@@ -35,6 +38,10 @@ export function TerminalMenuBar({
   onToggleMute,
   isMuted = false,
 }: TerminalMenuBarProps) {
+  const { t } = useTranslation();
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const appId = "terminal";
+  const appName = appRegistry[appId as keyof typeof appRegistry]?.name || appId;
   const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
 
@@ -48,7 +55,7 @@ export function TerminalMenuBar({
             size="default"
             className="h-6 text-md px-2 py-1 border-none hover:bg-gray-200 active:bg-gray-900 active:text-white focus-visible:ring-0"
           >
-            File
+            {t("common.menu.file")}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={1} className="px-0">
@@ -56,14 +63,14 @@ export function TerminalMenuBar({
             onClick={onClear}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Clear Terminal
+            {t("apps.terminal.menu.clearTerminal")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
           <DropdownMenuItem
             onClick={onClose}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Close
+            {t("common.menu.close")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -76,19 +83,19 @@ export function TerminalMenuBar({
             size="default"
             className="h-6 text-md px-2 py-1 border-none hover:bg-gray-200 active:bg-gray-900 active:text-white focus-visible:ring-0"
           >
-            Edit
+            {t("common.menu.edit")}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={1} className="px-0">
           <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
-            Copy
+            {t("common.menu.copy")}
           </DropdownMenuItem>
           <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
-            Paste
+            {t("common.menu.paste")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
           <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
-            Select All
+            {t("common.menu.selectAll")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -101,7 +108,7 @@ export function TerminalMenuBar({
             size="default"
             className="h-6 text-md px-2 py-1 border-none hover:bg-gray-200 active:bg-gray-900 active:text-white focus-visible:ring-0"
           >
-            View
+            {t("common.menu.view")}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={1} className="px-0">
@@ -109,20 +116,20 @@ export function TerminalMenuBar({
             onClick={onIncreaseFontSize}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Increase Font Size
+            {t("apps.terminal.menu.increaseFontSize")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={onDecreaseFontSize}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Decrease Font Size
+            {t("apps.terminal.menu.decreaseFontSize")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
           <DropdownMenuItem
             onClick={onResetFontSize}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Reset Font Size
+            {t("apps.terminal.menu.resetFontSize")}
           </DropdownMenuItem>
           {onToggleMute && (
             <>
@@ -132,7 +139,7 @@ export function TerminalMenuBar({
                 className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
               >
                 <span className={cn(!isMuted && "pl-4")}>
-                  {isMuted ? "✓ Mute Sounds" : "Mute Sounds"}
+                  {isMuted ? `✓ ${t("apps.terminal.menu.muteSounds")}` : t("apps.terminal.menu.muteSounds")}
                 </span>
               </DropdownMenuItem>
             </>
@@ -148,7 +155,7 @@ export function TerminalMenuBar({
             size="default"
             className="h-6 text-md px-2 py-1 border-none hover:bg-gray-200 active:bg-gray-900 active:text-white focus-visible:ring-0"
           >
-            Help
+            {t("common.menu.help")}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={1} className="px-0">
@@ -156,38 +163,31 @@ export function TerminalMenuBar({
             onClick={onShowHelp}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Terminal Help
+            {t("apps.terminal.menu.terminalHelp")}
           </DropdownMenuItem>
           <DropdownMenuItem
-            onSelect={async () => {
-              const appId = "terminal"; // Specific app ID
-              const shareUrl = generateAppShareUrl(appId);
-              if (!shareUrl) return;
-              try {
-                await navigator.clipboard.writeText(shareUrl);
-                toast.success("App link copied!", {
-                  description: `Link to ${appId} copied to clipboard.`,
-                });
-              } catch (err) {
-                console.error("Failed to copy app link: ", err);
-                toast.error("Failed to copy link", {
-                  description: "Could not copy link to clipboard.",
-                });
-              }
-            }}
+            onSelect={() => setIsShareDialogOpen(true)}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Share App...
+            {t("common.menu.shareApp")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
           <DropdownMenuItem
             onClick={onShowAbout}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            About Terminal
+            {t("apps.terminal.menu.aboutTerminal")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <ShareItemDialog
+        isOpen={isShareDialogOpen}
+        onClose={() => setIsShareDialogOpen(false)}
+        itemType="App"
+        itemIdentifier={appId}
+        title={appName}
+        generateShareUrl={generateAppShareUrl}
+      />
     </MenuBar>
   );
 }

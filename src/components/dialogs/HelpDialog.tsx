@@ -7,6 +7,8 @@ import {
 } from "@/components/ui/dialog";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
+import { getTranslatedAppName, type AppId } from "@/utils/i18n";
 
 interface HelpCardProps {
   icon: string;
@@ -30,7 +32,7 @@ function HelpCard({ icon, title, description }: HelpCardProps) {
         )}
         style={{
           fontFamily: isXpTheme
-            ? '"Pixelated MS Sans Serif", Arial'
+            ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
             : undefined,
           fontSize: isXpTheme ? "11px" : undefined,
         }}
@@ -46,7 +48,7 @@ function HelpCard({ icon, title, description }: HelpCardProps) {
         )}
         style={{
           fontFamily: isXpTheme
-            ? '"Pixelated MS Sans Serif", Arial'
+            ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
             : undefined,
           fontSize: isXpTheme ? "10px" : undefined,
         }}
@@ -61,7 +63,8 @@ interface HelpDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   helpItems: HelpCardProps[];
-  appName: string;
+  appName?: string; // Deprecated: use appId instead
+  appId?: AppId; // Preferred: will use localized app name
 }
 
 export function HelpDialog({
@@ -69,9 +72,14 @@ export function HelpDialog({
   onOpenChange,
   helpItems = [],
   appName,
+  appId,
 }: HelpDialogProps) {
+  const { t } = useTranslation();
   const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
+
+  // Use localized app name if appId is provided, otherwise fall back to appName
+  const displayAppName = appId ? getTranslatedAppName(appId) : appName || "";
 
   const dialogContent = (
     <div className={isXpTheme ? "p-2 px-4" : "p-6 pt-4"}>
@@ -84,12 +92,12 @@ export function HelpDialog({
         )}
         style={{
           fontFamily: isXpTheme
-            ? '"Pixelated MS Sans Serif", Arial'
+            ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
             : undefined,
           fontSize: isXpTheme ? "18px" : undefined,
         }}
       >
-        Welcome to {appName}
+        {t("common.dialog.welcomeTo", { appName: displayAppName })}
       </p>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {helpItems.map((item) => (
@@ -107,22 +115,22 @@ export function HelpDialog({
       >
         {isXpTheme ? (
           <>
-            <DialogHeader>Help</DialogHeader>
+            <DialogHeader>{t("common.dialog.help")}</DialogHeader>
             <div className="window-body">{dialogContent}</div>
           </>
         ) : currentTheme === "macosx" ? (
           <>
-            <DialogHeader>Help</DialogHeader>
+            <DialogHeader>{t("common.dialog.help")}</DialogHeader>
             {dialogContent}
           </>
         ) : (
           <>
             <DialogHeader>
               <DialogTitle className="font-normal text-[16px]">
-                Help
+                {t("common.dialog.help")}
               </DialogTitle>
               <DialogDescription className="sr-only">
-                Help and documentation for {appName}
+                {t("common.dialog.informationAboutApp")}
               </DialogDescription>
             </DialogHeader>
             {dialogContent}

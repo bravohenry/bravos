@@ -62,7 +62,7 @@ const SelectTrigger = React.forwardRef<
       )}
       style={{
         fontFamily: isXpTheme
-          ? '"Pixelated MS Sans Serif", Arial'
+          ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
           : isMacOSTheme
           ? '"LucidaGrande", "Lucida Grande", "Hiragino Sans", "Hiragino Sans GB", "Heiti SC", "Lucida Sans Unicode", sans-serif'
           : isOS1Theme
@@ -94,7 +94,6 @@ const SelectTrigger = React.forwardRef<
           color: "black",
           textShadow: "0 2px 3px rgba(0, 0, 0, 0.25)",
           paddingRight: "24px",
-          zIndex: 1,
         }),
       }}
       onClick={() => playClick()}
@@ -240,7 +239,7 @@ const SelectLabel = React.forwardRef<
       className={cn("px-2 py-1.5 text-sm font-semibold", className)}
       style={{
         fontFamily: isXpTheme
-          ? '"Pixelated MS Sans Serif", Arial'
+          ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
           : isMacOSTheme
           ? '"LucidaGrande", "Lucida Grande", "Hiragino Sans", "Hiragino Sans GB", "Heiti SC", "Lucida Sans Unicode", sans-serif'
           : undefined,
@@ -277,7 +276,7 @@ const SelectItem = React.forwardRef<
       )}
       style={{
         fontFamily: isXpTheme
-          ? '"Pixelated MS Sans Serif", Arial'
+          ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
           : isMacOSTheme
           ? '"LucidaGrande", "Lucida Grande", "Hiragino Sans", "Hiragino Sans GB", "Heiti SC", "Lucida Sans Unicode", sans-serif'
           : isOS1Theme
@@ -295,7 +294,6 @@ const SelectItem = React.forwardRef<
           fontSmooth: "auto",
           borderRadius: "0px",
           padding: "6px 20px 6px 16px",
-          margin: "1px 0",
           textShadow: "0 2px 3px rgba(0, 0, 0, 0.25)",
         }),
         ...(isOS1Theme && {

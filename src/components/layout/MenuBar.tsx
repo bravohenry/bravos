@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { AppleMenu } from "./AppleMenu";
 import { useAppContext } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
@@ -16,19 +16,24 @@ import { StartMenu } from "./StartMenu";
 import { useAppStoreShallow } from "@/stores/helpers";
 import { Slider } from "@/components/ui/slider";
 import { Volume1, Volume2, VolumeX, Settings, ChevronUp } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
 import { useSound, Sounds } from "@/hooks/useSound";
 import { useThemeStore } from "@/stores/useThemeStore";
-import { getAppIconPath, appRegistry } from "@/config/appRegistry";
+import { getAppIconPath } from "@/config/appRegistry";
+import { AppId } from "@/config/appRegistry";
 import { ThemedIcon } from "@/components/shared/ThemedIcon";
 import { useFilesStore } from "@/stores/useFilesStore";
 import type { AppInstance } from "@/stores/useAppStore";
 import type { AppletViewerInitialData } from "@/apps/applet-viewer";
+import { useOffline } from "@/hooks/useOffline";
+import { WifiOff } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
+import { getTranslatedAppName } from "@/utils/i18n";
+import { useIsPhone } from "@/hooks/useIsPhone";
 
-// Helper function to get app name
+// Helper function to get app name (using translations)
 const getAppName = (appId: string): string => {
-  const app = appRegistry[appId as keyof typeof appRegistry];
-  return app?.name || appId;
+  return getTranslatedAppName(appId as AppId);
 };
 
 const finderHelpItems = [
@@ -53,11 +58,11 @@ const finderMetadata = {
   name: "Finder",
   version: "1.0.0",
   creator: {
-    name: "Zihan",
-    url: "https://bravohenry.com",
+    name: "Ryo Lu",
+    url: "https://ryo.lu",
   },
-  github: "https://github.com/bravohenry/bravos",
-  icon: "mac.png",
+  github: "https://github.com/ryokun6/ryos",
+  icon: "/icons/mac.png",
 };
 
 interface MenuBarProps {
@@ -65,11 +70,294 @@ interface MenuBarProps {
   inWindowFrame?: boolean; // Add prop to indicate if MenuBar is inside a window
 }
 
+// Context to share scrolling state
+const ScrollingContext = React.createContext<{
+  isScrolling: boolean;
+  preventInteraction: (e: React.MouseEvent | React.TouchEvent) => boolean;
+}>({
+  isScrolling: false,
+  preventInteraction: () => false,
+});
+
+// Hook to use scrolling context
+function useScrollingContext() {
+  return React.useContext(ScrollingContext);
+}
+
+// Scrollable menu wrapper with fade masks for mobile
+function ScrollableMenuWrapper({ children }: { children: React.ReactNode }) {
+  const isPhone = useIsPhone();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const [scrollWidth, setScrollWidth] = useState(0);
+  const [clientWidth, setClientWidth] = useState(0);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Track touch state for preventing accidental taps during scroll
+  const touchStateRef = useRef<{
+    startX: number;
+    startY: number;
+    hasMoved: boolean;
+    startTime: number;
+  } | null>(null);
+  const hadRecentScrollRef = useRef(false);
+
+  const updateScrollState = useCallback(() => {
+    if (!scrollRef.current) return;
+    const { scrollLeft: left, scrollWidth: width, clientWidth: cw } = scrollRef.current;
+    setScrollLeft(left);
+    setScrollWidth(width);
+    setClientWidth(cw);
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    updateScrollState();
+    hadRecentScrollRef.current = true;
+    
+    // Mark current touch as moved if there's an active touch
+    if (touchStateRef.current) {
+      touchStateRef.current.hasMoved = true;
+    }
+    
+    // Clear existing timeout
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = null;
+    }
+    
+    // Clear recent scroll flag after scroll ends
+    scrollTimeoutRef.current = setTimeout(() => {
+      hadRecentScrollRef.current = false;
+    }, 300);
+  }, [updateScrollState]);
+
+  // Check if interaction should be prevented
+  const shouldPreventInteraction = useCallback(() => {
+    // Prevent if there was recent scrolling
+    if (hadRecentScrollRef.current) {
+      return true;
+    }
+    // Prevent if current touch has moved
+    if (touchStateRef.current?.hasMoved) {
+      return true;
+    }
+    return false;
+  }, []);
+
+  const preventInteraction = useCallback((e: React.MouseEvent | React.TouchEvent | React.PointerEvent) => {
+    if (shouldPreventInteraction()) {
+      e.preventDefault();
+      e.stopPropagation();
+      return true;
+    }
+    return false;
+  }, [shouldPreventInteraction]);
+
+  useEffect(() => {
+    updateScrollState();
+    const resizeObserver = new ResizeObserver(updateScrollState);
+    if (scrollRef.current) {
+      resizeObserver.observe(scrollRef.current);
+    }
+    return () => {
+      resizeObserver.disconnect();
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = null;
+      }
+    };
+  }, [updateScrollState]);
+
+  const canScrollLeft = scrollLeft > 0;
+  const canScrollRight = scrollLeft < scrollWidth - clientWidth - 1;
+
+  // Calculate mask gradients based on scroll position
+  // In CSS masks: black = visible, transparent = hidden
+  const getMaskImage = () => {
+    if (!isPhone || scrollWidth <= clientWidth) {
+      return undefined;
+    }
+    
+    const fadeWidth = 24; // Width of fade in pixels
+    
+    if (canScrollLeft && canScrollRight) {
+      // Both sides need fade: transparent edges, black middle
+      return `linear-gradient(to right, transparent 0%, black ${fadeWidth}px, black calc(100% - ${fadeWidth}px), transparent 100%)`;
+    } else if (canScrollLeft) {
+      // Only left side needs fade: transparent left edge, black rest
+      return `linear-gradient(to right, transparent 0%, black ${fadeWidth}px, black 100%)`;
+    } else if (canScrollRight) {
+      // Only right side needs fade: black start, transparent right edge
+      return `linear-gradient(to right, black 0%, black calc(100% - ${fadeWidth}px), transparent 100%)`;
+    }
+    return undefined;
+  };
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStateRef.current = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      hasMoved: false,
+      startTime: Date.now(),
+    };
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchStateRef.current) return;
+    
+    const touch = e.touches[0];
+    const deltaX = Math.abs(touch.clientX - touchStateRef.current.startX);
+    const deltaY = Math.abs(touch.clientY - touchStateRef.current.startY);
+    
+    // If any movement is significant, mark as moved
+    if (deltaX > 3 || deltaY > 3) {
+      touchStateRef.current.hasMoved = true;
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    // Keep hasMoved state briefly to catch click events that fire after touchend
+    const hadMoved = touchStateRef.current?.hasMoved;
+    touchStateRef.current = null;
+    
+    if (hadMoved) {
+      // Briefly keep the scroll prevention active
+      hadRecentScrollRef.current = true;
+      setTimeout(() => {
+        hadRecentScrollRef.current = false;
+      }, 100);
+    }
+  }, []);
+
+  if (!isPhone) {
+    return (
+      <ScrollingContext.Provider value={{ isScrolling: false, preventInteraction: () => false }}>
+        {children}
+      </ScrollingContext.Provider>
+    );
+  }
+
+  return (
+    <ScrollingContext.Provider value={{ isScrolling: hadRecentScrollRef.current, preventInteraction }}>
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-x-auto overflow-y-hidden"
+        style={{
+          WebkitOverflowScrolling: "touch",
+          overscrollBehaviorX: "contain",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          maskImage: getMaskImage(),
+          WebkitMaskImage: getMaskImage(),
+          touchAction: "pan-x",
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div className="flex items-center min-w-max">
+          {children}
+        </div>
+      </div>
+    </ScrollingContext.Provider>
+  );
+}
+
+// Wrapper for dropdown trigger buttons that prevents interaction during scrolling
+function DropdownTriggerButton({
+  children,
+  ...props
+}: React.ComponentProps<typeof Button>) {
+  const { preventInteraction } = useScrollingContext();
+  const isPhone = useIsPhone();
+  const touchStateRef = useRef<{ 
+    startX: number; 
+    startY: number; 
+    startTime: number;
+    hasMoved: boolean;
+  } | null>(null);
+  
+  if (!isPhone) {
+    return <Button {...props}>{children}</Button>;
+  }
+  
+  return (
+    <Button
+      {...props}
+      onPointerDown={(e) => {
+        // For touch events, prevent Radix from opening dropdown immediately
+        // We'll handle it via click after determining if it's a tap vs scroll
+        if (e.pointerType === 'touch') {
+          e.preventDefault();
+          // Track touch start
+          touchStateRef.current = {
+            startX: e.clientX,
+            startY: e.clientY,
+            startTime: Date.now(),
+            hasMoved: false,
+          };
+          return;
+        }
+        // For mouse/pen, use normal behavior
+        if (preventInteraction(e)) {
+          return;
+        }
+        props.onPointerDown?.(e);
+      }}
+      onPointerMove={(e) => {
+        if (e.pointerType !== 'touch' || !touchStateRef.current) return;
+        const deltaX = Math.abs(e.clientX - touchStateRef.current.startX);
+        const deltaY = Math.abs(e.clientY - touchStateRef.current.startY);
+        if (deltaX > 5 || deltaY > 5) {
+          touchStateRef.current.hasMoved = true;
+        }
+      }}
+      onPointerUp={(e) => {
+        if (e.pointerType !== 'touch' || !touchStateRef.current) return;
+        
+        const { hasMoved, startTime } = touchStateRef.current;
+        const duration = Date.now() - startTime;
+        touchStateRef.current = null;
+        
+        // If it was a clean tap (no movement, reasonable duration), trigger click
+        if (!hasMoved && duration < 300 && !preventInteraction(e)) {
+          // Simulate a click to open the dropdown
+          (e.target as HTMLElement).click();
+        }
+      }}
+      onPointerCancel={() => {
+        touchStateRef.current = null;
+      }}
+      onClick={(e) => {
+        // For touch, clicks are triggered programmatically from onPointerUp
+        // For mouse, allow normal clicks
+        if (preventInteraction(e)) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        props.onClick?.(e);
+      }}
+    >
+      {children}
+    </Button>
+  );
+}
+
 function Clock() {
   const [time, setTime] = useState(new Date());
   const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
   const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
+  const { i18n: i18nInstance } = useTranslation();
+  
+  // Get current locale from i18n (reactive to language changes)
+  const currentLocale = i18nInstance.language || "en";
+  
+  // Determine if locale prefers 24-hour format
+  const prefers24Hour = ["zh-TW", "ja", "de", "fr", "ko"].includes(currentLocale);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -93,42 +381,89 @@ function Clock() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Helper function to format time without leading zeros for 24h format
+  const formatTime24h = (date: Date): string => {
+    const hour = date.getHours();
+    const minute = date.getMinutes().toString().padStart(2, "0");
+    return `${hour}:${minute}`;
+  };
+
   // Format the display based on theme and viewport width
+  // Use "numeric" for hour to avoid leading zeros (e.g., "0:08" instead of "00:08")
+  // "2-digit" would force leading zeros which Chinese/Japanese don't typically use
+  const hourFormat = "numeric";
+  
   let displayTime;
 
   if (isXpTheme) {
-    // For XP/98 themes: time with AM/PM (e.g., "1:34 AM")
-    displayTime = time.toLocaleTimeString([], {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
+    // For XP/98 themes: use 24h for locales that prefer it, otherwise 12h
+    if (prefers24Hour) {
+      displayTime = formatTime24h(time);
+    } else {
+      displayTime = time.toLocaleTimeString(currentLocale, {
+        hour: hourFormat,
+        minute: "2-digit",
+        hour12: true,
+      });
+    }
   } else if (viewportWidth < 420) {
-    // For small screens: just time without AM/PM (e.g., "1:34")
-    const timeString = time.toLocaleTimeString([], {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-    displayTime = timeString.replace(/\s?(AM|PM)$/i, "");
+    // For small screens: just time (24h for locales that prefer it)
+    if (prefers24Hour) {
+      displayTime = formatTime24h(time);
+    } else {
+      displayTime = time.toLocaleTimeString(currentLocale, {
+        hour: hourFormat,
+        minute: "2-digit",
+        hour12: true,
+      });
+    }
   } else if (viewportWidth >= 420 && viewportWidth <= 768) {
-    // For medium screens: time with AM/PM (e.g., "1:00 AM")
-    displayTime = time.toLocaleTimeString([], {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
+    // For medium screens: time (24h for locales that prefer it)
+    if (prefers24Hour) {
+      displayTime = formatTime24h(time);
+    } else {
+      displayTime = time.toLocaleTimeString(currentLocale, {
+        hour: hourFormat,
+        minute: "2-digit",
+        hour12: true,
+      });
+    }
   } else {
-    // For larger screens (> 768px): full date and time (e.g., "Wed May 7 1:34 AM")
-    const shortWeekday = time.toLocaleDateString([], { weekday: "short" });
-    const month = time.toLocaleDateString([], { month: "short" });
-    const day = time.getDate();
-    const timeString = time.toLocaleTimeString([], {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-    displayTime = `${shortWeekday} ${month} ${day} ${timeString}`;
+    // For larger screens (> 768px): full date and time
+    const timeString = prefers24Hour 
+      ? formatTime24h(time)
+      : time.toLocaleTimeString(currentLocale, {
+          hour: hourFormat,
+          minute: "2-digit",
+          hour12: true,
+        });
+    
+    // Custom formatting for Chinese, Japanese, and Korean
+    if (currentLocale === "zh-TW") {
+      // Chinese format: "12月2日 週二 12:03"
+      const month = time.getMonth() + 1; // getMonth() returns 0-11, so add 1
+      const day = time.getDate();
+      const weekday = time.toLocaleDateString(currentLocale, { weekday: "short" });
+      displayTime = `${month}月${day}日 ${weekday} ${timeString}`;
+    } else if (currentLocale === "ja") {
+      // Japanese format: "12月2日 (火) 12:06"
+      const month = time.getMonth() + 1; // getMonth() returns 0-11, so add 1
+      const day = time.getDate();
+      const weekday = time.toLocaleDateString(currentLocale, { weekday: "short" });
+      displayTime = `${month}月${day}日 (${weekday}) ${timeString}`;
+    } else if (currentLocale === "ko") {
+      // Korean format: "12월2일 (화) 12:06" (similar to Japanese)
+      const month = time.getMonth() + 1; // getMonth() returns 0-11, so add 1
+      const day = time.getDate();
+      const weekday = time.toLocaleDateString(currentLocale, { weekday: "short" });
+      displayTime = `${month}월${day}일 (${weekday}) ${timeString}`;
+    } else {
+      // Default format for other locales: "Wed May 7 1:34 AM" or "Wed May 7 13:34"
+      const shortWeekday = time.toLocaleDateString(currentLocale, { weekday: "short" });
+      const month = time.toLocaleDateString(currentLocale, { month: "short" });
+      const day = time.getDate();
+      displayTime = `${shortWeekday} ${month} ${day} ${timeString}`;
+    }
   }
 
   return (
@@ -147,6 +482,7 @@ function Clock() {
 }
 
 function DefaultMenuItems() {
+  const { t } = useTranslation();
   const launchApp = useLaunchApp();
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
@@ -160,44 +496,44 @@ function DefaultMenuItems() {
       {/* File Menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
+          <DropdownTriggerButton
             variant="ghost"
             size="default"
             className="h-6 text-md px-2 py-1 border-none hover:bg-black/10 active:bg-black/20 focus-visible:ring-0"
             style={{ color: "inherit" }}
           >
-            File
-          </Button>
+            {t("common.menu.file")}
+          </DropdownTriggerButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={1} className="px-0">
           <DropdownMenuItem
             onClick={() => handleLaunchFinder("/")}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            New Finder Window
+            {t("common.menu.newFinderWindow")}
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            New Folder
+            {t("common.menu.newFolder")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
           <DropdownMenuItem
             disabled
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Move to Trash
+            {t("common.menu.moveToTrash")}
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Empty Trash...
+            {t("common.menu.emptyTrash")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
           <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
-            Close
+            {t("common.menu.close")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -205,53 +541,53 @@ function DefaultMenuItems() {
       {/* Edit Menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
+          <DropdownTriggerButton
             variant="ghost"
             size="default"
             className="h-6 text-md px-2 py-1 border-none hover:bg-black/10 active:bg-black/20 focus-visible:ring-0"
             style={{ color: "inherit" }}
           >
-            Edit
-          </Button>
+            {t("common.menu.edit")}
+          </DropdownTriggerButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={1} className="px-0">
           <DropdownMenuItem
             disabled
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Undo
+            {t("common.menu.undo")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
           <DropdownMenuItem
             disabled
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Cut
+            {t("common.menu.cut")}
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Copy
+            {t("common.menu.copy")}
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Paste
+            {t("common.menu.paste")}
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Clear
+            {t("common.menu.clear")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
           <DropdownMenuItem
             disabled
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Select All
+            {t("common.menu.selectAll")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -259,37 +595,37 @@ function DefaultMenuItems() {
       {/* View Menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
+          <DropdownTriggerButton
             variant="ghost"
             size="default"
             className="h-6 text-md px-2 py-1 border-none hover:bg-black/10 active:bg-black/20 focus-visible:ring-0"
             style={{ color: "inherit" }}
           >
-            View
-          </Button>
+            {t("common.menu.view")}
+          </DropdownTriggerButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={1} className="px-0">
           <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
-            <span className="pl-4">by Small Icon</span>
+            <span className="pl-4">{t("common.menu.bySmallIcon")}</span>
           </DropdownMenuItem>
           <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
-            <span>✓ by Icon</span>
+            <span>✓ {t("common.menu.byIcon")}</span>
           </DropdownMenuItem>
           <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
-            <span className="pl-4">by List</span>
+            <span className="pl-4">{t("common.menu.byList")}</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
           <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
-            <span>✓ by Name</span>
+            <span>✓ {t("common.menu.byName")}</span>
           </DropdownMenuItem>
           <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
-            <span className="pl-4">by Date</span>
+            <span className="pl-4">{t("common.menu.byDate")}</span>
           </DropdownMenuItem>
           <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
-            <span className="pl-4">by Size</span>
+            <span className="pl-4">{t("common.menu.bySize")}</span>
           </DropdownMenuItem>
           <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
-            <span className="pl-4">by Kind</span>
+            <span className="pl-4">{t("common.menu.byKind")}</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -297,27 +633,27 @@ function DefaultMenuItems() {
       {/* Go Menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
+          <DropdownTriggerButton
             variant="ghost"
             size="default"
             className="h-6 text-md px-2 py-1 border-none hover:bg-black/10 active:bg-black/20 focus-visible:ring-0"
             style={{ color: "inherit" }}
           >
-            Go
-          </Button>
+            {t("common.menu.go")}
+          </DropdownTriggerButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={1} className="px-0">
           <DropdownMenuItem
             disabled
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Back
+            {t("common.menu.back")}
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Forward
+            {t("common.menu.forward")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
           <DropdownMenuItem
@@ -326,10 +662,10 @@ function DefaultMenuItems() {
           >
             <ThemedIcon
               name="applications.png"
-              alt="Applications"
+              alt={t("common.menu.applications")}
               className="w-4 h-4 [image-rendering:pixelated]"
             />
-            Applications
+            {t("common.menu.applications")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => handleLaunchFinder("/Documents")}
@@ -337,10 +673,10 @@ function DefaultMenuItems() {
           >
             <ThemedIcon
               name="documents.png"
-              alt="Documents"
+              alt={t("common.menu.documents")}
               className="w-4 h-4 [image-rendering:pixelated]"
             />
-            Documents
+            {t("common.menu.documents")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => handleLaunchFinder("/Images")}
@@ -348,10 +684,10 @@ function DefaultMenuItems() {
           >
             <ThemedIcon
               name="images.png"
-              alt="Images"
+              alt={t("common.menu.images")}
               className="w-4 h-4 [image-rendering:pixelated]"
             />
-            Images
+            {t("common.menu.images")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => handleLaunchFinder("/Music")}
@@ -359,10 +695,10 @@ function DefaultMenuItems() {
           >
             <ThemedIcon
               name="sounds.png"
-              alt="Music"
+              alt={t("common.menu.music")}
               className="w-4 h-4 [image-rendering:pixelated]"
             />
-            Music
+            {t("common.menu.music")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => handleLaunchFinder("/Sites")}
@@ -370,10 +706,10 @@ function DefaultMenuItems() {
           >
             <ThemedIcon
               name="sites.png"
-              alt="Sites"
+              alt={t("common.menu.sites")}
               className="w-4 h-4 [image-rendering:pixelated]"
             />
-            Sites
+            {t("common.menu.sites")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => handleLaunchFinder("/Videos")}
@@ -381,10 +717,10 @@ function DefaultMenuItems() {
           >
             <ThemedIcon
               name="movies.png"
-              alt="Videos"
+              alt={t("common.menu.videos")}
               className="w-4 h-4 [image-rendering:pixelated]"
             />
-            Videos
+            {t("common.menu.videos")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => handleLaunchFinder("/Trash")}
@@ -392,10 +728,10 @@ function DefaultMenuItems() {
           >
             <ThemedIcon
               name="trash-empty.png"
-              alt="Trash"
+              alt={t("common.menu.trash")}
               className="w-4 h-4 [image-rendering:pixelated]"
             />
-            Trash
+            {t("common.menu.trash")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -403,28 +739,28 @@ function DefaultMenuItems() {
       {/* Help Menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
+          <DropdownTriggerButton
             variant="ghost"
             size="default"
             className="h-6 text-md px-2 py-1 border-none hover:bg-black/10 active:bg-black/20 focus-visible:ring-0"
             style={{ color: "inherit" }}
           >
-            Help
-          </Button>
+            {t("common.menu.help")}
+          </DropdownTriggerButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={1} className="px-0">
           <DropdownMenuItem
             onClick={() => setIsHelpDialogOpen(true)}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Finder Help
+            {t("common.menu.finderHelp")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
           <DropdownMenuItem
             onClick={() => setIsAboutDialogOpen(true)}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            About Finder
+            {t("common.menu.aboutFinder")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -432,13 +768,14 @@ function DefaultMenuItems() {
       <HelpDialog
         isOpen={isHelpDialogOpen}
         onOpenChange={setIsHelpDialogOpen}
-        appName="Finder"
+        appId="finder"
         helpItems={finderHelpItems}
       />
       <AboutDialog
         isOpen={isAboutDialogOpen}
         onOpenChange={setIsAboutDialogOpen}
         metadata={finderMetadata}
+        appId="finder"
       />
     </>
   );
@@ -457,12 +794,12 @@ function VolumeControl() {
 
   const getVolumeIcon = () => {
     if (masterVolume === 0) {
-      return <Icon icon={VolumeX} name="VolumeX" className="h-5 w-5" />;
+      return <VolumeX className="h-5 w-5" />;
     }
     if (masterVolume < 0.5) {
-      return <Icon icon={Volume1} name="Volume1" className="h-5 w-5" />;
+      return <Volume1 className="h-5 w-5" />;
     }
-    return <Icon icon={Volume2} name="Volume2" className="h-5 w-5" />;
+    return <Volume2 className="h-5 w-5" />;
   };
 
   return (
@@ -511,7 +848,7 @@ function VolumeControl() {
             setIsDropdownOpen(false);
           }}
         >
-          <Icon icon={Settings} name="Settings" className="h-4 w-4" />
+          <Settings className="h-4 w-4" />
         </Button>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -525,12 +862,14 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
     instances,
 
     bringInstanceToForeground,
+    restoreInstance,
     foregroundInstanceId, // Add this to get the foreground instance ID
   } = useAppStoreShallow((s) => ({
     getForegroundInstance: s.getForegroundInstance,
     instances: s.instances,
 
     bringInstanceToForeground: s.bringInstanceToForeground,
+    restoreInstance: s.restoreInstance,
     foregroundInstanceId: s.foregroundInstanceId, // Add this
   }));
 
@@ -540,12 +879,6 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
   // Get current theme
   const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
-  const isOS1Theme = currentTheme === "os1";
-  
-  // Get foreground window title for OS1 theme
-  const foregroundWindowTitle = isOS1Theme && foregroundInstance 
-    ? (foregroundInstance.title || getAppName(foregroundInstance.appId))
-    : null;
 
   // Get file system items for applet icons
   const files = useFilesStore((s) => s.items);
@@ -699,6 +1032,7 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
             ref={runningAreaRef}
             className="flex-1 flex items-center gap-0.5 px-2 overflow-hidden h-full"
           >
+            <AnimatePresence mode="popLayout">
             {(() => {
               const idsToRender =
                 visibleTaskbarIds.length > 0 || overflowTaskbarIds.length > 0
@@ -710,6 +1044,7 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
                 if (!instance || !instance.isOpen) return null;
 
                 const isForeground = instanceId === foregroundInstanceId;
+                const isMinimized = instance.isMinimized ?? false;
                 const isApplet = instance.appId === "applet-viewer";
                 
                 // Get icon and label based on app type
@@ -719,17 +1054,35 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
                 const isEmoji = appletInfo?.isEmoji || false;
 
                 return (
-                  <button
+                  <motion.button
                     key={instanceId}
+                    data-taskbar-item={instanceId}
+                    layout
+                    initial={{ scale: 0.8, opacity: 0, width: 0 }}
+                    animate={{ scale: 1, opacity: 1, width: "auto" }}
+                    exit={{ scale: 0.8, opacity: 0, width: 0 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 400,
+                      damping: 30,
+                      mass: 0.8,
+                    }}
                     className="px-2 gap-1 border-t border-y rounded-sm flex items-center justify-start"
-                    onClick={() => bringInstanceToForeground(instanceId)}
+                    onClick={() => {
+                      // If minimized, restore it; otherwise just bring to foreground
+                      if (isMinimized) {
+                        restoreInstance(instanceId);
+                      } else {
+                        bringInstanceToForeground(instanceId);
+                      }
+                    }}
                     style={{
                       height: "85%",
                       flex: "0 1 160px",
                       minWidth: "110px",
                       marginTop: "2px",
                       marginRight: "2px",
-                      background: isForeground
+                      background: isForeground && !isMinimized
                         ? currentTheme === "xp"
                           ? "#3980f4"
                           : "#c0c0c0"
@@ -738,7 +1091,7 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
                         : "#c0c0c0",
                       border:
                         currentTheme === "xp"
-                          ? isForeground
+                          ? isForeground && !isMinimized
                             ? "1px solid #255be1"
                             : "1px solid #255be1"
                           : "none",
@@ -747,35 +1100,35 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
                       boxShadow:
                         currentTheme === "xp"
                           ? "2px 2px 5px rgba(255, 255, 255, 0.267) inset"
-                          : isForeground
+                          : isForeground && !isMinimized
                           ? "inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px #dfdfdf, inset 2px 2px grey"
                           : "inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf",
-                      transition: "all 0.1s ease",
+                      transition: "background 0.1s ease, box-shadow 0.1s ease, border-color 0.1s ease",
                     }}
                     onMouseEnter={(e) => {
                       if (currentTheme === "xp") {
-                        if (isForeground) {
+                        if (isForeground && !isMinimized) {
                           e.currentTarget.style.background = "#4a92f9";
                           e.currentTarget.style.borderColor = "#2c64e3";
                         } else {
                           e.currentTarget.style.background = "#2a6ef1";
                           e.currentTarget.style.borderColor = "#1e56c9";
                         }
-                      } else if (currentTheme === "win98" && !isForeground) {
+                      } else if (currentTheme === "win98" && (!isForeground || isMinimized)) {
                         e.currentTarget.style.boxShadow =
                           "inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf";
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (currentTheme === "xp") {
-                        if (isForeground) {
+                        if (isForeground && !isMinimized) {
                           e.currentTarget.style.background = "#3980f4";
                           e.currentTarget.style.borderColor = "#255be1";
                         } else {
                           e.currentTarget.style.background = "#1658dd";
                           e.currentTarget.style.borderColor = "#255be1";
                         }
-                      } else if (currentTheme === "win98" && !isForeground) {
+                      } else if (currentTheme === "win98" && (!isForeground || isMinimized)) {
                         e.currentTarget.style.boxShadow =
                           "inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf";
                       }
@@ -802,10 +1155,11 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
                     <span className="truncate text-xs">
                       {displayLabel}
                     </span>
-                  </button>
+                  </motion.button>
                 );
               });
             })()}
+            </AnimatePresence>
 
             {/* Overflow menu button */}
             {overflowTaskbarIds.length > 0 && (
@@ -868,7 +1222,7 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
                       }
                     }}
                   >
-                    <Icon icon={ChevronUp} name="ChevronUp" className="h-4 w-4" />
+                    <ChevronUp className="h-4 w-4" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -881,6 +1235,7 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
                     const instance = instances[instanceId];
                     if (!instance || !instance.isOpen) return null;
                     
+                    const isMinimized = instance.isMinimized ?? false;
                     const isApplet = instance.appId === "applet-viewer";
                     const appletInfo = isApplet ? getAppletInfo(instance) : null;
                     const displayIcon = appletInfo?.icon || getAppIconPath(instance.appId);
@@ -890,7 +1245,14 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
                     return (
                       <DropdownMenuItem
                         key={instanceId}
-                        onClick={() => bringInstanceToForeground(instanceId)}
+                        onClick={() => {
+                          // If minimized, restore it; otherwise just bring to foreground
+                          if (isMinimized) {
+                            restoreInstance(instanceId);
+                          } else {
+                            bringInstanceToForeground(instanceId);
+                          }
+                        }}
                         className="text-md h-6 px-3 active:bg-gray-900 active:text-white flex items-center gap-2"
                       >
                         {isEmoji ? (
@@ -948,6 +1310,7 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
               paddingTop: currentTheme === "xp" ? "1px" : "0px",
             }}
           >
+            <OfflineIndicator />
             <div className="hidden sm:flex">
               <VolumeControl />
             </div>
@@ -981,9 +1344,11 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
   }
 
   // Default Mac-style top menubar
+  const isPhone = useIsPhone();
+
   return (
     <div
-      className="fixed top-0 left-0 right-0 flex border-b-[length:var(--os-metrics-border-width)] border-os-menubar px-2 h-os-menubar items-center font-os-ui"
+      className="fixed top-0 left-0 right-0 flex border-b-[length:var(--os-metrics-border-width)] border-os-menubar h-os-menubar items-center font-os-ui"
       style={{
         background:
           currentTheme === "macosx"
@@ -1000,28 +1365,57 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
             : undefined,
         fontFamily: "var(--os-font-ui)",
         color: "var(--os-color-menubar-text)",
+        paddingLeft: isPhone ? "0" : "0.5rem",
+        paddingRight: isPhone ? "0" : "0.5rem",
       }}
     >
-      <div className="relative z-10">
-        <AppleMenu apps={apps} />
-      </div>
-      {/* OS1 主题：在 Apple logo 和 File 菜单之间显示当前活动窗口的标题 */}
-      {isOS1Theme && foregroundWindowTitle && (
-        <div className="flex items-center px-3">
-          <span className="text-sm font-bold text-os-menubar-text truncate max-w-md">
-            {foregroundWindowTitle}
-          </span>
+      {!isPhone && <AppleMenu apps={apps} />}
+      {isPhone && (
+        <div className="flex-shrink-0 flex items-center pl-2">
+          <AppleMenu apps={apps} />
         </div>
       )}
-      <div className="relative z-10">
+      <ScrollableMenuWrapper>
         {hasActiveApp ? children : <DefaultMenuItems />}
-      </div>
-      <div className="ml-auto flex items-center relative z-10">
+      </ScrollableMenuWrapper>
+      <div className={`${isPhone ? "flex-shrink-0 px-2" : "ml-auto"} flex items-center`}>
+        <OfflineIndicator />
         <div className="hidden sm:flex">
           <VolumeControl />
         </div>
         <Clock />
       </div>
+    </div>
+  );
+}
+
+function OfflineIndicator() {
+  const isOffline = useOffline();
+  const currentTheme = useThemeStore((state) => state.current);
+  const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
+
+  if (!isOffline) return null;
+
+  return (
+    <div
+      className="flex items-center"
+      style={{
+        marginRight: isXpTheme ? "4px" : "8px",
+        color:
+          currentTheme === "win98"
+            ? "#000000"
+            : isXpTheme
+            ? "#ffffff"
+            : "var(--os-color-menubar-text)",
+      }}
+      title="You are currently offline"
+    >
+      <WifiOff
+        className={isXpTheme ? "h-3 w-3" : "h-4 w-4"}
+        style={{
+          opacity: 0.7,
+        }}
+      />
     </div>
   );
 }

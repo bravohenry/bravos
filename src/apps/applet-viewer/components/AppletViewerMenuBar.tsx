@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,11 +14,13 @@ import { MenuBar } from "@/components/layout/MenuBar";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { useLaunchApp } from "@/hooks/useLaunchApp";
 import { generateAppShareUrl } from "@/utils/sharedUrl";
-import { toast } from "sonner";
 import React from "react";
 import { useAppStore } from "@/stores/useAppStore";
 import { cn } from "@/lib/utils";
 import { useChatsStore } from "@/stores/useChatsStore";
+import { ShareItemDialog } from "@/components/dialogs/ShareItemDialog";
+import { appRegistry } from "@/config/appRegistry";
+import { useTranslation } from "react-i18next";
 
 interface AppletViewerMenuBarProps {
   onClose: () => void;
@@ -54,6 +57,10 @@ export function AppletViewerMenuBar({
   onCheckForUpdates,
   onUpdateAll,
 }: AppletViewerMenuBarProps) {
+  const { t } = useTranslation();
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const appId = "applet-viewer";
+  const appName = appRegistry[appId as keyof typeof appRegistry]?.name || appId;
   const currentTheme = useThemeStore((s) => s.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
   const launchApp = useLaunchApp();
@@ -77,7 +84,7 @@ export function AppletViewerMenuBar({
         type="file"
         ref={fileInputRef}
         onChange={handleFileSelect}
-        accept=".html,.htm,.app"
+        accept=".html,.htm,.app,.gz"
         className="hidden"
       />
       {/* File Menu */}
@@ -88,7 +95,7 @@ export function AppletViewerMenuBar({
             size="default"
             className="h-6 text-md px-2 py-1 border-none hover:bg-gray-200 active:bg-gray-900 active:text-white focus-visible:ring-0"
           >
-            File
+            {t("common.menu.file")}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={1} className="px-0">
@@ -96,14 +103,14 @@ export function AppletViewerMenuBar({
             onClick={() => launchApp("finder", { initialPath: "/Applets" })}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Open...
+            {t("apps.applet-viewer.menu.open")}
           </DropdownMenuItem>
           {hasAppletContent && isLoggedIn && (
             <DropdownMenuItem
               onClick={onShareApplet}
               className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
             >
-              Share Applet...
+              {t("apps.applet-viewer.menu.shareApplet")}
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
@@ -111,25 +118,25 @@ export function AppletViewerMenuBar({
             onClick={() => fileInputRef.current?.click()}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Import from Device...
+            {t("apps.applet-viewer.menu.importFromDevice")}
           </DropdownMenuItem>
           {hasAppletContent && (
             <DropdownMenuSub>
               <DropdownMenuSubTrigger className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
-                Export As...
+                {t("apps.applet-viewer.menu.exportAs")}
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
                 <DropdownMenuItem
                   onClick={onExportAsApp}
                   className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
                 >
-                  ZiOS App
+                  {t("apps.applet-viewer.menu.ryosApp")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={onExportAsHtml}
                   className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
                 >
-                  HTML
+                  {t("apps.applet-viewer.menu.html")}
                 </DropdownMenuItem>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
@@ -139,7 +146,7 @@ export function AppletViewerMenuBar({
             onClick={onClose}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Close
+            {t("common.menu.close")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -152,7 +159,7 @@ export function AppletViewerMenuBar({
             size="default"
             className="h-6 text-md px-2 py-1 border-none hover:bg-gray-200 active:bg-gray-900 active:text-white focus-visible:ring-0"
           >
-            Store
+            {t("apps.applet-viewer.menu.store")}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={1} className="px-0">
@@ -162,7 +169,7 @@ export function AppletViewerMenuBar({
             })}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Open Applet Store
+            {t("apps.applet-viewer.menu.openAppletStore")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={async () => {
@@ -175,8 +182,10 @@ export function AppletViewerMenuBar({
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
             {updateCount > 0
-              ? `Update ${updateCount} applet${updateCount > 1 ? "s" : ""}`
-              : "Check for updates"}
+              ? updateCount === 1
+                ? t("apps.applet-viewer.menu.updateApplets", { count: updateCount })
+                : t("apps.applet-viewer.menu.updateAppletsPlural", { count: updateCount })
+              : t("apps.applet-viewer.menu.checkForUpdates")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
           {username && authToken ? (
@@ -184,7 +193,7 @@ export function AppletViewerMenuBar({
               onClick={() => onLogout?.()}
               className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
             >
-              Log Out
+              {t("apps.applet-viewer.menu.logOut")}
             </DropdownMenuItem>
           ) : (
             <>
@@ -192,13 +201,13 @@ export function AppletViewerMenuBar({
                 onClick={onSetUsername}
                 className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
               >
-                Create Account...
+                {t("apps.applet-viewer.menu.createAccount")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={onVerifyToken}
                 className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
               >
-                Login...
+                {t("apps.applet-viewer.menu.login")}
               </DropdownMenuItem>
             </>
           )}
@@ -213,7 +222,7 @@ export function AppletViewerMenuBar({
             size="default"
             className="h-6 px-2 py-1 text-md focus-visible:ring-0 hover:bg-gray-200 active:bg-gray-900 active:text-white"
           >
-            Window
+            {t("apps.applet-viewer.menu.window")}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={1} className="px-0">
@@ -225,8 +234,8 @@ export function AppletViewerMenuBar({
                 ? path
                     .split("/")
                     .pop()
-                    ?.replace(/\.(html|app)$/i, "") || "Untitled"
-                : "Applet Store";
+                    ?.replace(/\.(html|app)$/i, "") || t("apps.applet-viewer.menu.untitled")
+                : t("apps.applet-viewer.menu.appletStore");
               const isActive = inst.instanceId === instanceId;
 
               return (
@@ -243,7 +252,7 @@ export function AppletViewerMenuBar({
             })
           ) : (
             <DropdownMenuItem disabled className="text-md h-6 px-3 opacity-50">
-              No applets open
+              {t("apps.applet-viewer.menu.noAppletsOpen")}
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
@@ -257,7 +266,7 @@ export function AppletViewerMenuBar({
             size="default"
             className="h-6 px-2 py-1 text-md focus-visible:ring-0 hover:bg-gray-200 active:bg-gray-900 active:text-white"
           >
-            Help
+            {t("common.menu.help")}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={1} className="px-0">
@@ -265,38 +274,31 @@ export function AppletViewerMenuBar({
             onClick={onShowHelp}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Applets Help
+            {t("apps.applet-viewer.menu.appletsHelp")}
           </DropdownMenuItem>
           <DropdownMenuItem
-            onSelect={async () => {
-              const appId = "applet-viewer"; // Specific app ID
-              const shareUrl = generateAppShareUrl(appId);
-              if (!shareUrl) return;
-              try {
-                await navigator.clipboard.writeText(shareUrl);
-                toast.success("App link copied!", {
-                  description: `Link to ${appId} copied to clipboard.`,
-                });
-              } catch (err) {
-                console.error("Failed to copy app link: ", err);
-                toast.error("Failed to copy link", {
-                  description: "Could not copy link to clipboard.",
-                });
-              }
-            }}
+            onSelect={() => setIsShareDialogOpen(true)}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            Share App...
+            {t("common.menu.shareApp")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
           <DropdownMenuItem
             onClick={onShowAbout}
             className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            About Applets
+            {t("apps.applet-viewer.menu.aboutApplets")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <ShareItemDialog
+        isOpen={isShareDialogOpen}
+        onClose={() => setIsShareDialogOpen(false)}
+        itemType="App"
+        itemIdentifier={appId}
+        title={appName}
+        generateShareUrl={generateAppShareUrl}
+      />
     </MenuBar>
   );
 }

@@ -5,6 +5,9 @@ import {
   type ChatMessage,
   type AIChatMessage,
 } from "@/types/chat";
+import { track } from "@vercel/analytics";
+import { APP_ANALYTICS } from "@/utils/analytics";
+import i18n from "@/lib/i18n";
 
 // Recovery mechanism - uses different prefix to avoid reset
 const USERNAME_RECOVERY_KEY = "_usr_recovery_key_";
@@ -131,39 +134,12 @@ const makeAuthenticatedRequest = async (
   }
 
   // Retry the request with the new token
-  // 确保正确保留所有原始 headers，特别是 X-Username
-  const originalHeaders = options.headers;
-  let newHeaders: HeadersInit;
-  
-  if (originalHeaders instanceof Headers) {
-    // 如果是 Headers 对象，需要手动复制所有键值对
-    newHeaders = new Headers(originalHeaders);
-    newHeaders.set("Authorization", `Bearer ${refreshResult.token}`);
-    // 确保 X-Username 被保留
-    if (!newHeaders.has("X-Username") && originalHeaders.has("X-Username")) {
-      newHeaders.set("X-Username", originalHeaders.get("X-Username")!);
-    }
-  } else if (Array.isArray(originalHeaders)) {
-    // 如果是数组格式，转换为对象并更新
-    newHeaders = Object.fromEntries(originalHeaders);
-    newHeaders["Authorization"] = `Bearer ${refreshResult.token}`;
-  } else {
-    // 如果是普通对象，直接展开并更新
-    newHeaders = {
-      ...originalHeaders,
+  const newHeaders = {
+    ...options.headers,
     Authorization: `Bearer ${refreshResult.token}`,
   };
-    // 确保 X-Username 被保留（如果原始 headers 中有）
-    if (!("X-Username" in newHeaders) && originalHeaders && "X-Username" in originalHeaders) {
-      newHeaders["X-Username"] = (originalHeaders as Record<string, string>)["X-Username"];
-    }
-  }
 
-  console.log("[ChatsStore] Retrying request with refreshed token", {
-    hasXUsername: newHeaders instanceof Headers 
-      ? newHeaders.has("X-Username")
-      : "X-Username" in newHeaders,
-  });
+  console.log("[ChatsStore] Retrying request with refreshed token");
   return fetch(url, { ...options, headers: newHeaders });
 };
 
@@ -194,7 +170,7 @@ export interface ChatsStoreState {
   authToken: string | null; // Authentication token
   hasPassword: boolean | null; // Whether user has password set (null = unknown/not checked)
   rooms: ChatRoom[];
-  currentRoomId: string | null; // ID of the currently selected room, null for AI chat (@zi)
+  currentRoomId: string | null; // ID of the currently selected room, null for AI chat (@ryo)
   roomMessages: Record<string, ChatMessage[]>; // roomId -> messages map
   unreadCounts: Record<string, number>; // roomId -> unread message count
   hasEverUsedChats: boolean; // Track if user has ever used chat before
@@ -268,14 +244,14 @@ export interface ChatsStoreState {
   logout: () => Promise<void>; // Logout and clear all user data
 }
 
-const initialAiMessage: AIChatMessage = {
+const getInitialAiMessage = (): AIChatMessage => ({
   id: "1",
   role: "assistant",
-  parts: [{ type: "text" as const, text: "👋 hey! i'm zi. ask me anything!" }],
+  parts: [{ type: "text" as const, text: i18n.t("apps.chats.messages.greeting") }],
   metadata: {
     createdAt: new Date(),
   },
-};
+});
 
 const getInitialState = (): Omit<
   ChatsStoreState,
@@ -319,7 +295,7 @@ const getInitialState = (): Omit<
   const recoveredAuthToken = getAuthTokenFromRecovery();
 
   return {
-    aiMessages: [initialAiMessage],
+    aiMessages: [getInitialAiMessage()],
     username: recoveredUsername,
     authToken: recoveredAuthToken,
     hasPassword: null, // Unknown until checked
@@ -337,7 +313,7 @@ const getInitialState = (): Omit<
 };
 
 const STORE_VERSION = 2;
-const STORE_NAME = "zios:chats";
+const STORE_NAME = "ryos:chats";
 
 export const useChatsStore = create<ChatsStoreState>()(
   persist(
@@ -547,20 +523,12 @@ export const useChatsStore = create<ChatsStoreState>()(
             // Prefer replacing by clientId when provided by the server
             const incomingClientId = (incoming as Partial<ChatMessage>)
               .clientId as string | undefined;
-            
-            console.log('[ChatsStore] Dedup check:', {
-              incomingId: incoming.id,
-              incomingClientId,
-              existingMessages: existingMessages.map(m => ({ id: m.id, clientId: m.clientId }))
-            });
-            
             if (incomingClientId) {
               const idxByClientId = existingMessages.findIndex(
                 (m) =>
                   m.id === incomingClientId || m.clientId === incomingClientId
               );
               if (idxByClientId !== -1) {
-                console.log('[ChatsStore] Replacing optimistic message at index', idxByClientId);
                 const tempMsg = existingMessages[idxByClientId];
                 const replaced = {
                   ...incoming,
@@ -574,11 +542,7 @@ export const useChatsStore = create<ChatsStoreState>()(
                     [roomId]: updated.sort((a, b) => a.timestamp - b.timestamp),
                   },
                 };
-              } else {
-                console.log('[ChatsStore] No matching clientId found');
               }
-            } else {
-              console.log('[ChatsStore] No clientId in incoming message');
             }
 
             // Fallback: replace a temp message by matching username + content (decoded)
@@ -728,7 +692,9 @@ export const useChatsStore = create<ChatsStoreState>()(
             return { ok: true };
           }
 
-          // Username exists but no token, generate one
+          // Username exists but no token - this is a legacy scenario.
+          // Modern auth flows (createUser, authenticateWithPassword) return tokens directly.
+          // This fallback exists for users who somehow have a username but no token.
           console.log(
             "[ChatsStore] Generating auth token for existing user:",
             currentUsername
@@ -956,6 +922,11 @@ export const useChatsStore = create<ChatsStoreState>()(
             }
           }
 
+          // Track user logout analytics before clearing data
+          if (currentUsername) {
+            track(APP_ANALYTICS.USER_LOGOUT, { username: currentUsername });
+          }
+
           // Clear recovery keys from localStorage
           localStorage.removeItem(USERNAME_RECOVERY_KEY);
           localStorage.removeItem(AUTH_TOKEN_RECOVERY_KEY);
@@ -969,7 +940,7 @@ export const useChatsStore = create<ChatsStoreState>()(
           // Reset only user-specific data, preserve rooms and messages
           set((state) => ({
             ...state,
-            aiMessages: [initialAiMessage],
+            aiMessages: [getInitialAiMessage()],
             username: null,
             authToken: null,
             hasPassword: null,
@@ -1204,35 +1175,11 @@ export const useChatsStore = create<ChatsStoreState>()(
           // If switching to a real room and we have a username, handle the API call
           if (username) {
             try {
-              let authToken = get().authToken;
-              
-              // 如果有 username 但没有 authToken，先确保生成 token
-              if (!authToken) {
-                console.log("[ChatsStore] No auth token, generating before switch...");
-                const tokenResult = await get().ensureAuthToken();
-                if (tokenResult.ok) {
-                  authToken = get().authToken;
-                } else {
-                  console.error("[ChatsStore] Failed to ensure auth token for switch");
-                  // 继续尝试，但可能会失败
-                }
-              }
-
-              const headers: HeadersInit = {
-                "Content-Type": "application/json",
-              };
-
-              // 如果用户已登录，添加认证头
-              if (authToken) {
-                headers["Authorization"] = `Bearer ${authToken}`;
-                headers["X-Username"] = username;
-              }
-
               const response = await fetch(
                 "/api/chat-rooms?action=switchRoom",
                 {
                   method: "POST",
-                  headers,
+                  headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     previousRoomId: currentRoomId,
                     nextRoomId: newRoomId,
@@ -1376,7 +1323,7 @@ export const useChatsStore = create<ChatsStoreState>()(
             }
 
             // Room will be removed via Pusher update
-            // If we're currently in this room, switch to @zi
+            // If we're currently in this room, switch to @ryo
             const currentRoomId = get().currentRoomId;
             if (currentRoomId === roomId) {
               set({ currentRoomId: null });
@@ -1531,6 +1478,9 @@ export const useChatsStore = create<ChatsStoreState>()(
                   get().checkHasPassword();
                 }, 100); // Small delay to ensure token is set
               }
+
+              // Track user creation analytics
+              track(APP_ANALYTICS.USER_CREATE, { username: data.user.username });
 
               return { ok: true };
             }

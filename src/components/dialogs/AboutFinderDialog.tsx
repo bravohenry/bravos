@@ -5,12 +5,15 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { useTranslation } from "react-i18next";
 import { getNonFinderApps } from "@/config/appRegistry";
 import { useAppContext } from "@/contexts/AppContext";
 import { useThemeStore } from "@/stores/useThemeStore";
+import { useAppStore } from "@/stores/useAppStore";
 import { cn } from "@/lib/utils";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ThemedIcon } from "@/components/shared/ThemedIcon";
+import { getTranslatedAppName } from "@/utils/i18n";
 
 interface AboutFinderDialogProps {
   isOpen: boolean;
@@ -27,10 +30,14 @@ export function AboutFinderDialog({
   isOpen,
   onOpenChange,
 }: AboutFinderDialogProps) {
+  const { t } = useTranslation();
   const { appStates } = useAppContext();
   const currentTheme = useThemeStore((state) => state.current);
+  const version = useAppStore((state) => state.ryOSVersion);
+  const buildNumber = useAppStore((state) => state.ryOSBuildNumber);
+  const buildTime = useAppStore((state) => state.ryOSBuildTime);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
-  const isOS1Theme = currentTheme === "os1";
+  const [versionDisplayMode, setVersionDisplayMode] = useState(0); // 0: version, 1: commit, 2: date
 
   const memoryUsage = useMemo(() => {
     const totalMemory = 32; // 32MB total memory
@@ -43,14 +50,14 @@ export function AboutFinderDialog({
     // Calculate memory usage for system and open apps (limited to 4)
     const appUsages: AppMemoryUsage[] = [
       {
-        name: "System",
+        name: t("common.aboutThisMac.system"),
         memoryMB: systemUsage,
         percentage: (systemUsage / totalMemory) * 100,
       },
       ...openApps.map((app, index) => {
         const memory = 1.5 + index * 0.5; // Simulate different memory usage per app
         return {
-          name: app.name,
+          name: getTranslatedAppName(app.id),
           memoryMB: memory,
           percentage: (memory / totalMemory) * 100,
         };
@@ -65,422 +72,134 @@ export function AboutFinderDialog({
   }, [memoryUsage]);
 
   const dialogContent = (
-    <div className={isXpTheme ? "p-2 px-4" : isOS1Theme ? "p-6" : "p-4"}>
+    <div className={isXpTheme ? "p-2 px-4" : "p-4"}>
       <div className="flex">
         {/* Right side with system info */}
-        <div className={cn("flex-1", isOS1Theme ? "space-y-5" : "space-y-3")}>
-          {isOS1Theme ? (
-            // OS1 主题：居中布局
+        <div className="space-y-3 flex-1 ">
+          <div className="flex flex-row items-center space-x-2 p-2 px-4">
+            <div className="flex flex-col w-1/3 items-center">
+              <ThemedIcon
+                name="mac-classic.png"
+                alt="Happy Mac"
+                className="w-10 h-10 mb-1 mr-0"
+              />
+              <div
+                className={cn(
+                  isXpTheme
+                    ? "font-['Pixelated_MS_Sans_Serif',Arial] text-[16px]"
+                    : "font-apple-garamond text-2xl "
+                )}
+              >
+                ryOS
+                {currentTheme === "system7"
+                  ? " 7"
+                  : currentTheme === "macosx"
+                  ? " X"
+                  : currentTheme === "win98"
+                  ? " 98"
+                  : currentTheme === "xp"
+                  ? " XP"
+                  : ""}
+              </div>
+              <div
+                className={cn(
+                  "cursor-pointer select-none transition-opacity hover:opacity-70 text-gray-500",
+                  isXpTheme
+                    ? "font-['Pixelated_MS_Sans_Serif',Arial] text-[10px]"
+                    : "font-geneva-12 text-[10px]"
+                )}
+                onClick={() => setVersionDisplayMode((prev) => (prev + 1) % 3)}
+                title={t("common.aboutThisMac.clickToToggle")}
+              >
+                {versionDisplayMode === 0
+                  ? (version || "...")
+                  : versionDisplayMode === 1
+                  ? (buildNumber || "...")
+                  : (buildTime ? new Date(buildTime).toLocaleDateString() : "...")
+                }
+              </div>
+            </div>
+
             <div
+              className={cn(
+                "space-y-4",
+                isXpTheme
+                  ? "font-['Pixelated_MS_Sans_Serif',Arial] text-[10px]"
+                  : "font-geneva-12 text-[10px]"
+              )}
               style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                width: "100%",
+                fontFamily: isXpTheme
+                  ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
+                  : undefined,
+                fontSize: isXpTheme ? "10px" : undefined,
               }}
             >
-              {/* 图标和标题区域 - 居中 */}
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  marginBottom: "24px",
-                }}
-              >
-                <ThemedIcon
-                  name="mac-classic.png"
-                  alt="Happy Mac"
-                  className="w-16 h-16 mb-4"
-                />
-                <span
-                  style={{
-                    fontFamily: "var(--os-font-ui)",
-                    fontSize: "36px",
-                    fontWeight: 600,
-                    color: "var(--os-color-text-primary)",
-                    letterSpacing: "-0.02em",
-                    lineHeight: "1.2",
-                    marginBottom: "4px",
-                    display: "block",
-                  }}
-                >
-                  ZiOS
-                </span>
-              </div>
-
-              {/* 规格信息区域 - 居中 */}
-              <div
-                style={{
-                  fontFamily: "var(--os-font-ui)",
-                  fontSize: "13px",
-                  color: "var(--os-color-text-primary)",
-                  lineHeight: "1.6",
-                  letterSpacing: "-0.01em",
-                  width: "100%",
-                  marginBottom: "16px",
-                  textAlign: "center",
-                }}
-              >
-                <div style={{ marginBottom: "4px" }}>
-                  Built-in Memory: 32MB
+              <div>
+                <div>{t("common.aboutThisMac.builtInMemory")}: 32{t("common.aboutThisMac.mb")}</div>
+                <div>{t("common.aboutThisMac.virtualMemory")}: {t("common.aboutThisMac.virtualMemoryOff")}</div>
+                <div>
+                  {t("common.aboutThisMac.largestUnusedBlock")}: {(32 - totalUsedMemory).toFixed(1)}{t("common.aboutThisMac.mb")}
                 </div>
-                <div style={{ marginBottom: "4px" }}>
-                  Virtual Memory: Off
-                </div>
-                <div style={{ marginBottom: "16px" }}>
-                  Largest Unused Block: {(32 - totalUsedMemory).toFixed(1)}MB
-                </div>
-
-                {/* More Info 按钮 - 居中 */}
-                <div style={{ display: "flex", justifyContent: "center" }}>
-                  <a
-                    href="https://bravohenry.com/about"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: "inline-block",
-                      padding: "6px 16px",
-                      backgroundColor: "rgba(0, 0, 0, 0.05)",
-                      borderRadius: "6px",
-                      fontFamily: "var(--os-font-ui)",
-                      fontSize: "13px",
-                      color: "var(--os-color-text-primary)",
-                      textDecoration: "none",
-                      transition: "background-color 0.2s",
-                      cursor: "pointer",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.08)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.05)";
-                    }}
-                  >
-                    More Info...
-                  </a>
-                </div>
-              </div>
-
-              {/* 分隔线 */}
-              <hr
-                style={{
-                  borderColor: "rgba(0, 0, 0, 0.08)",
-                  borderWidth: "1px",
-                  width: "100%",
-                  margin: "0 0 16px 0",
-                }}
-              />
-            </div>
-          ) : (
-            // 其他主题：保持原有布局
-            <>
-              <div className={cn(
-                "flex flex-row items-start",
-                "space-x-2 p-2 px-4"
-              )}>
-                <div className={cn(
-                  "flex flex-col items-center",
-                  "w-1/3"
-                )}>
-                  <ThemedIcon
-                    name="mac-classic.png"
-                    alt="Happy Mac"
-                    className="w-10 h-10 mb-1 mr-0"
-                  />
-                  <div
-                    className={cn(
-                      isXpTheme
-                        ? "font-['Pixelated_MS_Sans_Serif',Arial] text-[16px]"
-                        : "font-apple-garamond text-2xl"
-                    )}
-                  >
-                    ZiOS
-                    {currentTheme === "system7"
-                      ? " 7"
-                      : currentTheme === "macosx"
-                      ? " X"
-                      : currentTheme === "win98"
-                      ? " 98"
-                      : currentTheme === "xp"
-                      ? " XP"
-                      : ""}
-                  </div>
-                </div>
-
                 <div
                   className={cn(
-                    "flex-1",
+                    "text-[10px] text-gray-500 mt-2",
                     isXpTheme
-                      ? "font-['Pixelated_MS_Sans_Serif',Arial] text-[10px] space-y-4"
-                      : "font-geneva-12 text-[10px] space-y-4"
+                      ? "font-['Pixelated_MS_Sans_Serif',Arial]"
+                      : "font-geneva-12"
                   )}
                   style={{
                     fontFamily: isXpTheme
-                      ? '"Pixelated MS Sans Serif", Arial'
+                      ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
                       : undefined,
-                    fontSize: isXpTheme ? "10px" : undefined,
                   }}
                 >
-                  <div>
-                    <div>Built-in Memory: 32MB</div>
-                    <div>Virtual Memory: Off</div>
-                    <div>
-                      Largest Unused Block: {(32 - totalUsedMemory).toFixed(1)}MB
-                    </div>
-                  </div>
+                  © Ryo Lu. 1992-{new Date().getFullYear()}
                 </div>
               </div>
-              <hr
-                className={cn(
-                  "border-gray-300"
-                )}
-              />
-            </>
-          )}
+            </div>
+          </div>
+          <hr className="border-gray-300" />
 
           {/* Memory usage bars */}
           <div
             className={cn(
+              "space-y-2 p-2 px-4 pb-4",
               isXpTheme
-                ? "font-['Pixelated_MS_Sans_Serif',Arial] text-[10px] space-y-2 p-2 px-4 pb-4"
-                : isOS1Theme
-                ? "font-os-ui space-y-3 px-2 pb-2"
-                : "font-geneva-12 text-[10px] space-y-2 p-2 px-4 pb-4"
+                ? "font-['Pixelated_MS_Sans_Serif',Arial] text-[10px]"
+                : "font-geneva-12 text-[10px]"
             )}
-            style={
-              isOS1Theme
-                ? {
-                    fontFamily: "var(--os-font-ui)",
-                    fontSize: "12px",
-                    color: "var(--os-color-text-primary)",
-                    lineHeight: "1.5",
-                    letterSpacing: "-0.01em",
-                    width: "100%",
-                  }
-                : {
-                    fontFamily: isXpTheme
-                      ? '"Pixelated MS Sans Serif", Arial'
-                      : undefined,
-                    fontSize: isXpTheme ? "10px" : undefined,
-                  }
-            }
+            style={{
+              fontFamily: isXpTheme
+                      ? '"Pixelated MS Sans Serif", "ArkPixel", Arial'
+                : undefined,
+              fontSize: isXpTheme ? "10px" : undefined,
+            }}
           >
             {memoryUsage.map((app, index) => (
-              <div
-                key={index}
-                style={
-                  isOS1Theme
-                    ? {
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "14px",
-                      }
-                    : {
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                      }
-                }
-              >
-                <div
-                  style={
-                    isOS1Theme
-                      ? {
-                          display: "flex",
-                          alignItems: "baseline",
-                          width: "180px",
-                          gap: "8px",
-                        }
-                      : {
-                          display: "flex",
-                          alignItems: "baseline",
-                          width: "160px",
-                          gap: "8px",
-                        }
-                  }
-                >
-                  <span
-                    style={
-                      isOS1Theme
-                        ? {
-                            fontFamily: "var(--os-font-ui)",
-                            fontSize: "12px",
-                            color: "var(--os-color-text-primary)",
-                            fontWeight: 500,
-                            flex: 1,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }
-                        : isXpTheme
-                        ? {
-                            fontFamily: '"Pixelated MS Sans Serif", Arial',
-                            fontSize: "10px",
-                            flex: 1,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }
-                        : {
-                            fontFamily: "var(--font-geneva-12)",
-                            fontSize: "10px",
-                            flex: 1,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }
-                    }
-                  >
-                    {app.name}
-                  </span>
-                  <span
-                    style={
-                      isOS1Theme
-                        ? {
-                            fontFamily: "var(--os-font-ui)",
-                            fontSize: "12px",
-                            color: "var(--os-color-text-secondary)",
-                            minWidth: "58px",
-                            textAlign: "right",
-                          }
-                        : isXpTheme
-                        ? {
-                            fontFamily: '"Pixelated MS Sans Serif", Arial',
-                            fontSize: "10px",
-                            minWidth: "50px",
-                            textAlign: "right",
-                          }
-                        : {
-                            fontFamily: "var(--font-geneva-12)",
-                            fontSize: "10px",
-                            minWidth: "50px",
-                            textAlign: "right",
-                          }
-                    }
-                  >
-                    {app.memoryMB.toFixed(1)} MB
-                  </span>
+              <div className="flex flex-row items-center gap-1" key={index}>
+                <div className="flex justify-between w-full">
+                  <div className="w-1/2 truncate">{app.name}</div>
+                  <div className="w-1/3">{app.memoryMB.toFixed(1)} {t("common.aboutThisMac.mb")}</div>
                 </div>
                 <div
-                  className={
-                    currentTheme === "macosx" && !isOS1Theme
-                      ? "aqua-progress flex-1 h-2 rounded"
-                      : undefined
-                  }
-                  style={
-                    isOS1Theme
-                      ? {
-                          flexGrow: 1,
-                          height: "6px",
-                          borderRadius: "999px",
-                          backgroundColor: "rgba(0, 0, 0, 0.1)",
-                        }
-                      : currentTheme === "macosx"
-                      ? {
-                          flexGrow: 1,
-                        }
-                      : {
-                          flexGrow: 1,
-                          height: "8px",
-                          borderRadius: "4px",
-                          backgroundColor: "#e5e5e5",
-                        }
-                  }
+                  className={cn(
+                    "h-2 w-full",
+                    currentTheme === "macosx" ? "aqua-progress" : "bg-gray-200"
+                  )}
                 >
                   <div
-                    className={
-                      currentTheme === "macosx" && !isOS1Theme
-                        ? "aqua-progress-fill h-full rounded transition-all duration-200"
-                        : undefined
-                    }
-                    style={
-                      isOS1Theme
-                        ? {
-                            width: `${app.percentage}%`,
-                            maxWidth: "100%",
-                            height: "100%",
-                            borderRadius: "999px",
-                            backgroundColor: "var(--os-color-traffic-light-close)",
-                            transition: "width 0.2s ease",
-                          }
-                        : currentTheme === "macosx"
-                        ? {
-                            width: `${app.percentage}%`,
-                          }
-                        : {
-                            width: `${app.percentage}%`,
-                            height: "100%",
-                            borderRadius: "4px",
-                            backgroundColor: "#3b82f6",
-                            transition: "width 0.2s ease",
-                          }
-                    }
+                    className={cn(
+                      "h-full transition-all duration-200",
+                      currentTheme === "macosx"
+                        ? "aqua-progress-fill"
+                        : "bg-blue-500"
+                    )}
+                    style={{ width: `${app.percentage}%` }}
                   />
                 </div>
               </div>
             ))}
           </div>
-
-          {/* 底部信息区域 - 仅在 OS1 主题显示 */}
-          {isOS1Theme && (
-            <div
-              style={{
-                paddingTop: "20px",
-                width: "100%",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              <span
-                data-about-finder-footer
-                style={{
-                  fontFamily: "var(--os-font-ui)",
-                  fontSize: "10px",
-                  color: "var(--os-color-text-secondary)",
-                  lineHeight: "1.4",
-                  textAlign: "center",
-                  display: "block",
-                }}
-              >
-                Open Source By{" "}
-                <a
-                  href="https://github.com/ryokun6/ryos"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    textDecoration: "underline",
-                    textDecorationColor: "rgba(0, 0, 0, 0.2)",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = "var(--os-color-text-primary)";
-                    e.currentTarget.style.textDecorationColor = "var(--os-color-text-primary)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = "var(--os-color-text-secondary)";
-                    e.currentTarget.style.textDecorationColor = "rgba(0, 0, 0, 0.2)";
-                  }}
-                >
-                  RyOS
-                </a>
-              </span>
-              <span
-                data-about-finder-footer
-                style={{
-                  fontFamily: "var(--os-font-ui)",
-                  fontSize: "10px",
-                  color: "var(--os-color-text-secondary)",
-                  lineHeight: "1.4",
-                  textAlign: "center",
-                  display: "block",
-                }}
-              >
-                @Zihan Huang 2025
-              </span>
-            </div>
-          )}
         </div>
       </div>
     </div>
@@ -494,27 +213,22 @@ export function AboutFinderDialog({
       >
         {isXpTheme ? (
           <>
-            <DialogHeader>About This Computer</DialogHeader>
+            <DialogHeader>{t("common.aboutThisMac.title")}</DialogHeader>
             <div className="window-body">{dialogContent}</div>
           </>
         ) : currentTheme === "macosx" ? (
           <>
-            <DialogHeader>About This Computer</DialogHeader>
-            {dialogContent}
-          </>
-        ) : isOS1Theme ? (
-          <>
-            <DialogHeader>About This Computer</DialogHeader>
+            <DialogHeader>{t("common.aboutThisMac.title")}</DialogHeader>
             {dialogContent}
           </>
         ) : (
           <>
             <DialogHeader>
               <DialogTitle className="font-normal text-[16px]">
-                About This Computer
+                {t("common.aboutThisMac.title")}
               </DialogTitle>
               <DialogDescription className="sr-only">
-                Information about ZiOS on this computer
+                {t("common.aboutThisMac.description")}
               </DialogDescription>
             </DialogHeader>
             {dialogContent}
