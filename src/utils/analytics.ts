@@ -1,52 +1,66 @@
-// 安全的 Analytics wrapper，防止被内容拦截器阻止时影响应用
+/**
+ * Centralized analytics event constants
+ * 
+ * This file contains all analytics event names used throughout the application.
+ * Events follow the pattern: `category:action` or `app:action`
+ * 
+ * Usage:
+ *   import { track } from "@vercel/analytics";
+ *   import { APP_ANALYTICS } from "@/utils/analytics";
+ *   track(APP_ANALYTICS.LAUNCH, { appId: "finder" });
+ */
 
-type TrackFunction = (event: string, data?: Record<string, any>) => void;
+// Core application events
+export const APP_ANALYTICS = {
+  // App lifecycle
+  APP_LAUNCH: "app:launch",
+  
+  // User lifecycle
+  USER_CREATE: "user:create",
+  USER_LOGIN_PASSWORD: "user:login_password",
+  USER_LOGIN_TOKEN: "user:login_token",
+  USER_LOGOUT: "user:logout",
+} as const;
 
-let analyticsTrack: TrackFunction | null = null;
-let analyticsInitialized = false;
+// Chat-specific events (existing)
+export const CHAT_ANALYTICS = {
+  TEXT_MESSAGE: "chats:text",
+  VOICE_MESSAGE: "chats:voice",
+  NUDGE: "chats:nudge",
+  STOP_GENERATION: "chats:stop",
+} as const;
 
-// 尝试初始化 Analytics
-async function initAnalytics() {
-  if (analyticsInitialized) return;
-  analyticsInitialized = true;
+// Internet Explorer events (existing)
+export const IE_ANALYTICS = {
+  NAVIGATION_START: "internet-explorer:navigation_start",
+  NAVIGATION_ERROR: "internet-explorer:navigation_error",
+  NAVIGATION_SUCCESS: "internet-explorer:navigation_success",
+} as const;
 
-  try {
-    const analytics = await import("@vercel/analytics");
-    analyticsTrack = analytics.track as TrackFunction;
-  } catch (error) {
-    // 静默失败，不影响应用运行
-    console.warn("Analytics 初始化失败（可能被内容拦截器阻止）");
-    analyticsTrack = null;
-  }
-}
+// Terminal events (existing)
+export const TERMINAL_ANALYTICS = {
+  AI_COMMAND: "terminal:ai_command",
+  CHAT_START: "terminal:chat_start",
+  CHAT_EXIT: "terminal:chat_exit",
+  CHAT_CLEAR: "terminal:chat_clear",
+} as const;
 
-// 导出安全的 track 函数
-export function track(event: string, data?: Record<string, any>) {
-  // 如果还没有初始化，尝试初始化
-  if (!analyticsInitialized) {
-    initAnalytics().then(() => {
-      if (analyticsTrack) {
-        analyticsTrack(event, data);
-      }
-    });
-    return;
-  }
+// iPod events
+export const IPOD_ANALYTICS = {
+  SONG_PLAY: "ipod:song_play",
+} as const;
 
-  // 如果已初始化且有 track 函数，使用它
-  if (analyticsTrack) {
-    try {
-      analyticsTrack(event, data);
-    } catch (error) {
-      // 静默处理错误
-      console.warn("Analytics track 失败:", error);
-    }
-  }
-}
+// Applet Viewer events
+export const APPLET_ANALYTICS = {
+  INSTALL: "applet:install",
+  UPDATE: "applet:update",
+  VIEW: "applet:view",
+} as const;
 
-// 预初始化（可选，在应用启动时调用）
-export function preloadAnalytics() {
-  if (!analyticsInitialized) {
-    initAnalytics();
-  }
-}
-
+// Type helpers for analytics event names
+export type AppAnalyticsEvent = typeof APP_ANALYTICS[keyof typeof APP_ANALYTICS];
+export type ChatAnalyticsEvent = typeof CHAT_ANALYTICS[keyof typeof CHAT_ANALYTICS];
+export type IEAnalyticsEvent = typeof IE_ANALYTICS[keyof typeof IE_ANALYTICS];
+export type TerminalAnalyticsEvent = typeof TERMINAL_ANALYTICS[keyof typeof TERMINAL_ANALYTICS];
+export type IpodAnalyticsEvent = typeof IPOD_ANALYTICS[keyof typeof IPOD_ANALYTICS];
+export type AppletAnalyticsEvent = typeof APPLET_ANALYTICS[keyof typeof APPLET_ANALYTICS];
