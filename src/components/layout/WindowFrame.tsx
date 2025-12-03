@@ -37,6 +37,8 @@ export interface WindowFrameProps {
   // Close interception support
   interceptClose?: boolean;
   menuBar?: React.ReactNode; // Add menuBar prop
+  // Keep content mounted when minimized (useful for audio/video apps)
+  keepMountedWhenMinimized?: boolean;
 }
 
 export function WindowFrame({
@@ -54,6 +56,7 @@ export function WindowFrame({
   onNavigatePrevious,
   interceptClose = false,
   menuBar, // Add menuBar to destructured props
+  keepMountedWhenMinimized = false,
 }: WindowFrameProps) {
   const config = getWindowConfig(appId);
   const defaultConstraints = {
@@ -712,8 +715,9 @@ export function WindowFrame({
   }, []);
 
   // 如果窗口正在最小化动画中，仍然渲染（等待动画完成）
-  // 如果窗口已最小化且不在恢复动画中，不渲染
-  if (!isVisible || (isMinimized && !isMinimizing && !isRestoring)) return null;
+  // 如果窗口已最小化且不在恢复动画中，根据 keepMountedWhenMinimized 决定是否渲染
+  // 如果 keepMountedWhenMinimized 为 true，保持挂载但隐藏（用于音频/视频应用）
+  if (!isVisible || (isMinimized && !isMinimizing && !isRestoring && !keepMountedWhenMinimized)) return null;
 
   // Calculate dynamic style for swipe animation feedback
   const getSwipeStyle = () => {
@@ -738,7 +742,9 @@ export function WindowFrame({
         isInitialMount && "animate-in fade-in-0 zoom-in-95 duration-200",
         isShaking && "animate-shake",
         // Disable all pointer events when window is closing, minimizing, or restoring
-        (!isOpen || isMinimizing || isRestoring) && "pointer-events-none"
+        (!isOpen || isMinimizing || isRestoring) && "pointer-events-none",
+        // If keepMountedWhenMinimized is true, hide visually when minimized but keep mounted
+        keepMountedWhenMinimized && isMinimized && !isMinimizing && !isRestoring && "opacity-0 pointer-events-none"
       )}
       onClick={() => {
         if (!isForeground && !isMinimizing && !isRestoring) {
