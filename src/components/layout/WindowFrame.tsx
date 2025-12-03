@@ -15,7 +15,7 @@ import { useThemeStore } from "@/stores/useThemeStore";
 import { getTheme } from "@/themes";
 import { ThemedIcon } from "@/components/shared/ThemedIcon";
 
-interface WindowFrameProps {
+export interface WindowFrameProps {
   children: React.ReactNode;
   title: string;
   onClose?: () => void;
