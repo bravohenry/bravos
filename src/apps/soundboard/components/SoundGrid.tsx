@@ -1,6 +1,8 @@
 import { Input } from "@/components/ui/input";
 import { SoundSlot } from "./SoundSlot";
 import { Soundboard, PlaybackState } from "@/types/types";
+import { useThemeStore } from "@/stores/useThemeStore";
+import { cn } from "@/lib/utils";
 
 interface SoundGridProps {
   board: Soundboard;
@@ -33,13 +35,28 @@ export function SoundGrid({
   showWaveforms,
   showEmojis,
 }: SoundGridProps) {
+  const currentTheme = useThemeStore((state) => state.current);
+  const isOs1 = currentTheme === "os1";
+
   return (
-    <div className="flex-1 overflow-auto">
+    <div
+      className={cn(
+        "flex-1 overflow-auto",
+        isOs1 && "bg-white/85 backdrop-blur-xl"
+      )}
+      style={isOs1 ? {
+        backdropFilter: "blur(30px) saturate(180%)",
+        WebkitBackdropFilter: "blur(30px) saturate(180%)",
+      } : undefined}
+    >
       <div className="py-6 px-4 md:px-8 md:py-4">
         <div className="max-w-2xl mx-auto flex flex-col">
           {isEditingTitle ? (
             <Input
-              className="text-[24px] font-bold mb-2 text-left select-text"
+              className={cn(
+                "text-[24px] mb-2 text-left select-text bg-transparent border-none focus-visible:ring-0 px-2 -ml-2",
+                isOs1 ? "font-semibold tracking-tight" : "font-bold"
+              )}
               value={board.name}
               autoFocus
               onChange={(e) => onTitleChange(e.target.value)}
@@ -48,7 +65,12 @@ export function SoundGrid({
             />
           ) : (
             <h1
-              className="text-[24px] font-bold mb-2 text-left cursor-text hover:opacity-80 hover:bg-black/7 px-2 -ml-2 transition-all duration-300 ease-in-out transform origin-left rounded select-text"
+              className={cn(
+                "text-[24px] mb-2 text-left cursor-text px-2 -ml-2 transition-all duration-300 ease-in-out transform origin-left rounded select-text",
+                isOs1
+                  ? "font-semibold tracking-tight text-black/90 hover:bg-black/5"
+                  : "font-bold hover:opacity-80 hover:bg-black/7"
+              )}
               onClick={() => setIsEditingTitle(true)}
             >
               {board.name}

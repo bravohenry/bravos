@@ -63,6 +63,7 @@ export function SoundboardAppComponent({
   // Get current theme
   const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
+  const isOs1 = currentTheme === "os1";
 
   useEffect(() => {
     if (!hasInitialized) {
@@ -423,9 +424,15 @@ export function SoundboardAppComponent({
         }}
       >
         <div
-          className={`h-full w-full flex flex-col md:flex-row ${
-            isXpTheme ? "border-t border-[#919b9c]" : ""
-          }`}
+          className={`h-full w-full flex flex-col md:flex-row ${isXpTheme ? "border-t border-[#919b9c]" : ""
+            } ${isOs1
+              ? "bg-white/85 backdrop-blur-xl"
+              : "bg-white/85"
+            }`}
+          style={isOs1 ? {
+            backdropFilter: "blur(30px) saturate(180%)",
+            WebkitBackdropFilter: "blur(30px) saturate(180%)",
+          } : undefined}
         >
           <input
             type="file"
@@ -444,6 +451,7 @@ export function SoundboardAppComponent({
             onDeviceSelect={storeSetSelectedDeviceId}
             audioDevices={audioDevices}
             micPermissionGranted={micPermissionGranted}
+            isForeground={isForeground}
           />
 
           <SoundGrid
