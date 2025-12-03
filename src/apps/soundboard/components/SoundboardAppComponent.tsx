@@ -451,7 +451,6 @@ export function SoundboardAppComponent({
             onDeviceSelect={storeSetSelectedDeviceId}
             audioDevices={audioDevices}
             micPermissionGranted={micPermissionGranted}
-            isForeground={isForeground}
           />
 
           <SoundGrid

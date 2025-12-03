@@ -56,3 +56,8 @@ export const ryoCommand: Command = {
   ...aiCommand,
   name: "ryo",
 };
+
+export const ziCommand: Command = {
+  ...aiCommand,
+  name: "zi",
+};
