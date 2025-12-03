@@ -1,5 +1,5 @@
 import { AppManager } from "./apps/base/AppManager";
-import { appRegistry } from "./config/appRegistry";
+import { appRegistry } from "./config/appRegistry.tsx";
 import { useEffect, useState, useMemo } from "react";
 import { applyDisplayMode, type DisplayMode } from "./utils/displayMode";
 import { Toaster } from "./components/ui/sonner";
