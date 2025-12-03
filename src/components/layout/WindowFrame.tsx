@@ -3,7 +3,7 @@ import { ResizeType } from "@/types/types";
 import { useAppContext } from "@/contexts/AppContext";
 import { useSound, Sounds } from "@/hooks/useSound";
 import { useVibration } from "@/hooks/useVibration";
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { getWindowConfig, getAppIconPath } from "@/config/appRegistry";
 import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
@@ -14,7 +14,6 @@ import { useAppStoreShallow } from "@/stores/helpers";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { getTheme } from "@/themes";
 import { ThemedIcon } from "@/components/shared/ThemedIcon";
-import { motion, AnimatePresence } from "framer-motion";
 
 interface WindowFrameProps {
   children: React.ReactNode;
@@ -38,8 +37,6 @@ interface WindowFrameProps {
   // Close interception support
   interceptClose?: boolean;
   menuBar?: React.ReactNode; // Add menuBar prop
-  // Keep content mounted when minimized (useful for audio/video apps)
-  keepMountedWhenMinimized?: boolean;
 }
 
 export function WindowFrame({
@@ -57,7 +54,6 @@ export function WindowFrame({
   onNavigatePrevious,
   interceptClose = false,
   menuBar, // Add menuBar to destructured props
-  keepMountedWhenMinimized = false,
 }: WindowFrameProps) {
   const config = getWindowConfig(appId);
   const defaultConstraints = {
@@ -75,41 +71,30 @@ export function WindowFrame({
   };
 
   const [isOpen, setIsOpen] = useState(true);
-  const [isClosing, setIsClosing] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const [isInitialMount, setIsInitialMount] = useState(true);
-  // Ref to store the exit animation - updated synchronously before state changes
-  const exitAnimationRef = useRef<'close' | 'minimize'>('minimize');
-  // Track if close was triggered via external event (menu bar, dock, etc.)
-  const closeViaEventRef = useRef(false);
+  const [isMinimizing, setIsMinimizing] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const windowRef = useRef<HTMLDivElement>(null);
+  const previousMinimizedStateRef = useRef<boolean | undefined>(undefined);
   const { bringToForeground } = useAppContext();
   const {
     bringInstanceToForeground,
+    minimizeInstance,
     debugMode,
     updateWindowState,
     updateInstanceWindowState,
-    minimizeInstance,
-    instances,
-    closeAppInstance,
   } = useAppStoreShallow((state) => ({
     bringInstanceToForeground: state.bringInstanceToForeground,
+    minimizeInstance: state.minimizeInstance,
     debugMode: state.debugMode,
     updateWindowState: state.updateWindowState,
     updateInstanceWindowState: state.updateInstanceWindowState,
-    minimizeInstance: state.minimizeInstance,
-    instances: state.instances,
-    closeAppInstance: state.closeAppInstance,
   }));
-  
-  // Check if this instance is minimized
-  const isMinimized = instanceId ? instances[instanceId]?.isMinimized ?? false : false;
   const { play: playWindowOpen } = useSound(Sounds.WINDOW_OPEN);
   const { play: playWindowClose } = useSound(Sounds.WINDOW_CLOSE);
-  // For green button zoom (maximize/restore window size)
   const { play: playWindowExpand } = useSound(Sounds.WINDOW_EXPAND);
   const { play: playWindowCollapse } = useSound(Sounds.WINDOW_COLLAPSE);
-  // For dock minimize/restore
-  const { play: playZoomMinimize } = useSound(Sounds.WINDOW_ZOOM_MINIMIZE);
-  const { play: playZoomMaximize } = useSound(Sounds.WINDOW_ZOOM_MAXIMIZE);
   const { play: playWindowMoveStop } = useSound(Sounds.WINDOW_MOVE_STOP);
   const vibrateMaximize = useVibration(50, 100);
   const vibrateClose = useVibration(50, 50);
@@ -173,55 +158,40 @@ export function WindowFrame({
     return () => clearTimeout(timer);
   }, []); // Play sound when component mounts
 
-  // Track previous minimized state to play sound on restore
-  const wasMinimizedRef = useRef(isMinimized);
-  const shouldAnimateRestore = wasMinimizedRef.current && !isMinimized;
-  
-  useEffect(() => {
-    if (wasMinimizedRef.current && !isMinimized) {
-      // Window was just restored from minimized state (from dock)
-      playZoomMaximize();
-    }
-    wasMinimizedRef.current = isMinimized;
-  }, [isMinimized, playZoomMaximize]);
+  // 获取当前实例的最小化状态
+  const currentInstance = useAppStoreShallow((state) =>
+    instanceId ? state.instances[instanceId] : null
+  );
+  const isMinimized = currentInstance?.isMinimized ?? false;
+
+  const handleTransitionEnd = useCallback(
+    (e: React.TransitionEvent) => {
+      if (
+        e.target === e.currentTarget &&
+        !isOpen &&
+        e.propertyName === "opacity"
+      ) {
+        setIsVisible(false);
+        // For normal closes (non-intercepted), call onClose here
+        if (!interceptClose) {
+          onClose?.();
+        }
+        isClosingRef.current = false;
+      }
+    },
+    [isOpen, interceptClose, onClose]
+  );
 
   const handleClose = () => {
     if (interceptClose) {
       // Call the parent's onClose handler for interception (like confirmation dialogs)
       onClose?.();
     } else {
-      // Set exit animation ref BEFORE state change - this is read synchronously by Framer Motion
-      exitAnimationRef.current = 'close';
+      // Normal close behavior with animation and sounds
       isClosingRef.current = true;
       vibrateClose();
       playWindowClose();
-      setIsClosing(true);
-    }
-  };
-
-  // Called when close animation completes
-  const handleCloseAnimationComplete = useCallback(() => {
-    if (isClosing) {
       setIsOpen(false);
-      isClosingRef.current = false;
-      exitAnimationRef.current = 'minimize'; // Reset to default
-      closeViaEventRef.current = false;
-      
-      // For instance-based windows, always use closeAppInstance directly
-      // This handles both normal closes and interceptClose closes uniformly
-      if (instanceId) {
-        closeAppInstance(instanceId);
-      } else {
-        // Fallback for non-instance-based windows (legacy support)
-        onClose?.();
-      }
-    }
-  }, [isClosing, onClose, instanceId, closeAppInstance]);
-
-  const handleMinimize = () => {
-    if (instanceId) {
-      playZoomMinimize();
-      minimizeInstance(instanceId);
     }
   };
 
@@ -231,17 +201,188 @@ export function WindowFrame({
     isClosingRef.current = true;
     vibrateClose();
     playWindowClose();
-    setIsClosing(true);
-  }, [vibrateClose, playWindowClose]);
+    setIsOpen(false);
+  }, [vibrateClose, playWindowClose, setIsOpen]);
+
+  // 处理窗口最小化动画（类似 macOS Genie 效果）
+  const handleMinimize = useCallback(() => {
+    if (!instanceId || isMinimizing) return;
+
+    setIsMinimizing(true);
+    playWindowCollapse();
+
+    // 获取窗口当前位置和大小
+    const windowRect = windowRef.current?.getBoundingClientRect();
+    if (!windowRect) {
+      // 如果无法获取位置，直接最小化
+      minimizeInstance(instanceId);
+      setIsMinimizing(false);
+      return;
+    }
+
+    // 计算 Dock 的位置
+    // OS1 主题：Dock 在底部 12px，图标大小约 68px，中心在底部 12 + 34 = 46px
+    // macOS 主题：Dock 在底部 0px，图标大小约 58px，中心在底部 29px
+    const isOS1Theme = currentTheme === "os1";
+    const dockIconSize = isOS1Theme ? 68 : 58;
+    const dockBottomOffset = isOS1Theme ? 12 : 0;
+    const dockY = window.innerHeight - dockBottomOffset - dockIconSize / 2;
+    const dockX = window.innerWidth / 2; // 屏幕中央
+
+    // 窗口中心点
+    const startX = windowRect.left + windowRect.width / 2;
+    const startY = windowRect.top + windowRect.height / 2;
+
+    // 计算需要移动的距离
+    const deltaX = dockX - startX;
+    const deltaY = dockY - startY;
+
+    // macOS Genie 效果：先稍微向上，然后向下折叠
+    const finalScale = 0.05; // 缩小到 5%
+
+    // 设置 transform origin 为窗口中心
+    const originX = windowRect.width / 2;
+    const originY = windowRect.height / 2;
+
+    // 使用 requestAnimationFrame 确保样式更新
+    requestAnimationFrame(() => {
+      if (windowRef.current) {
+        // 使用流畅的 cubic-bezier 缓动函数，模拟 macOS 的 Genie 效果
+        // cubic-bezier(0.25, 0.1, 0.25, 1) 提供流畅的加速和减速，类似 macOS 的动画曲线
+        // 缩短总时长到 350ms，让动画更快速流畅
+        const animationDuration = "0.35s";
+        const easing = "cubic-bezier(0.25, 0.1, 0.25, 1)"; // 流畅的缓动曲线，类似 macOS
+        
+        windowRef.current.style.transition = `transform ${animationDuration} ${easing}, opacity ${animationDuration} ${easing}`;
+        windowRef.current.style.transformOrigin = `${originX}px ${originY}px`;
+        
+        // 使用单步动画，直接完成整个折叠过程
+        // 通过调整 translate 的 Y 值来模拟先向上再向下的效果
+        // 使用稍微向上的偏移来模拟 Genie 效果的弹跳
+        const upwardOffset = -15; // 减少向上偏移，让动画更流畅
+        
+        // 直接设置最终状态，让 CSS transition 处理整个动画
+        requestAnimationFrame(() => {
+          if (windowRef.current) {
+            windowRef.current.style.transform = `translate(${deltaX}px, ${deltaY + upwardOffset}px) scale(${finalScale})`;
+            windowRef.current.style.opacity = "0";
+          }
+        });
+      }
+    });
+
+    // 动画完成后调用最小化（350ms + 50ms 缓冲）
+    setTimeout(() => {
+      if (windowRef.current) {
+        // 清理动画样式
+        windowRef.current.style.transition = "";
+        windowRef.current.style.transform = "";
+        windowRef.current.style.opacity = "";
+        windowRef.current.style.transformOrigin = "";
+      }
+      // 延迟一帧再调用最小化，确保样式已清理
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          minimizeInstance(instanceId);
+          setIsMinimizing(false);
+        });
+      });
+    }, 400); // 350ms 动画 + 50ms 缓冲
+  }, [instanceId, isMinimizing, playWindowCollapse, minimizeInstance, currentTheme]);
+
+  // 处理窗口恢复动画（从 Dock 弹回原位置）
+  const handleRestore = useCallback(() => {
+    if (!instanceId || isRestoring || !windowRef.current) return;
+
+    setIsRestoring(true);
+    playWindowOpen();
+
+    // 计算 Dock 的位置（与最小化时相同）
+    const isOS1Theme = currentTheme === "os1";
+    const dockIconSize = isOS1Theme ? 68 : 58;
+    const dockBottomOffset = isOS1Theme ? 12 : 0;
+    const dockY = window.innerHeight - dockBottomOffset - dockIconSize / 2;
+    const dockX = window.innerWidth / 2;
+
+    // 获取窗口目标位置和大小
+    const windowRect = windowRef.current.getBoundingClientRect();
+    const targetX = windowRect.left + windowRect.width / 2;
+    const targetY = windowRect.top + windowRect.height / 2;
+
+    // 计算从 Dock 到窗口的移动距离
+    const deltaX = targetX - dockX;
+    const deltaY = targetY - dockY;
+
+    // 设置 transform origin 为窗口中心
+    const originX = windowRect.width / 2;
+    const originY = windowRect.height / 2;
+
+    // 先设置窗口在 Dock 位置（缩小状态）
+    if (windowRef.current) {
+      windowRef.current.style.transition = "none";
+      windowRef.current.style.transformOrigin = `${originX}px ${originY}px`;
+      windowRef.current.style.transform = `translate(${-deltaX}px, ${-deltaY}px) scale(0.05)`;
+      windowRef.current.style.opacity = "0";
+    }
+
+    // 然后动画回到原位置
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (windowRef.current) {
+          // 反向动画：从 Dock 弹回，使用流畅的缓动曲线
+          // 缩短时长到 350ms，与最小化动画保持一致
+          windowRef.current.style.transition = "transform 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.35s ease-out";
+          windowRef.current.style.transform = "translate(0, 0) scale(1)";
+          windowRef.current.style.opacity = "1";
+        }
+
+        // 动画完成后清理
+        setTimeout(() => {
+          if (windowRef.current) {
+            windowRef.current.style.transition = "";
+            windowRef.current.style.transform = "";
+            windowRef.current.style.opacity = "";
+            windowRef.current.style.transformOrigin = "";
+          }
+          setIsRestoring(false);
+        }, 350);
+      });
+    });
+  }, [instanceId, isRestoring, playWindowOpen, currentTheme]);
+
+  // 检测从最小化状态恢复
+  useEffect(() => {
+    // 初始化 previousMinimizedStateRef
+    if (previousMinimizedStateRef.current === undefined) {
+      previousMinimizedStateRef.current = isMinimized;
+      return;
+    }
+    
+    // 如果之前是最小化状态，现在不是，且不在恢复动画中，则触发恢复动画
+    if (previousMinimizedStateRef.current && !isMinimized && !isRestoring && instanceId && windowRef.current) {
+      // 延迟一帧确保窗口已渲染
+      requestAnimationFrame(() => {
+        handleRestore();
+      });
+    }
+    previousMinimizedStateRef.current = isMinimized;
+  }, [isMinimized, isRestoring, instanceId, handleRestore]);
 
   // Expose performClose to parent component through a custom event (only for intercepted closes)
-  // This allows apps like TextEdit to show confirmation dialogs before closing
   useEffect(() => {
     if (!interceptClose) return;
 
-    const handlePerformClose = () => {
-      // The actual cleanup (closeAppInstance) is handled in handleCloseAnimationComplete
+    const handlePerformClose = (event: CustomEvent) => {
+      const onComplete = event.detail?.onComplete;
       performClose();
+
+      // Call the completion callback after the close animation finishes
+      if (onComplete) {
+        // Wait for the transition to complete (200ms as per the transition duration)
+        setTimeout(() => {
+          onComplete();
+        }, 200);
+      }
     };
 
     // Listen for close confirmation from parent
@@ -258,33 +399,10 @@ export function WindowFrame({
     };
   }, [instanceId, appId, performClose, interceptClose]);
 
-  // Listen for close requests from external sources (menu bars, dock, etc.)
-  // This allows them to trigger the animated close with sound instead of immediately closing
-  useEffect(() => {
-    if (!instanceId) return;
-
-    const handleCloseRequest = () => {
-      // Mark that this close was triggered externally so we use closeAppInstance directly
-      closeViaEventRef.current = true;
-      handleClose();
-    };
-
-    window.addEventListener(
-      `requestCloseWindow-${instanceId}`,
-      handleCloseRequest
-    );
-
-    return () => {
-      window.removeEventListener(
-        `requestCloseWindow-${instanceId}`,
-        handleCloseRequest
-      );
-    };
-  }, [instanceId]);
-
   const {
     windowPosition,
     windowSize,
+    isDragging,
     resizeType,
     handleMouseDown,
     handleResizeStart,
@@ -292,39 +410,6 @@ export function WindowFrame({
     setWindowPosition,
     getSafeAreaBottomInset,
   } = useWindowManager({ appId, instanceId });
-
-  // Calculate dock icon or taskbar item position relative to window center (used for both minimize and restore animations)
-  const dockIconOffset = useMemo(() => {
-    // First try to find the dock icon (macOS theme)
-    const dockIcon = document.querySelector(`[data-dock-icon="${appId}"]`);
-    if (dockIcon) {
-      const rect = dockIcon.getBoundingClientRect();
-      // Calculate offset from window center to dock icon center
-      const windowCenterX = windowPosition.x + windowSize.width / 2;
-      const windowCenterY = windowPosition.y + windowSize.height / 2;
-      return {
-        x: rect.left + rect.width / 2 - windowCenterX,
-        y: rect.top + rect.height / 2 - windowCenterY,
-      };
-    }
-    
-    // Try to find the taskbar item (Windows XP/98 theme)
-    const taskbarItem = instanceId 
-      ? document.querySelector(`[data-taskbar-item="${instanceId}"]`)
-      : null;
-    if (taskbarItem) {
-      const rect = taskbarItem.getBoundingClientRect();
-      // Calculate offset from window center to taskbar item center
-      const windowCenterX = windowPosition.x + windowSize.width / 2;
-      const windowCenterY = windowPosition.y + windowSize.height / 2;
-      return {
-        x: rect.left + rect.width / 2 - windowCenterX,
-        y: rect.top + rect.height / 2 - windowCenterY,
-      };
-    }
-    
-    return { x: 0, y: window.innerHeight - windowPosition.y }; // Fallback to bottom of screen
-  }, [appId, instanceId, windowPosition, windowSize, currentTheme]);
 
   // Centralized insets per theme
   const computeInsets = useCallback(() => {
@@ -626,6 +711,10 @@ export function WindowFrame({
     };
   }, []);
 
+  // 如果窗口正在最小化动画中，仍然渲染（等待动画完成）
+  // 如果窗口已最小化且不在恢复动画中，不渲染
+  if (!isVisible || (isMinimized && !isMinimizing && !isRestoring)) return null;
+
   // Calculate dynamic style for swipe animation feedback
   const getSwipeStyle = () => {
     if (!isPhone || !isSwiping || !swipeDirection) {
@@ -640,151 +729,45 @@ export function WindowFrame({
     };
   };
 
-  // For close: keep showing but animate to closed state, then unmount via onAnimationComplete
-  // For minimize: by default unmount via AnimatePresence exit animation
-  // If keepMountedWhenMinimized is true, keep content mounted but visually hidden (useful for audio/video apps)
-  const shouldShow = keepMountedWhenMinimized ? isOpen : (!isMinimized && isOpen);
-
-  // Shake/nudge animation using Framer Motion
-  const shakeTransition = {
-    duration: 0.4,
-    ease: "easeInOut" as const,
-  };
-
-  // Determine animation variants
-  const getInitialAnimation = () => {
-    if (shouldAnimateRestore) {
-      // Restoring from minimized - animate from dock icon position
-      return { 
-        scale: 0.1, 
-        opacity: 0, 
-        x: dockIconOffset.x,
-        y: dockIconOffset.y 
-      };
-    }
-    if (isInitialMount) {
-      // Initial window open
-      return { scale: 0.95, opacity: 0 };
-    }
-    return false;
-  };
-
-  const getExitAnimation = () => {
-    // For apps with keepMountedWhenMinimized, exit is only for close
-    // For other apps, exit handles both close and minimize (minimize animates to dock)
-    if (keepMountedWhenMinimized) {
-      // Only close animation - minimize is handled via animate prop
-      return { 
-        scale: 0.95, 
-        opacity: 0,
-        x: 0,
-        y: 0,
-        transition: { duration: 0.2, ease: [0.32, 0, 0.67, 0] as const }
-      };
-    }
-    // Default behavior: minimize animation - shrink to dock icon position
-    return { 
-      scale: 0.1, 
-      opacity: 0,
-      x: dockIconOffset.x,
-      y: dockIconOffset.y,
-      transition: { duration: 0.25, ease: [0.32, 0, 0.67, 0] as const }
-    };
-  };
-
-  // Get the animate state based on current conditions
-  const getAnimateState = () => {
-    if (isClosing) {
-      return { 
-        scale: 0.95, 
-        opacity: 0,
-        x: 0,
-        y: 0,
-        transition: { duration: 0.2, ease: [0.32, 0, 0.67, 0] as const }
-      };
-    }
-    // Only apply minimize animation via animate prop when keepMountedWhenMinimized is true
-    // Otherwise, the exit animation handles minimize
-    if (keepMountedWhenMinimized && isMinimized) {
-      // Minimize animation - shrink to dock icon position
-      return { 
-        scale: 0.1, 
-        opacity: 0,
-        x: dockIconOffset.x,
-        y: dockIconOffset.y,
-        transition: { duration: 0.25, ease: [0.32, 0, 0.67, 0] as const }
-      };
-    }
-    
-    if (isShaking) {
-      return {
-        scale: 1,
-        opacity: 1,
-        x: [0, -5, 5, -5, 5, -3, 3, 0],
-        y: 0,
-        transition: {
-          scale: { duration: 0 },
-          opacity: { duration: 0 },
-          y: { duration: 0 },
-          x: shakeTransition,
-        }
-      };
-    }
-    
-    // Normal visible state
-    return { 
-      scale: 1, 
-      opacity: 1,
-      x: 0,
-      y: 0,
-      transition: shouldAnimateRestore 
-        ? { duration: 0.25, ease: [0.33, 1, 0.68, 1] as const }
-        : { duration: 0.2, ease: [0.33, 1, 0.68, 1] as const }
-    };
-  };
-
   return (
-    <AnimatePresence>
-      {shouldShow && (
-        <motion.div
-          key={instanceId || appId}
-          initial={getInitialAnimation()}
-          animate={getAnimateState()}
-          onAnimationComplete={() => {
-            if (isClosing) {
-              handleCloseAnimationComplete();
-            }
-          }}
-          exit={getExitAnimation()}
-          className={cn(
-            "absolute p-2 md:p-0 w-full md:h-full md:mt-0 select-none",
-            // Disable all pointer events when window is closing
-            isClosing && "pointer-events-none",
-            // For keepMountedWhenMinimized apps, also disable pointer events when minimized
-            (keepMountedWhenMinimized && isMinimized) && "pointer-events-none"
-          )}
-          onClick={() => {
-            if (!isForeground) {
-              if (instanceId) {
-                bringInstanceToForeground(instanceId);
-              } else {
-                bringToForeground(appId);
-              }
-            }
-          }}
-          style={{
-            left: windowPosition.x,
-            top: Math.max(0, windowPosition.y),
-            width: window.innerWidth >= 768 ? windowSize.width : "100%",
-            height: Math.max(windowSize.height, mergedConstraints.minHeight || 0),
-            minWidth:
-              window.innerWidth >= 768 ? mergedConstraints.minWidth : "100%",
-            minHeight: mergedConstraints.minHeight,
-            maxWidth: mergedConstraints.maxWidth || undefined,
-            maxHeight: mergedConstraints.maxHeight || undefined,
-            transformOrigin: "center",
-          }}
-        >
+    <div
+      ref={windowRef}
+      className={cn(
+        "absolute p-2 md:p-0 w-full md:h-full md:mt-0 select-none",
+        "transition-all duration-200 ease-in-out",
+        isInitialMount && "animate-in fade-in-0 zoom-in-95 duration-200",
+        isShaking && "animate-shake",
+        // Disable all pointer events when window is closing, minimizing, or restoring
+        (!isOpen || isMinimizing || isRestoring) && "pointer-events-none"
+      )}
+      onClick={() => {
+        if (!isForeground && !isMinimizing && !isRestoring) {
+          if (instanceId) {
+            bringInstanceToForeground(instanceId);
+          } else {
+            bringToForeground(appId);
+          }
+        }
+      }}
+      onTransitionEnd={handleTransitionEnd}
+      style={{
+        left: windowPosition.x,
+        top: Math.max(0, windowPosition.y),
+        width: window.innerWidth >= 768 ? windowSize.width : "100%",
+        height: Math.max(windowSize.height, mergedConstraints.minHeight || 0),
+        minWidth:
+          window.innerWidth >= 768 ? mergedConstraints.minWidth : "100%",
+        minHeight: mergedConstraints.minHeight,
+        maxWidth: mergedConstraints.maxWidth || undefined,
+        maxHeight: mergedConstraints.maxHeight || undefined,
+        // 在最小化或恢复动画期间，禁用默认 transition，使用动画函数中的样式
+        transition: isDragging || resizeType || isMinimizing || isRestoring ? "none" : undefined,
+        // 只有在非最小化/恢复状态下才应用关闭动画
+        transform: !isInitialMount && !isOpen && !isMinimizing && !isRestoring ? "scale(0.95)" : undefined,
+        opacity: !isInitialMount && !isOpen && !isMinimizing && !isRestoring ? 0 : undefined,
+        transformOrigin: "center",
+      }}
+    >
       <div className="relative w-full h-full">
         {/* Resize handles - positioned outside main content */}
         <div
@@ -1016,7 +999,9 @@ export function WindowFrame({
                   aria-label="Minimize"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleMinimize();
+                    if (instanceId) {
+                      handleMinimize();
+                    }
                   }}
                   onMouseDown={(e) => e.stopPropagation()}
                   onTouchStart={(e) => e.stopPropagation()}
@@ -1039,6 +1024,123 @@ export function WindowFrame({
                   onMouseDown={(e) => e.stopPropagation()}
                   onTouchStart={(e) => e.stopPropagation()}
                 />
+              </div>
+            </div>
+          ) : currentTheme === "os1" ? (
+            <div
+              className={cn(
+                "title-bar os1-title-bar flex items-center h-os-titlebar min-h-[1.375rem] px-3 select-none cursor-move user-select-none z-50",
+                // 添加透明背景和毛玻璃效果
+                "bg-white/80 backdrop-blur-xl"
+              )}
+              style={{
+                // 移除原来的 background，改用透明背景
+                // background: isForeground
+                //   ? theme.colors.titleBar.activeBg
+                //   : theme.colors.titleBar.inactiveBg,
+                backdropFilter: "blur(20px) saturate(180%)",
+                WebkitBackdropFilter: "blur(20px) saturate(180%)",
+                color: isForeground
+                  ? theme.colors.titleBar.text
+                  : theme.colors.titleBar.inactiveText,
+                borderRadius: theme.metrics.titleBarRadius,
+                borderBottom: `1px solid ${
+                  isForeground
+                    ? theme.colors.titleBar.borderBottom ||
+                      theme.colors.titleBar.border ||
+                      "rgba(0, 0, 0, 0.12)"
+                    : theme.colors.titleBar.borderInactive ||
+                      "rgba(0, 0, 0, 0.08)"
+                }`,
+                opacity: isForeground ? 1 : 0.85,
+              }}
+              onMouseDown={handleMouseDownWithForeground}
+              onDoubleClick={(e) => {
+                if (isFromTitlebarControls(e.target)) return;
+                handleFullMaximize(e);
+              }}
+              onTouchStart={(e: React.TouchEvent<HTMLElement>) => {
+                if (isFromTitlebarControls(e.target)) {
+                  e.stopPropagation();
+                  return;
+                }
+                handleTitleBarTap(e);
+                handleMouseDownWithForeground(e);
+                if (isPhone) {
+                  handleTouchStart(e);
+                }
+              }}
+              onTouchMove={(e: React.TouchEvent<HTMLElement>) => {
+                if (isPhone) {
+                  handleTouchMove(e);
+                }
+              }}
+              onTouchEnd={() => {
+                if (isPhone) {
+                  handleTouchEnd();
+                }
+              }}
+            >
+              {/* 窗口控制按钮 - 放在左侧 */}
+              <div
+                className={cn(
+                  "os1-window-controls flex items-center gap-2 mr-3",
+                  !isForeground && "inactive"
+                )}
+                data-titlebar-controls
+              >
+                <button
+                  type="button"
+                  aria-label="Close"
+                  className="os1-window-control os1-window-control--close"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClose();
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                >
+                  <span aria-hidden="true" className="os1-window-control-icon">
+                    &times;
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  aria-label="Minimize"
+                  className="os1-window-control os1-window-control--ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (instanceId) {
+                      handleMinimize();
+                    }
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                >
+                  <span aria-hidden="true" className="os1-window-control-icon">
+                    &minus;
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  aria-label="Maximize"
+                  className="os1-window-control os1-window-control--ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleFullMaximize(e);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                >
+                  <span aria-hidden="true" className="os1-window-control-icon">
+                    &#9633;
+                  </span>
+                </button>
+              </div>
+              {/* 图标和标题 - 放在右侧 */}
+              {/* OS1 主题下隐藏图标和标题，标题显示在菜单栏中 */}
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                {/* OS1 主题下不显示任何内容 */}
               </div>
             </div>
           ) : currentTheme === "macosx" ? (
@@ -1165,66 +1267,56 @@ export function WindowFrame({
                 </div>
 
                 {/* Minimize Button (Yellow) */}
-                <div
-                  className="relative"
-                  style={{ width: "13px", height: "13px" }}
-                >
-                  <div
-                    aria-hidden="true"
-                    className="rounded-full relative overflow-hidden cursor-default outline-none box-border"
-                    style={{
-                      width: "13px",
-                      height: "13px",
-                      background: isForeground
-                        ? "linear-gradient(rgb(202, 130, 13), rgb(253, 253, 149))"
-                        : "linear-gradient(rgba(160, 160, 160, 0.625), rgba(255, 255, 255, 0.625))",
-                      boxShadow: isForeground
-                        ? "rgba(0, 0, 0, 0.5) 0px 2px 4px, rgba(0, 0, 0, 0.4) 0px 1px 2px, rgba(223, 161, 35, 0.5) 0px 1px 1px, rgba(0, 0, 0, 0.3) 0px 0px 0px 0.5px inset, rgb(155, 78, 21) 0px 1px 3px inset, rgb(241, 157, 20) 0px 2px 3px 1px inset"
-                        : "0 2px 3px rgba(0, 0, 0, 0.2), 0 1px 1px rgba(0, 0, 0, 0.3), inset 0 0 0 0.5px rgba(0, 0, 0, 0.3), inset 0 1px 2px rgba(0, 0, 0, 0.4), inset 0 2px 3px 1px #bbbbbb",
-                    }}
-                  >
-                    {/* Top shine */}
-                    <div
-                      className="absolute left-1/2 transform -translate-x-1/2 pointer-events-none"
-                      style={{
-                        height: "28%",
-                        background:
-                          "linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.3))",
-                        width: "calc(100% - 6px)",
-                        borderRadius: "6px 6px 0 0",
-                        top: "1px",
-                        filter: "blur(0.2px)",
-                        zIndex: 2,
-                      }}
-                    />
-                    {/* Bottom glow */}
-                    <div
-                      className="absolute left-1/2 transform -translate-x-1/2 pointer-events-none"
-                      style={{
-                        height: "33%",
-                        background:
-                          "linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.5))",
-                        width: "calc(100% - 3px)",
-                        borderRadius: "0 0 6px 6px",
-                        bottom: "1px",
-                        filter: "blur(0.3px)",
-                      }}
-                    />
-                  </div>
-                  <button
-                    aria-label="Minimize"
-                    className={cn(
-                      "absolute -inset-2 z-10 rounded-none outline-none cursor-default",
-                      debugMode ? "bg-red-500/50" : "opacity-0"
-                    )}
-                    onClick={(e) => {
-                      e.stopPropagation();
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (instanceId) {
                       handleMinimize();
+                    }
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  className="rounded-full relative overflow-hidden cursor-default outline-none box-border"
+                  style={{
+                    width: "13px",
+                    height: "13px",
+                    background: isForeground
+                      ? "linear-gradient(rgb(202, 130, 13), rgb(253, 253, 149))"
+                      : "linear-gradient(rgba(160, 160, 160, 0.625), rgba(255, 255, 255, 0.625))",
+                    boxShadow: isForeground
+                      ? "rgba(0, 0, 0, 0.5) 0px 2px 4px, rgba(0, 0, 0, 0.4) 0px 1px 2px, rgba(223, 161, 35, 0.5) 0px 1px 1px, rgba(0, 0, 0, 0.3) 0px 0px 0px 0.5px inset, rgb(155, 78, 21) 0px 1px 3px inset, rgb(241, 157, 20) 0px 2px 3px 1px inset"
+                      : "0 2px 3px rgba(0, 0, 0, 0.2), 0 1px 1px rgba(0, 0, 0, 0.3), inset 0 0 0 0.5px rgba(0, 0, 0, 0.3), inset 0 1px 2px rgba(0, 0, 0, 0.4), inset 0 2px 3px 1px #bbbbbb",
+                  }}
+                  aria-label="Minimize"
+                >
+                  {/* Top shine */}
+                  <div
+                    className="absolute left-1/2 transform -translate-x-1/2 pointer-events-none"
+                    style={{
+                      height: "28%",
+                      background:
+                        "linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.3))",
+                      width: "calc(100% - 6px)",
+                      borderRadius: "6px 6px 0 0",
+                      top: "1px",
+                      filter: "blur(0.2px)",
+                      zIndex: 2,
                     }}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onTouchStart={(e) => e.stopPropagation()}
                   />
-                </div>
+                  {/* Bottom glow */}
+                  <div
+                    className="absolute left-1/2 transform -translate-x-1/2 pointer-events-none"
+                    style={{
+                      height: "33%",
+                      background:
+                        "linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.5))",
+                      width: "calc(100% - 3px)",
+                      borderRadius: "0 0 6px 6px",
+                      bottom: "1px",
+                      filter: "blur(0.3px)",
+                    }}
+                  />
+                </button>
 
                 {/* Maximize Button (Green) */}
                 <div
@@ -1403,7 +1495,9 @@ export function WindowFrame({
           <div
             className={cn(
               "flex flex-1 min-h-0 flex-col md:flex-row",
-              isXpTheme && "window-body flex-1"
+              isXpTheme && "window-body flex-1",
+              // OS1 主题下添加上边左右圆角
+              currentTheme === "os1" && "rounded-tl-xl rounded-tr-xl overflow-hidden"
             )}
             style={
               isXpTheme
@@ -1427,8 +1521,6 @@ export function WindowFrame({
           </div>
         </div>
       </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    </div>
   );
 }
