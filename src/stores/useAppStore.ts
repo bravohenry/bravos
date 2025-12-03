@@ -812,27 +812,6 @@ export const useAppStore = create<AppStoreState>()(
         const prev = (idx - 1 + instanceOrder.length) % instanceOrder.length;
         get().bringInstanceToForeground(instanceOrder[prev]);
       },
-          instances[instanceId] = { ...inst, isMinimized: false, isForeground: true };
-
-          // Move to end of order
-          const order = [
-            ...state.instanceOrder.filter((id) => id !== instanceId),
-            instanceId,
-          ];
-
-          window.dispatchEvent(
-            new CustomEvent("instanceStateChange", {
-              detail: { instanceId, isOpen: true, isForeground: true, isMinimized: false },
-            })
-          );
-
-          return {
-            instances,
-            instanceOrder: order,
-            foregroundInstanceId: instanceId,
-          };
-        });
-      },
       launchApp: (appId, initialData, title, multiWindow = false) => {
         const state = get();
         
