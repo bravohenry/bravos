@@ -64,8 +64,6 @@ interface AppStoreState extends AppManagerState {
   getForegroundInstance: () => AppInstance | null;
   navigateToNextInstance: (currentInstanceId: string) => void;
   navigateToPreviousInstance: (currentInstanceId: string) => void;
-  minimizeInstance: (instanceId: string) => void;
-  restoreInstance: (instanceId: string) => void;
   launchApp: (
     appId: AppId,
     initialData?: unknown,
@@ -814,51 +812,6 @@ export const useAppStore = create<AppStoreState>()(
         const prev = (idx - 1 + instanceOrder.length) % instanceOrder.length;
         get().bringInstanceToForeground(instanceOrder[prev]);
       },
-      minimizeInstance: (instanceId) => {
-        set((state) => {
-          const inst = state.instances[instanceId];
-          if (!inst || inst.isMinimized) return state;
-
-          const instances = { ...state.instances };
-          instances[instanceId] = { ...inst, isMinimized: true, isForeground: false };
-
-          // Find next foreground from non-minimized windows
-          let nextForeground: string | null = null;
-          for (let i = state.instanceOrder.length - 1; i >= 0; i--) {
-            const id = state.instanceOrder[i];
-            if (id !== instanceId && instances[id]?.isOpen && !instances[id]?.isMinimized) {
-              nextForeground = id;
-              break;
-            }
-          }
-
-          if (nextForeground) {
-            instances[nextForeground] = { ...instances[nextForeground], isForeground: true };
-          }
-
-          window.dispatchEvent(
-            new CustomEvent("instanceStateChange", {
-              detail: { instanceId, isOpen: true, isForeground: false, isMinimized: true },
-            })
-          );
-
-          return {
-            instances,
-            foregroundInstanceId: nextForeground,
-          };
-        });
-      },
-      restoreInstance: (instanceId) => {
-        set((state) => {
-          const inst = state.instances[instanceId];
-          if (!inst || !inst.isMinimized) return state;
-
-          const instances = { ...state.instances };
-          // Remove foreground from all others
-          Object.keys(instances).forEach((id) => {
-            instances[id] = { ...instances[id], isForeground: false };
-          });
-          // Restore and bring to foreground
           instances[instanceId] = { ...inst, isMinimized: false, isForeground: true };
 
           // Move to end of order
