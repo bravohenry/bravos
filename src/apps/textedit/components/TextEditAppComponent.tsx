@@ -489,14 +489,6 @@ function TextEditContent({
     }
   };
 
-  const showUnsavedIndicator =
-    hasUnsavedChanges ||
-    (!currentFilePath &&
-      editor &&
-      (!editor.isEmpty ||
-        editor.getText().trim().length > 0 ||
-        editor.getHTML() !== "<p></p>"));
-
   const menuBar = (
     <TextEditMenuBar
       editor={editor}
@@ -534,7 +526,11 @@ function TextEditContent({
             ? `${removeFileExtension(currentFilePath.split("/").pop() || "")}${
                 hasUnsavedChanges ? " •" : ""
               }`
+<<<<<<< HEAD
             : `${t("apps.textedit.untitled")}${showUnsavedIndicator ? " •" : ""}`)
+=======
+            : `Untitled${hasUnsavedChanges ? " •" : ""}`)
+>>>>>>> 4d1a39cd3b909106c025a9770f8f45d2789aa4b1
         }
         onClose={handleClose}
         isForeground={isForeground}
