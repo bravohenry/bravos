@@ -109,8 +109,8 @@ export const autoDetectLanguage = (): SupportedLanguage => {
 
 // Get initial language from localStorage, or auto-detect on first initialization
 const getInitialLanguage = (): string => {
-  const saved = localStorage.getItem("ryos_language");
-  const isInitialized = localStorage.getItem("ryos_language_initialized");
+  const saved = localStorage.getItem("zios_language");
+  const isInitialized = localStorage.getItem("zios_language_initialized");
   
   // If user has previously set a language, use it
   if (saved && SUPPORTED_LANGUAGES.includes(saved as SupportedLanguage)) {
@@ -121,8 +121,8 @@ const getInitialLanguage = (): string => {
   if (!isInitialized) {
     const detectedLanguage = autoDetectLanguage();
     // Store the detected language and mark as initialized
-    localStorage.setItem("ryos_language", detectedLanguage);
-    localStorage.setItem("ryos_language_initialized", "true");
+    localStorage.setItem("zios_language", detectedLanguage);
+    localStorage.setItem("zios_language_initialized", "true");
     return detectedLanguage;
   }
   
@@ -143,7 +143,7 @@ i18n
     },
     detection: {
       order: ["localStorage", "navigator"],
-      lookupLocalStorage: "ryos_language",
+      lookupLocalStorage: "zios_language",
       caches: ["localStorage"],
     },
   });

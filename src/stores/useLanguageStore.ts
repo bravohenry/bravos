@@ -18,14 +18,14 @@ export const useLanguageStore = create<LanguageState>((set) => ({
   current: "en",
   setLanguage: (language) => {
     set({ current: language });
-    localStorage.setItem("ryos_language", language);
+    localStorage.setItem("zios_language", language);
     // Mark as initialized when user manually sets language
-    localStorage.setItem("ryos_language_initialized", "true");
+    localStorage.setItem("zios_language_initialized", "true");
     changeLanguage(language);
   },
   hydrate: () => {
-    const saved = localStorage.getItem("ryos_language") as LanguageCode | null;
-    const isInitialized = localStorage.getItem("ryos_language_initialized");
+    const saved = localStorage.getItem("zios_language") as LanguageCode | null;
+    const isInitialized = localStorage.getItem("zios_language_initialized");
 
     let language: LanguageCode;
 
@@ -35,8 +35,8 @@ export const useLanguageStore = create<LanguageState>((set) => ({
     } else if (!isInitialized) {
       // First initialization: auto-detect from browser locale
       language = autoDetectLanguage();
-      localStorage.setItem("ryos_language", language);
-      localStorage.setItem("ryos_language_initialized", "true");
+      localStorage.setItem("zios_language", language);
+      localStorage.setItem("zios_language_initialized", "true");
     } else {
       // Fallback to English
       language = "en";

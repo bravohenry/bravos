@@ -4,6 +4,7 @@ import { App } from "./App";
 import "./index.css";
 import { useThemeStore } from "./stores/useThemeStore";
 import { Analytics } from "@vercel/analytics/react";
+import "./lib/i18n"; // 初始化 i18n
 
 // Hydrate theme from localStorage before rendering
 try {
