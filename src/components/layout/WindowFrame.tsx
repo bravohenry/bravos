@@ -3,7 +3,7 @@ import { ResizeType } from "@/types/types";
 import { useAppContext } from "@/contexts/AppContext";
 import { useSound, Sounds } from "@/hooks/useSound";
 import { useVibration } from "@/hooks/useVibration";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { getWindowConfig, getAppIconPath } from "@/config/appRegistry";
 import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
@@ -14,8 +14,9 @@ import { useAppStoreShallow } from "@/stores/helpers";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { getTheme } from "@/themes";
 import { ThemedIcon } from "@/components/shared/ThemedIcon";
+import { motion, AnimatePresence } from "framer-motion";
 
-export interface WindowFrameProps {
+interface WindowFrameProps {
   children: React.ReactNode;
   title: string;
   onClose?: () => void;
@@ -74,7 +75,7 @@ export function WindowFrame({
   };
 
   const [isOpen, setIsOpen] = useState(true);
-  const [isVisible, setIsVisible] = useState(true);
+  const [isClosing, setIsClosing] = useState(false);
   const [isInitialMount, setIsInitialMount] = useState(true);
   const [isMinimizing, setIsMinimizing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -87,17 +88,28 @@ export function WindowFrame({
     debugMode,
     updateWindowState,
     updateInstanceWindowState,
+    instances,
+    closeAppInstance,
   } = useAppStoreShallow((state) => ({
     bringInstanceToForeground: state.bringInstanceToForeground,
     minimizeInstance: state.minimizeInstance,
     debugMode: state.debugMode,
     updateWindowState: state.updateWindowState,
     updateInstanceWindowState: state.updateInstanceWindowState,
+    instances: state.instances,
+    closeAppInstance: state.closeAppInstance,
   }));
+  
+  // Check if this instance is minimized
+  const isMinimized = instanceId ? instances[instanceId]?.isMinimized ?? false : false;
   const { play: playWindowOpen } = useSound(Sounds.WINDOW_OPEN);
   const { play: playWindowClose } = useSound(Sounds.WINDOW_CLOSE);
+  // For green button zoom (maximize/restore window size)
   const { play: playWindowExpand } = useSound(Sounds.WINDOW_EXPAND);
   const { play: playWindowCollapse } = useSound(Sounds.WINDOW_COLLAPSE);
+  // For dock minimize/restore
+  const { play: playZoomMinimize } = useSound(Sounds.WINDOW_ZOOM_MINIMIZE);
+  const { play: playZoomMaximize } = useSound(Sounds.WINDOW_ZOOM_MAXIMIZE);
   const { play: playWindowMoveStop } = useSound(Sounds.WINDOW_MOVE_STOP);
   const vibrateMaximize = useVibration(50, 100);
   const vibrateClose = useVibration(50, 50);
@@ -105,6 +117,8 @@ export function WindowFrame({
   const [isFullHeight, setIsFullHeight] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const isClosingRef = useRef(false);
+  const closeViaEventRef = useRef(false);
+  const exitAnimationRef = useRef<'close' | 'minimize'>('minimize');
   const isMobile = useIsMobile();
   const isPhone = useIsPhone();
   const lastTapTimeRef = useRef<number>(0);
@@ -161,11 +175,7 @@ export function WindowFrame({
     return () => clearTimeout(timer);
   }, []); // Play sound when component mounts
 
-  // 获取当前实例的最小化状态
-  const currentInstance = useAppStoreShallow((state) =>
-    instanceId ? state.instances[instanceId] : null
-  );
-  const isMinimized = currentInstance?.isMinimized ?? false;
+  // 获取当前实例的最小化状态（已在上面定义）
 
   const handleTransitionEnd = useCallback(
     (e: React.TransitionEvent) => {
@@ -174,7 +184,7 @@ export function WindowFrame({
         !isOpen &&
         e.propertyName === "opacity"
       ) {
-        setIsVisible(false);
+        // Window is now closed
         // For normal closes (non-intercepted), call onClose here
         if (!interceptClose) {
           onClose?.();
@@ -190,13 +200,33 @@ export function WindowFrame({
       // Call the parent's onClose handler for interception (like confirmation dialogs)
       onClose?.();
     } else {
-      // Normal close behavior with animation and sounds
+      // Set exit animation ref BEFORE state change - this is read synchronously by Framer Motion
+      exitAnimationRef.current = 'close';
       isClosingRef.current = true;
       vibrateClose();
       playWindowClose();
-      setIsOpen(false);
+      setIsClosing(true);
     }
   };
+
+  // Called when close animation completes
+  const handleCloseAnimationComplete = useCallback(() => {
+    if (isClosing) {
+      setIsOpen(false);
+      isClosingRef.current = false;
+      exitAnimationRef.current = 'minimize'; // Reset to default
+      closeViaEventRef.current = false;
+      
+      // For instance-based windows, always use closeAppInstance directly
+      // This handles both normal closes and interceptClose closes uniformly
+      if (instanceId) {
+        closeAppInstance(instanceId);
+      } else {
+        // Fallback for non-instance-based windows (legacy support)
+        onClose?.();
+      }
+    }
+  }, [isClosing, onClose, instanceId, closeAppInstance]);
 
   // Function to actually perform the close operation
   // This should be called by the parent component after confirmation
@@ -204,8 +234,8 @@ export function WindowFrame({
     isClosingRef.current = true;
     vibrateClose();
     playWindowClose();
-    setIsOpen(false);
-  }, [vibrateClose, playWindowClose, setIsOpen]);
+    setIsClosing(true);
+  }, [vibrateClose, playWindowClose]);
 
   // 处理窗口最小化动画（类似 macOS Genie 效果）
   const handleMinimize = useCallback(() => {
@@ -372,20 +402,13 @@ export function WindowFrame({
   }, [isMinimized, isRestoring, instanceId, handleRestore]);
 
   // Expose performClose to parent component through a custom event (only for intercepted closes)
+  // This allows apps like TextEdit to show confirmation dialogs before closing
   useEffect(() => {
     if (!interceptClose) return;
 
-    const handlePerformClose = (event: CustomEvent) => {
-      const onComplete = event.detail?.onComplete;
+    const handlePerformClose = () => {
+      // The actual cleanup (closeAppInstance) is handled in handleCloseAnimationComplete
       performClose();
-
-      // Call the completion callback after the close animation finishes
-      if (onComplete) {
-        // Wait for the transition to complete (200ms as per the transition duration)
-        setTimeout(() => {
-          onComplete();
-        }, 200);
-      }
     };
 
     // Listen for close confirmation from parent
@@ -402,17 +425,76 @@ export function WindowFrame({
     };
   }, [instanceId, appId, performClose, interceptClose]);
 
+  // Listen for close requests from external sources (menu bars, dock, etc.)
+  // This allows them to trigger the animated close with sound instead of immediately closing
+  useEffect(() => {
+    if (!instanceId) return;
+
+    const handleCloseRequest = () => {
+      // Mark that this close was triggered externally so we use closeAppInstance directly
+      closeViaEventRef.current = true;
+      handleClose();
+    };
+
+    window.addEventListener(
+      `requestCloseWindow-${instanceId}`,
+      handleCloseRequest
+    );
+
+    return () => {
+      window.removeEventListener(
+        `requestCloseWindow-${instanceId}`,
+        handleCloseRequest
+      );
+    };
+  }, [instanceId]);
+
   const {
     windowPosition,
     windowSize,
-    isDragging,
     resizeType,
     handleMouseDown,
     handleResizeStart,
     setWindowSize,
     setWindowPosition,
     getSafeAreaBottomInset,
+    isDragging,
   } = useWindowManager({ appId, instanceId });
+
+  // Calculate dock icon or taskbar item position relative to window center (used for both minimize and restore animations)
+  // Note: Currently unused but kept for potential future use
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _dockIconOffset = useMemo(() => {
+    // First try to find the dock icon (macOS theme)
+    const dockIcon = document.querySelector(`[data-dock-icon="${appId}"]`);
+    if (dockIcon) {
+      const rect = dockIcon.getBoundingClientRect();
+      // Calculate offset from window center to dock icon center
+      const windowCenterX = windowPosition.x + windowSize.width / 2;
+      const windowCenterY = windowPosition.y + windowSize.height / 2;
+      return {
+        x: rect.left + rect.width / 2 - windowCenterX,
+        y: rect.top + rect.height / 2 - windowCenterY,
+      };
+    }
+    
+    // Try to find the taskbar item (Windows XP/98 theme)
+    const taskbarItem = instanceId 
+      ? document.querySelector(`[data-taskbar-item="${instanceId}"]`)
+      : null;
+    if (taskbarItem) {
+      const rect = taskbarItem.getBoundingClientRect();
+      // Calculate offset from window center to taskbar item center
+      const windowCenterX = windowPosition.x + windowSize.width / 2;
+      const windowCenterY = windowPosition.y + windowSize.height / 2;
+      return {
+        x: rect.left + rect.width / 2 - windowCenterX,
+        y: rect.top + rect.height / 2 - windowCenterY,
+      };
+    }
+    
+    return { x: 0, y: window.innerHeight - windowPosition.y }; // Fallback to bottom of screen
+  }, [appId, instanceId, windowPosition, windowSize, currentTheme]);
 
   // Centralized insets per theme
   const computeInsets = useCallback(() => {
@@ -715,9 +797,9 @@ export function WindowFrame({
   }, []);
 
   // 如果窗口正在最小化动画中，仍然渲染（等待动画完成）
-  // 如果窗口已最小化且不在恢复动画中，根据 keepMountedWhenMinimized 决定是否渲染
-  // 如果 keepMountedWhenMinimized 为 true，保持挂载但隐藏（用于音频/视频应用）
-  if (!isVisible || (isMinimized && !isMinimizing && !isRestoring && !keepMountedWhenMinimized)) return null;
+  // 如果窗口已最小化且不在恢复动画中，不渲染
+  const isVisible = isOpen && !isClosing;
+  if (!isVisible || (isMinimized && !isMinimizing && !isRestoring)) return null;
 
   // Calculate dynamic style for swipe animation feedback
   const getSwipeStyle = () => {
@@ -742,9 +824,7 @@ export function WindowFrame({
         isInitialMount && "animate-in fade-in-0 zoom-in-95 duration-200",
         isShaking && "animate-shake",
         // Disable all pointer events when window is closing, minimizing, or restoring
-        (!isOpen || isMinimizing || isRestoring) && "pointer-events-none",
-        // If keepMountedWhenMinimized is true, hide visually when minimized but keep mounted
-        keepMountedWhenMinimized && isMinimized && !isMinimizing && !isRestoring && "opacity-0 pointer-events-none"
+        (!isOpen || isMinimizing || isRestoring) && "pointer-events-none"
       )}
       onClick={() => {
         if (!isForeground && !isMinimizing && !isRestoring) {

@@ -130,6 +130,30 @@ interface SystemState {
   };
 }
 
+// Allowed origins for API requests
+const ALLOWED_ORIGINS = new Set([
+  "https://os.bravohenry.com",
+  "http://localhost:3000",
+  "http://localhost:5173", // Vite dev server 默认端口
+]);
+
+// Function to validate request origin
+// Allow explicit origins defined in ALLOWED_ORIGINS, or any localhost port
+const isValidOrigin = (origin: string | null): boolean => {
+  if (!origin) return false;
+  // Check explicit allowed origins
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  // Allow any localhost port number
+  try {
+    const url = new URL(origin);
+    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+      return true;
+    }
+  } catch {
+    // Invalid URL, fall through to return false
+  }
+  return false;
+};
 
 // Allow streaming responses up to 60 seconds
 export const maxDuration = 80;
@@ -174,7 +198,7 @@ const generateDynamicSystemPrompt = (systemState?: SystemState) => {
     day: "numeric",
   });
 
-  const ryoTimeZone = "America/Los_Angeles";
+  const ziTimeZone = "America/Los_Angeles";
 
   if (!systemState) return "";
 
@@ -183,7 +207,7 @@ const generateDynamicSystemPrompt = (systemState?: SystemState) => {
 Current User: ${systemState.username || "you"}
 
 ## TIME & LOCATION
-Ryo Time: ${timeString} on ${dateString} (${ryoTimeZone})`;
+Zi Time: ${timeString} on ${dateString} (${ziTimeZone})`;
 
   if (systemState.userLocalTime) {
     prompt += `
@@ -344,7 +368,7 @@ ${index + 1}. ${instance.title}${unsavedMark}${pathInfo} (instanceId: ${instance
     prompt += `\n\n<chat_room_reply_instructions>
 ## CHAT ROOM CONTEXT
 Room ID: ${systemState.chatRoomContext.roomId}
-Your Role: Respond as 'ryo' in this IRC-style chat room
+Your Role: Respond as 'zi' in this IRC-style chat room
 Response Style: Use extremely concise responses
 
 Recent Conversation:
@@ -508,8 +532,8 @@ export default async function handler(req: Request) {
 
     // Get IP address for rate limiting anonymous users
     // For Vercel deployments, use x-vercel-forwarded-for (won't be overwritten by proxies)
-    // For localhost/local dev, use a fixed identifier
-    const isLocalDev = validOrigin?.startsWith("http://localhost") || validOrigin?.startsWith("http://127.0.0.1") || validOrigin?.includes("100.110.251.60");
+    // For localhost, use a fixed identifier
+    const isLocalhost = origin === "http://localhost:3000" || origin === "http://localhost:5173";
     let ip: string;
 
     if (isLocalDev) {
@@ -541,7 +565,7 @@ export default async function handler(req: Request) {
     // ---------------------------
     // Rate-limit & auth checks
     // ---------------------------
-    // Validate authentication (all users, including "ryo", must present a valid token)
+    // Validate authentication (all users, including "zi", must present a valid token)
     const validationResult = await validateAuthToken(username, authToken);
 
     // If a username was provided but the token is missing/invalid, reject the request early
@@ -694,7 +718,7 @@ export default async function handler(req: Request) {
       tools: {
         launchApp: {
           description:
-            "Launch an application in the ryOS interface when the user explicitly requests it. If the id is 'internet-explorer', you must provide BOTH a real 'url' and a 'year' for time-travel; otherwise provide neither.",
+            "Launch an application in the ZiOS interface when the user explicitly requests it. If the id is 'internet-explorer', you must provide BOTH a real 'url' and a 'year' for time-travel; otherwise provide neither.",
           inputSchema: z
             .object({
               id: z.enum(appIds).describe("The app id to launch"),
@@ -767,9 +791,77 @@ export default async function handler(req: Request) {
         },
         closeApp: {
           description:
-            "Close an application in the ryOS interface—but only when the user explicitly asks you to close that specific app.",
+            "Close an application in the ZiOS interface—but only when the user explicitly asks you to close that specific app.",
           inputSchema: z.object({
             id: z.enum(appIds).describe("The app id to close"),
+          }),
+        },
+        switchTheme: {
+          description:
+            "Switch the ZiOS UI theme to a specific OS style when the user explicitly requests it.",
+          inputSchema: z.object({
+            theme: z
+              .enum(themeIds)
+              .describe(
+                'The theme to switch to. One of "system7", "macosx", "xp", "win98".'
+              ),
+          }),
+        },
+        textEditSearchReplace: {
+          description:
+            "Search and replace text in a specific TextEdit document. You MUST always provide 'search', 'replace', and 'instanceId'. Set 'isRegex: true' ONLY if the user explicitly mentions using a regular expression. Use the instanceId from the tool result of textEditNewFile or from the system state TextEdit Windows list. If the specified instanceId doesn't exist, the system will fall back to the most recently created TextEdit instance.",
+          inputSchema: z.object({
+            search: z
+              .string()
+              .describe(
+                "REQUIRED: The text or regular expression to search for"
+              ),
+            replace: z
+              .string()
+              .describe(
+                "REQUIRED: The text that will replace each match of 'search'"
+              ),
+            isRegex: z
+              .boolean()
+              .optional()
+              .describe(
+                "Set to true if the 'search' field should be treated as a JavaScript regular expression (without flags). Defaults to false."
+              ),
+            instanceId: z
+              .string()
+              .describe(
+                "REQUIRED: The specific TextEdit instance ID to modify (e.g., '15'). Get this from the system state TextEdit Windows list."
+              ),
+          }),
+        },
+        textEditInsertText: {
+          description:
+            "Insert plain text into a specific TextEdit document. You MUST always provide 'text' and 'instanceId'. Appends to the end by default; use position 'start' to prepend. Use the instanceId from the tool result of textEditNewFile or from the system state TextEdit Windows list. If the specified instanceId doesn't exist, the system will fall back to the most recently created TextEdit instance.",
+          inputSchema: z.object({
+            text: z.string().describe("REQUIRED: The text to insert"),
+            position: z
+              .enum(["start", "end"])
+              .optional()
+              .describe(
+                "Where to insert the text: 'start' to prepend, 'end' to append. Default is 'end'."
+              ),
+            instanceId: z
+              .string()
+              .describe(
+                "REQUIRED: The specific TextEdit instance ID to modify (e.g., '15'). Get this from the system state TextEdit Windows list."
+              ),
+          }),
+        },
+        textEditNewFile: {
+          description:
+            "Create a new blank document in a new TextEdit instance. Returns an instanceId that MUST be used in subsequent textEditInsertText or textEditSearchReplace calls to modify this document. Use when the user explicitly requests a new or untitled file.",
+          inputSchema: z.object({
+            title: z
+              .string()
+              .optional()
+              .describe(
+                "Optional title for the new TextEdit window. If not provided, defaults to 'Untitled'."
+              ),
           }),
         },
         // Add iPod control tools
@@ -900,7 +992,7 @@ export default async function handler(req: Request) {
         // --- HTML generation & preview ---
         generateHtml: {
           description:
-            "Generate an HTML snippet for an ryOS Applet: a small windowed app (default ~320px wide) that runs inside ryOS, not the full page. Design mobile-first for ~320px width but keep layouts responsive to expand gracefully. Provide markup in 'html', a short 'title', and an 'icon' (emoji). DO NOT wrap it in markdown fences; the client will handle scaffolding.",
+            "Generate an HTML snippet for a ZiOS Applet: a small windowed app (default ~320px wide) that runs inside ZiOS, not the full page. Design mobile-first for ~320px width but keep layouts responsive to expand gracefully. Provide markup in 'html', a short 'title', and an 'icon' (emoji). DO NOT wrap it in markdown fences; the client will handle scaffolding.",
           inputSchema: z.object({
             html: z
               .string()
@@ -945,7 +1037,7 @@ export default async function handler(req: Request) {
         // --- Unified Virtual File System Tools ---
         list: {
           description:
-            "List items from the ryOS virtual file system. Returns a JSON array with metadata for each item. CRITICAL: You MUST ONLY reference items that are explicitly returned in the tool result. DO NOT suggest, mention, or hallucinate items that are not in the returned list.",
+            "List items from the ziOS virtual file system. Returns a JSON array with metadata for each item. CRITICAL: You MUST ONLY reference items that are explicitly returned in the tool result. DO NOT suggest, mention, or hallucinate items that are not in the returned list.",
           inputSchema: z.object({
             path: z
               .enum(["/Applets", "/Documents", "/Applications", "/Music", "/Applets Store"])
@@ -1027,7 +1119,7 @@ export default async function handler(req: Request) {
         },
         edit: {
           description:
-            "Edit existing files in the ryOS virtual file system. For creating new files, use the write tool (documents) or generateHtml tool (applets). For larger rewrites, use write with mode 'overwrite'.\n\n" +
+            "Edit existing files in the ziOS virtual file system. For creating new files, use the write tool (documents) or generateHtml tool (applets). For larger rewrites, use write with mode 'overwrite'.\n\n" +
             "Before using this tool:\n" +
             "1. Use the read tool to understand the file's contents and context\n" +
             "2. Verify the file exists using list\n\n" +
@@ -1067,7 +1159,7 @@ export default async function handler(req: Request) {
         // --- System Settings Tool ---
         settings: {
           description:
-            "Change system settings in ryOS. Use this tool when the user asks to change language, theme, volume, enable/disable speech, or check for updates. Multiple settings can be changed in a single call.",
+            "Change system settings in ziOS. Use this tool when the user asks to change language, theme, volume, enable/disable speech, or check for updates. Multiple settings can be changed in a single call.",
           inputSchema: z.object({
             language: z
               .enum(["en", "zh-TW", "ja", "ko", "fr", "de", "es", "pt", "it", "ru"])
@@ -1099,7 +1191,7 @@ export default async function handler(req: Request) {
               .boolean()
               .optional()
               .describe(
-                "When true, triggers a check for ryOS updates. Will notify the user if an update is available."
+                "When true, triggers a check for ziOS updates. Will notify the user if an update is available."
               ),
           }),
         },

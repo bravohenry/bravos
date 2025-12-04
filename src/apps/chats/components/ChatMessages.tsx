@@ -36,6 +36,7 @@ import {
 import { LinkPreview } from "@/components/shared/LinkPreview";
 import { useThemeStore } from "@/stores/useThemeStore";
 import EmojiAquarium from "@/components/shared/EmojiAquarium";
+import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 
@@ -161,7 +162,7 @@ const getErrorMessage = (error: Error): string => {
         if (errorData.isAuthenticated) {
           return i18n.t("apps.chats.status.dailyLimitReached");
         } else {
-          return i18n.t("apps.chats.status.loginToContinue");
+          return `Login to continue chatting with Zi.`;
         }
       }
 
@@ -249,9 +250,9 @@ interface ChatMessagesProps {
   error?: Error;
   onRetry?: () => void;
   onClear?: () => void;
-  isRoomView: boolean; // Indicates if this is a room view (vs Ryo chat)
+  isRoomView: boolean; // Indicates if this is a room view (vs Zi chat)
   roomId?: string; // Needed for message deletion calls
-  isAdmin?: boolean; // Whether the current user has admin privileges (e.g. username === "ryo")
+  isAdmin?: boolean; // Whether the current user has admin privileges (e.g. username === "zihan")
   username?: string; // Current client username (needed for delete request)
   onMessageDeleted?: (messageId: string) => void; // Callback when a message is deleted locally
   fontSize: number; // Add font size prop
@@ -384,6 +385,7 @@ function ChatMessagesContent({
   const { speak, stop, isSpeaking: localTtsSpeaking } = useTtsQueue();
   const speechEnabled = useAppStore((state) => state.speechEnabled);
   const currentTheme = useThemeStore((s) => s.current);
+  const isOS1Theme = currentTheme === "os1";
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
   const [speechLoadingId, setSpeechLoadingId] = useState<string | null>(null);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
@@ -600,17 +602,36 @@ function ChatMessagesContent({
 
         const variants = { initial: { opacity: 0 }, animate: { opacity: 1 } };
         const isUrgent = isUrgentMessage(messageText);
+        // 判断消息是否来自 Zi
+        const isZiMessage = message.role === "assistant" || message.username === "zihan" || message.username?.toLowerCase() === "zihan";
+        
         let bgColorClass = "";
-        if (isUrgent) {
-          // Urgent bubbles will be driven by inline animation; avoid bg-* and text-* so theme overrides don't interfere
-          // Provide a truthy class to skip the default fallback color classes
+        if (isUrgent && isZiMessage) {
+          // Zi 生气的消息：在 OS1 主题下使用红色气泡
+          bgColorClass = isOS1Theme 
+            ? "os1-message-bubble-angry" 
+            : "bg-transparent text-current"; // 其他主题保持原有动画逻辑
+        } else if (isUrgent) {
+          // 其他用户的紧急消息：保持原有动画逻辑
           bgColorClass = "bg-transparent text-current";
-        } else if (message.role === "user")
-          bgColorClass = "bg-yellow-100 text-black";
-        else if (message.role === "assistant")
-          bgColorClass = "bg-blue-100 text-black";
-        else if (message.role === "human")
+        } else if (message.role === "user") {
+          // OS1 主题：发送消息使用 macOS 蓝色
+          bgColorClass = isOS1Theme 
+            ? "os1-message-bubble-sent" 
+            : "bg-yellow-100 text-black";
+        } else if (message.role === "assistant") {
+          // OS1 主题：如果是群聊，Zi 的消息也使用颜色分配；否则使用浅灰色
+          if (isOS1Theme && isRoomView) {
+            bgColorClass = getUserColorClass(message.username || "zihan");
+          } else if (isOS1Theme) {
+            bgColorClass = "os1-message-bubble-received";
+          } else {
+            bgColorClass = "bg-blue-100 text-black";
+          }
+        } else if (message.role === "human") {
+          // OS1 主题：群聊中每个人的气泡颜色都不同
           bgColorClass = getUserColorClass(message.username);
+        }
 
         // Trim leading "!!!!" for urgent messages and decode HTML entities
         const rawContent = isUrgent
@@ -641,9 +662,9 @@ function ChatMessagesContent({
         }
 
         // Check for aquarium token in chat room messages
-        // In chat rooms, messages from ryo don't have a role, just a username
+        // In chat rooms, messages from zi don't have a role, just a username
         if (
-          (message.role === "human" || message.username === "ryo") &&
+          (message.role === "human" || message.username === "zihan") &&
           hasAquariumToken
         ) {
           hasAquarium = true;
@@ -695,10 +716,13 @@ function ChatMessagesContent({
               }
             }}
           >
-            <div
-              className={`${
-                currentTheme === "macosx" ? "text-[10px]" : "text-[16px]"
-              } chat-messages-meta text-gray-500 mb-0.5 font-['Geneva-9'] mb-[-2px] select-text flex items-center gap-2`}
+            <motion.div
+              layout="position"
+              className={cn(
+                "chat-messages-meta text-gray-500 mb-0.5 font-['Geneva-9'] select-text flex items-center gap-2",
+                currentTheme === "macosx" ? "text-[10px] mb-[-2px]" : "text-[16px] mb-[-2px]",
+                isOS1Theme && "text-[11px] mb-1 text-gray-400"
+              )}
             >
               {message.role === "user" && (
                 <>
@@ -712,11 +736,14 @@ function ChatMessagesContent({
                               opacity: hoveredMessageId === messageKey ? 1 : 0,
                               scale: 1,
                             }}
-                            className="h-3 w-3 text-gray-400 hover:text-red-600 transition-colors"
+                            className={cn(
+                              "text-gray-400 hover:text-red-600 transition-colors",
+                              isOS1Theme ? "h-3 w-3 os1-chat-meta-icon-button" : "h-3 w-3"
+                            )}
                             onClick={() => deleteMessage(message)}
                             aria-label={t("apps.chats.ariaLabels.deleteMessage")}
                           >
-                            <Trash className="h-3 w-3" />
+                            <Trash className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3")} />
                           </motion.button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -731,14 +758,17 @@ function ChatMessagesContent({
                       opacity: hoveredMessageId === messageKey ? 1 : 0,
                       scale: 1,
                     }}
-                    className="h-3 w-3 text-gray-400 hover:text-gray-600 transition-colors"
+                    className={cn(
+                      "text-gray-400 hover:text-gray-600 transition-colors",
+                      isOS1Theme ? "h-3 w-3 os1-chat-meta-icon-button" : "h-3 w-3"
+                    )}
                     onClick={() => copyMessage(message)}
                     aria-label={t("apps.chats.ariaLabels.copyMessage")}
                   >
                     {copiedMessageId === messageKey ? (
-                      <Check className="h-3 w-3" />
+                      <Check className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3")} />
                     ) : (
-                      <Copy className="h-3 w-3" />
+                      <Copy className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3")} />
                     )}
                   </motion.button>
                 </>
@@ -746,10 +776,10 @@ function ChatMessagesContent({
               <span
                 className="max-w-[120px] inline-block overflow-hidden text-ellipsis whitespace-nowrap"
                 title={
-                  message.username || (message.role === "user" ? t("apps.chats.messages.you") : t("apps.chats.messages.ryo"))
+                  message.username || (message.role === "user" ? "You" : "Zi")
                 }
               >
-                {message.username || (message.role === "user" ? t("apps.chats.messages.you") : t("apps.chats.messages.ryo"))}
+                {message.username || (message.role === "user" ? "You" : "Zi")}
               </span>{" "}
               <span className="text-gray-400 select-text">
                 {message.metadata?.createdAt ? (
@@ -772,7 +802,7 @@ function ChatMessagesContent({
                         });
                   })()
                 ) : (
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <Loader2 className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3", "animate-spin")} />
                 )}
               </span>
               {message.role === "assistant" && (
@@ -783,14 +813,17 @@ function ChatMessagesContent({
                       opacity: hoveredMessageId === messageKey ? 1 : 0,
                       scale: 1,
                     }}
-                    className="h-3 w-3 text-gray-400 hover:text-gray-600 transition-colors"
+                    className={cn(
+                      "text-gray-400 hover:text-gray-600 transition-colors",
+                      isOS1Theme ? "h-3 w-3 os1-chat-meta-icon-button" : "h-3 w-3"
+                    )}
                     onClick={() => copyMessage(message)}
                     aria-label={t("apps.chats.ariaLabels.copyMessage")}
                   >
                     {copiedMessageId === messageKey ? (
-                      <Check className="h-3 w-3" />
+                      <Check className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3")} />
                     ) : (
-                      <Copy className="h-3 w-3" />
+                      <Copy className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3")} />
                     )}
                   </motion.button>
                   {speechEnabled && (
@@ -800,7 +833,10 @@ function ChatMessagesContent({
                         opacity: hoveredMessageId === messageKey ? 1 : 0,
                         scale: 1,
                       }}
-                      className="h-3 w-3 text-gray-400 hover:text-gray-600 transition-colors"
+                      className={cn(
+                        "text-gray-400 hover:text-gray-600 transition-colors",
+                        isOS1Theme ? "h-3 w-3 os1-chat-meta-icon-button" : "h-3 w-3"
+                      )}
                       onClick={() => {
                         if (playingMessageId === messageKey) {
                           // Stop current playback
@@ -891,12 +927,12 @@ function ChatMessagesContent({
                     >
                       {playingMessageId === messageKey ? (
                         speechLoadingId === messageKey ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <Loader2 className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3", "animate-spin")} />
                         ) : (
-                          <Pause className="h-3 w-3" />
+                          <Pause className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3")} />
                         )
                       ) : (
-                        <Volume2 className="h-3 w-3" />
+                        <Volume2 className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3")} />
                       )}
                     </motion.button>
                   )}
@@ -915,11 +951,14 @@ function ChatMessagesContent({
                             opacity: hoveredMessageId === messageKey ? 1 : 0,
                             scale: 1,
                           }}
-                          className="h-3 w-3 text-gray-400 hover:text-blue-600 transition-colors"
+                          className={cn(
+                            "text-gray-400 hover:text-blue-600 transition-colors",
+                            isOS1Theme ? "h-3 w-3 os1-chat-meta-icon-button" : "h-3 w-3"
+                          )}
                           onClick={() => onSendMessage(message.username!)}
                           aria-label={t("apps.chats.ariaLabels.messageUser", { username: message.username })}
                         >
-                          <Send className="h-3 w-3" />
+                          <Send className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3")} />
                         </motion.button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -938,11 +977,14 @@ function ChatMessagesContent({
                           opacity: hoveredMessageId === messageKey ? 1 : 0,
                           scale: 1,
                         }}
-                        className="h-3 w-3 text-gray-400 hover:text-red-600 transition-colors"
+                        className={cn(
+                          "text-gray-400 hover:text-red-600 transition-colors",
+                          isOS1Theme ? "h-3 w-3 os1-chat-meta-icon-button" : "h-3 w-3"
+                        )}
                         onClick={() => deleteMessage(message)}
                         aria-label={t("apps.chats.ariaLabels.deleteMessage")}
                       >
-                        <Trash className="h-3 w-3" />
+                        <Trash className={cn(isOS1Theme ? "h-3 w-3" : "h-3 w-3")} />
                       </motion.button>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -951,7 +993,7 @@ function ChatMessagesContent({
                   </Tooltip>
                 </TooltipProvider>
               )}
-            </div>
+            </motion.div>
 
             {/* Render aquarium tool(s) as their own element; component styles itself as a chat bubble */}
             {hasAquarium && <EmojiAquarium />}
@@ -960,16 +1002,16 @@ function ChatMessagesContent({
             {!isUrlOnly(displayContent) && (
               <motion.div
                 initial={
-                  isUrgent
+                  isUrgent && !isOS1Theme
                     ? {
                         opacity: 0,
                         backgroundColor: "#bfdbfe",
                         color: "#111827",
-                      } // quick fade-in for urgent, then color-only animation
+                      } // quick fade-in for urgent, then color-only animation (非 OS1 主题)
                     : { opacity: 0 }
                 }
                 animate={
-                  isUrgent
+                  isUrgent && !isOS1Theme
                     ? {
                         opacity: 1,
                         backgroundColor: [
@@ -986,7 +1028,7 @@ function ChatMessagesContent({
                     : { opacity: 1 }
                 }
                 transition={
-                  isUrgent
+                  isUrgent && !isOS1Theme
                     ? {
                         opacity: { duration: 0.12, ease: "easeOut" },
                         backgroundColor: {
@@ -1002,13 +1044,27 @@ function ChatMessagesContent({
                       }
                     : undefined
                 }
-                className={`p-1.5 px-2 chat-bubble ${
+                className={cn(
+                  "chat-bubble w-fit max-w-[90%] min-h-[12px] leading-snug font-geneva-12 break-words select-text",
+                  isOS1Theme 
+                    ? "px-3 py-2 rounded-2xl shadow-sm" 
+                    : "p-1.5 px-2 rounded",
                   bgColorClass ||
-                  (message.role === "user"
-                    ? "bg-yellow-100 text-black"
-                    : "bg-blue-100 text-black")
-                } w-fit max-w-[90%] min-h-[12px] rounded leading-snug font-geneva-12 break-words select-text`}
-                style={{ fontSize: `${fontSize}px` }}
+                    (message.role === "user"
+                      ? isOS1Theme 
+                        ? "os1-message-bubble-sent"
+                        : "bg-yellow-100 text-black"
+                      : isOS1Theme
+                      ? "os1-message-bubble-received"
+                      : "bg-blue-100 text-black")
+                )}
+                style={{ 
+                  fontSize: `${fontSize}px`,
+                  ...(isOS1Theme && {
+                    backdropFilter: "blur(10px) saturate(180%)",
+                    WebkitBackdropFilter: "blur(10px) saturate(180%)",
+                  })
+                }}
               >
                 {message.role === "assistant" ? (
                   <motion.div className="select-text flex flex-col gap-1">
@@ -1332,13 +1388,13 @@ function ChatMessagesContent({
           // Check if it's a rate limit error that's handled elsewhere
           const isRateLimitError =
             errorMessage === "Daily AI message limit reached." ||
-            errorMessage === "Set a username to continue chatting with Ryo.";
+            errorMessage === "Set a username to continue chatting with Zi.";
 
           // Don't show these errors in chat since they're handled by other UI
           if (isRateLimitError) return null;
 
           // Special handling for login message - render in gray like "Start a new conversation?"
-          if (errorMessage === t("apps.chats.status.loginToContinue")) {
+          if (errorMessage === "Login to continue chatting with Zi.") {
             if (username) {
               return null;
             }

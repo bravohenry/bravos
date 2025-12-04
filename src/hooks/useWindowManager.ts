@@ -124,8 +124,9 @@ export const useWindowManager = ({
   const { play: playMoveMoving } = useSound(Sounds.WINDOW_MOVE_MOVING);
   const { play: playResizeResizing } = useSound(Sounds.WINDOW_RESIZE_RESIZING);
 
-  const moveAudioRef = useRef<NodeJS.Timeout | null>(null);
-  const resizeAudioRef = useRef<NodeJS.Timeout | null>(null);
+  // Track the interval for playing sounds repeatedly
+  const moveSoundIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const resizeSoundIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const updateWindowState = useAppStore((state) => state.updateWindowState);
   const updateInstanceWindowState = useAppStore(
@@ -233,9 +234,9 @@ export const useWindowManager = ({
         const { topInset: menuBarHeight, bottomInset } = computeInsets();
 
         // Start playing move sound in a loop when actual movement starts
-        if (!moveAudioRef.current && !isMobile) {
+        if (!moveSoundIntervalRef.current && !isMobile) {
           playMoveMoving();
-          moveAudioRef.current = setInterval(playMoveMoving, 200);
+          moveSoundIntervalRef.current = setInterval(playMoveMoving, 200);
         }
 
         if (isMobile) {
@@ -330,11 +331,11 @@ export const useWindowManager = ({
 
         // Start playing resize sound when actual movement starts
         if (
-          !resizeAudioRef.current &&
+          !resizeSoundIntervalRef.current &&
           (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2)
         ) {
           playResizeResizing();
-          resizeAudioRef.current = setInterval(playResizeResizing, 200);
+          resizeSoundIntervalRef.current = setInterval(playResizeResizing, 200);
         }
       }
     };
@@ -348,9 +349,9 @@ export const useWindowManager = ({
           updateWindowState(appId, windowPosition, windowSize);
         }
         // Stop move sound loop
-        if (moveAudioRef.current) {
-          clearInterval(moveAudioRef.current);
-          moveAudioRef.current = null;
+        if (moveSoundIntervalRef.current) {
+          clearInterval(moveSoundIntervalRef.current);
+          moveSoundIntervalRef.current = null;
         }
       }
       if (resizeType) {
@@ -361,9 +362,9 @@ export const useWindowManager = ({
           updateWindowState(appId, windowPosition, windowSize);
         }
         // Stop resize sound loop
-        if (resizeAudioRef.current) {
-          clearInterval(resizeAudioRef.current);
-          resizeAudioRef.current = null;
+        if (resizeSoundIntervalRef.current) {
+          clearInterval(resizeSoundIntervalRef.current);
+          resizeSoundIntervalRef.current = null;
         }
       }
     };
@@ -380,12 +381,14 @@ export const useWindowManager = ({
       document.removeEventListener("mouseup", handleEnd);
       document.removeEventListener("touchmove", handleMove);
       document.removeEventListener("touchend", handleEnd);
-      // Clean up any ongoing sound loops
-      if (moveAudioRef.current) {
-        clearInterval(moveAudioRef.current);
+      // Clean up intervals if they exist
+      if (moveSoundIntervalRef.current) {
+        clearInterval(moveSoundIntervalRef.current);
+        moveSoundIntervalRef.current = null;
       }
-      if (resizeAudioRef.current) {
-        clearInterval(resizeAudioRef.current);
+      if (resizeSoundIntervalRef.current) {
+        clearInterval(resizeSoundIntervalRef.current);
+        resizeSoundIntervalRef.current = null;
       }
     };
   }, [
@@ -398,7 +401,6 @@ export const useWindowManager = ({
     appId,
     isMobile,
     config,
-    getSafeAreaBottomInset,
     updateWindowState,
     updateInstanceWindowState,
     instanceId,

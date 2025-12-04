@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ArrowUp, Square, Hand, AtSign } from "lucide-react";
+import { Icon } from "@/components/shared/Icon";
 import { motion, AnimatePresence } from "framer-motion";
 import { AudioInputButton } from "@/components/ui/audio-input-button";
 import { useChatSynth } from "@/hooks/useChatSynth";
@@ -51,7 +52,7 @@ interface ChatInputProps {
   previousMessages?: string[];
   /**
    * Whether to display the "nudge" (👋) button. Defaults to true so that the
-   * button is shown in the regular Ryo chat, and can be disabled for chat-room
+   * button is shown in the regular Zi chat, and can be disabled for chat-room
    * contexts where nudging is not available.
    */
   showNudgeButton?: boolean;
@@ -109,13 +110,14 @@ export function ChatInput({
   const currentTheme = useThemeStore((s) => s.current);
   const isMacTheme = currentTheme === "macosx";
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
+  const isOS1Theme = currentTheme === "os1";
 
   // Get the model display name for debug information
   const modelDisplayName = aiModel ? AI_MODELS[aiModel]?.name : null;
 
-  // Check if user is typing @ryo
-  const isTypingRyoMention =
-    isInChatRoom && (input.startsWith("@ryo ") || input === "@ryo");
+  // Check if user is typing @zi
+  const isTypingZiMention =
+    isInChatRoom && (input.startsWith("@zi ") || input === "@zi");
 
   useEffect(() => {
     // Check if device has touch capability
@@ -223,7 +225,7 @@ export function ChatInput({
   const handleMentionClick = () => {
     let newValue = input;
 
-    if (input.startsWith("@ryo ")) {
+    if (input.startsWith("@zi ")) {
       // Already properly mentioned, just focus
       inputRef.current?.focus();
       // Position cursor at the end
@@ -236,12 +238,12 @@ export function ChatInput({
         }
       }, 0);
       return;
-    } else if (input.startsWith("@ryo")) {
-      // Has @ryo but missing space
-      newValue = input.replace("@ryo", "@ryo ");
+    } else if (input.startsWith("@zi")) {
+      // Has @zi but missing space
+      newValue = input.replace("@zi", "@zi ");
     } else {
-      // Add @ryo at the beginning
-      newValue = `@ryo ${input}`.trim() + (input.endsWith(" ") ? "" : " ");
+      // Add @zi at the beginning
+      newValue = `@zi ${input}`.trim() + (input.endsWith(" ") ? "" : " ");
     }
 
     const event = {
@@ -316,7 +318,7 @@ export function ChatInput({
             }
             onSubmit(e);
           }}
-          className={`flex ${isMacTheme ? "gap-2" : "gap-1"}`}
+          className={`chat-input flex ${isMacTheme || isOS1Theme ? "gap-2" : "gap-1"}`}
         >
           <AnimatePresence mode="popLayout" initial={false}>
             <div className="flex-1 relative">
@@ -337,15 +339,23 @@ export function ChatInput({
                     ? t("apps.chats.status.typeMessage")
                     : t("apps.chats.status.typeOrPushSpace")
                 }
-                className={`w-full border-1 border-gray-800 text-xs font-geneva-12 h-9 ${
-                  isMacTheme ? "pl-3 pr-16 rounded-full" : "pl-2 pr-16"
-                } backdrop-blur-lg bg-white/80 ${
+                className={`w-full border-1 text-xs font-geneva-12 h-9 ${
+                  isMacTheme || isOS1Theme ? "pl-3 pr-16 rounded-full" : "pl-2 pr-16"
+                } ${
+                  isOS1Theme 
+                    ? "border-gray-200 bg-white/90 backdrop-blur-xl shadow-sm" 
+                    : "border-gray-800 backdrop-blur-lg bg-white/80"
+                } ${
                   isFocused ? "input--focused" : ""
-                } ${isTypingRyoMention ? "border-blue-600 bg-blue-50" : ""} ${
+                } ${isTypingZiMention ? "border-blue-600 bg-blue-50" : ""} ${
                   needsUsername && !isInChatRoom
                     ? "border-orange-600 bg-orange-50"
                     : ""
                 }`}
+                style={isOS1Theme ? {
+                  backdropFilter: "blur(20px) saturate(180%)",
+                  WebkitBackdropFilter: "blur(20px) saturate(180%)",
+                } : undefined}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 onTouchStart={(e) => {
@@ -370,7 +380,7 @@ export function ChatInput({
                   </motion.div>
                 )}
               </AnimatePresence>
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              <div className={`absolute ${isOS1Theme ? "right-3" : "right-2.5"} top-1/2 -translate-y-1/2 flex items-center ${isOS1Theme ? "gap-1.5" : "gap-1"}`}>
                 {showNudgeButton && (
                   <TooltipProvider>
                     <Tooltip>
@@ -380,14 +390,16 @@ export function ChatInput({
                             type="button"
                             onClick={handleNudgeClick}
                             className={`w-[22px] h-[22px] flex items-center justify-center ${
-                              isMacTheme
-                                ? "text-neutral-400 hover:text-neutral-800 transition-colors"
+                              isMacTheme || isOS1Theme
+                                ? isOS1Theme
+                                  ? "text-gray-400 hover:text-gray-500 transition-colors os1-chat-input-icon-button"
+                                  : "text-neutral-400 hover:text-neutral-800 transition-colors"
                                 : ""
                             }`}
                             disabled={isLoading}
                             aria-label={t("apps.chats.ariaLabels.sendNudge")}
                           >
-                            <Hand className="h-4 w-4 -rotate-40" />
+                            <Icon icon={Hand} name="Hand" className="h-4 w-4 -rotate-40" />
                           </button>
                         </div>
                       </TooltipTrigger>
@@ -406,19 +418,21 @@ export function ChatInput({
                             type="button"
                             onClick={handleMentionClick}
                             className={`w-[22px] h-[22px] flex items-center justify-center ${
-                              isMacTheme
-                                ? "text-neutral-400 hover:text-neutral-800 transition-colors"
+                              isMacTheme || isOS1Theme
+                                ? isOS1Theme
+                                  ? "text-gray-400 hover:text-gray-500 transition-colors os1-chat-input-icon-button"
+                                  : "text-neutral-400 hover:text-neutral-800 transition-colors"
                                 : ""
                             }`}
                             disabled={isLoading}
-                            aria-label={t("apps.chats.ariaLabels.mentionRyo")}
+                            aria-label="Mention Zi"
                           >
-                            <AtSign className="h-4 w-4" />
+                            <Icon icon={AtSign} name="AtSign" className="h-4 w-4" />
                           </button>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>{t("apps.chats.ariaLabels.mentionRyo")}</p>
+                        <p>Mention Zi</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -435,8 +449,10 @@ export function ChatInput({
                           isLoading={isTranscribing}
                           silenceThreshold={1200}
                           className={`w-[22px] h-[22px] flex items-center justify-center ${
-                            isMacTheme
-                              ? "text-neutral-400 hover:text-neutral-800 transition-colors"
+                            isMacTheme || isOS1Theme
+                              ? isOS1Theme
+                                ? "text-gray-400 hover:text-gray-500 transition-colors os1-chat-input-icon-button"
+                                : "text-neutral-400 hover:text-neutral-800 transition-colors"
                               : ""
                           }`}
                         />
@@ -464,29 +480,35 @@ export function ChatInput({
                     onStop();
                   }}
                   className={`text-xs w-9 h-9 p-0 flex items-center justify-center ${
-                    isMacTheme ? "rounded-full" : "rounded-none"
+                    isMacTheme || isOS1Theme ? "rounded-full" : "rounded-none"
                   } ${
-                    isMacTheme
+                    isMacTheme || isOS1Theme
                       ? "relative overflow-hidden transition-transform hover:scale-105"
                       : isXpTheme
                       ? "text-black"
                       : "bg-black hover:bg-black/80 text-white border-2 border-gray-800"
                   }`}
                   style={
-                    isMacTheme
-                      ? {
-                          background:
-                            "linear-gradient(rgba(254, 205, 211, 0.9), rgba(252, 165, 165, 0.9))",
-                          boxShadow:
-                            "0 2px 3px rgba(0,0,0,0.2), 0 1px 1px rgba(0,0,0,0.3), inset 0 0 0 0.5px rgba(0,0,0,0.3), inset 0 1px 2px rgba(0,0,0,0.4), inset 0 2px 3px 1px rgba(254, 205, 211, 0.5)",
-                          backdropFilter: "blur(2px)",
-                        }
+                    isMacTheme || isOS1Theme
+                      ? isOS1Theme
+                        ? {
+                            background: "rgba(255, 59, 48, 0.9)",
+                            boxShadow: "0 2px 8px rgba(255, 59, 48, 0.3), 0 1px 2px rgba(0,0,0,0.2)",
+                            backdropFilter: "blur(10px)",
+                          }
+                        : {
+                            background:
+                              "linear-gradient(rgba(254, 205, 211, 0.9), rgba(252, 165, 165, 0.9))",
+                            boxShadow:
+                              "0 2px 3px rgba(0,0,0,0.2), 0 1px 1px rgba(0,0,0,0.3), inset 0 0 0 0.5px rgba(0,0,0,0.3), inset 0 1px 2px rgba(0,0,0,0.4), inset 0 2px 3px 1px rgba(254, 205, 211, 0.5)",
+                            backdropFilter: "blur(2px)",
+                          }
                       : {}
                   }
                 >
-                  {isMacTheme && (
+                  {(isMacTheme || isOS1Theme) && !isOS1Theme && (
                     <>
-                      {/* Top shine */}
+                      {/* Top shine - 仅用于 macOS 主题 */}
                       <div
                         className="pointer-events-none absolute left-1/2 -translate-x-1/2"
                         style={{
@@ -500,7 +522,7 @@ export function ChatInput({
                           zIndex: 2,
                         }}
                       />
-                      {/* Bottom glow */}
+                      {/* Bottom glow - 仅用于 macOS 主题 */}
                       <div
                         className="pointer-events-none absolute left-1/2 -translate-x-1/2"
                         style={{
@@ -516,10 +538,14 @@ export function ChatInput({
                       />
                     </>
                   )}
-                  <Square
+                  <Icon
+                    icon={Square}
+                    name="Square"
                     className={`h-4 w-4 ${
-                      isMacTheme
-                        ? "text-black/70 relative z-10"
+                      isMacTheme || isOS1Theme
+                        ? isOS1Theme
+                          ? "text-white relative z-10"
+                          : "text-black/70 relative z-10"
                         : isXpTheme
                         ? "text-black"
                         : ""
@@ -539,16 +565,16 @@ export function ChatInput({
                 <Button
                   type="submit"
                   className={`text-xs w-9 h-9 p-0 flex items-center justify-center ${
-                    isMacTheme ? "rounded-full" : "rounded-none"
+                    isMacTheme || isOS1Theme ? "rounded-full" : "rounded-none"
                   } ${
-                    isMacTheme
+                    isMacTheme || isOS1Theme
                       ? "relative overflow-hidden transition-transform hover:scale-105"
                       : isXpTheme
                       ? "text-black"
                       : "bg-black hover:bg-black/80 text-white border-2 border-gray-800"
-                  }`}
+                  } ${isOS1Theme ? "os1-chat-submit chat-input" : ""}`}
                   style={
-                    isMacTheme
+                    isMacTheme && !isOS1Theme
                       ? {
                           background:
                             "linear-gradient(rgba(217, 249, 157, 0.9), rgba(190, 227, 120, 0.9))",
@@ -560,9 +586,9 @@ export function ChatInput({
                   }
                   disabled={isLoading || isOffline}
                 >
-                  {isMacTheme && (
+                  {(isMacTheme || isOS1Theme) && !isOS1Theme && (
                     <>
-                      {/* Top shine */}
+                      {/* Top shine - 仅用于 macOS 主题 */}
                       <div
                         className="pointer-events-none absolute left-1/2 -translate-x-1/2"
                         style={{
@@ -576,7 +602,7 @@ export function ChatInput({
                           zIndex: 2,
                         }}
                       />
-                      {/* Bottom glow */}
+                      {/* Bottom glow - 仅用于 macOS 主题 */}
                       <div
                         className="pointer-events-none absolute left-1/2 -translate-x-1/2"
                         style={{
@@ -592,14 +618,19 @@ export function ChatInput({
                       />
                     </>
                   )}
-                  <ArrowUp
+                  <Icon
+                    icon={ArrowUp}
+                    name="ArrowUp"
                     className={`h-6 w-6 ${
-                      isMacTheme
-                        ? "text-black/70 relative z-10"
+                      isMacTheme || isOS1Theme
+                        ? isOS1Theme
+                          ? "text-gray-400 hover:text-gray-500 relative z-10"
+                          : "text-black/70 relative z-10"
                         : isXpTheme
                         ? "text-black"
                         : ""
                     }`}
+                    style={isOS1Theme ? { color: 'rgb(156, 163, 175)' } : undefined}
                   />
                 </Button>
               </motion.div>
@@ -607,7 +638,7 @@ export function ChatInput({
           </AnimatePresence>
         </form>
         <AnimatePresence>
-          {(isTypingRyoMention ||
+          {(isTypingZiMention ||
             (!isInChatRoom && debugMode && modelDisplayName)) && (
             <motion.div
               key="model-info"
@@ -617,9 +648,13 @@ export function ChatInput({
               transition={{ duration: 0.15 }}
               className="mt-2 px-1 text-xs text-neutral-700 font-geneva-12"
             >
-              {isTypingRyoMention
-                ? t("apps.chats.status.ryoWillRespond") + (debugMode && modelDisplayName ? ` (${modelDisplayName})` : "")
-                : t("apps.chats.status.usingModel", { model: modelDisplayName })}
+              {isTypingZiMention
+                ? `Zi will respond to this message${
+                    debugMode && modelDisplayName
+                      ? ` (${modelDisplayName})`
+                      : ""
+                  }`
+                : `Using ${modelDisplayName}`}
             </motion.div>
           )}
         </AnimatePresence>

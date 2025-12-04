@@ -24,7 +24,7 @@ import {
   type ChatRoom,
 } from "@/types/chat";
 import { Button } from "@/components/ui/button";
-import { useRyoChat } from "../hooks/useRyoChat";
+import { useZiChat } from "../hooks/useZiChat";
 import { ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getPrivateRoomDisplayName } from "@/utils/chat";
@@ -54,6 +54,7 @@ export function ChatsAppComponent({
   const { t } = useTranslation();
   const translatedHelpItems = useTranslatedHelpItems("chats", helpItems);
   const { aiMessages } = useChatsStore();
+  const isOffline = useOffline();
 
   // Use auth hook for authentication functionality
   const authResult = useAuth();
@@ -176,9 +177,9 @@ export function ChatsAppComponent({
     displayNames.join(", ") +
     (remainingCount > 0 ? `, ${remainingCount}+` : "");
 
-  // Use the @ryo chat hook
-  const { isRyoLoading, stopRyo, handleRyoMention, detectAndProcessMention } =
-    useRyoChat({
+  // Use the @zi chat hook
+  const { isZiLoading, stopZi, handleZiMention, detectAndProcessMention } =
+    useZiChat({
       currentRoomId,
       onScrollToBottom: () => setScrollToBottomTrigger((prev) => prev + 1),
       roomMessages: currentRoomMessages?.map((msg: AppChatMessage) => ({
@@ -232,7 +233,7 @@ export function ChatsAppComponent({
       if (currentRoomId && username) {
         const trimmedInput = input.trim();
 
-        // Detect if this is an @ryo mention
+        // Detect if this is an @zi mention
         const { isMention, messageContent } =
           detectAndProcessMention(trimmedInput);
 
@@ -242,11 +243,11 @@ export function ChatsAppComponent({
             target: { value: "" },
           } as React.ChangeEvent<HTMLInputElement>);
 
-          // Send the user's message to the chat room first (showing @ryo)
+          // Send the user's message to the chat room first (showing @zi)
           sendRoomMessage(input);
 
           // Then send to AI (doesn't affect input clearing)
-          handleRyoMention(messageContent);
+          handleZiMention(messageContent);
 
           // Trigger scroll
           setScrollToBottomTrigger((prev) => prev + 1);
@@ -273,7 +274,7 @@ export function ChatsAppComponent({
       handleAiSubmit,
       input,
       handleInputChange,
-      handleRyoMention,
+      handleZiMention,
       detectAndProcessMention,
     ]
   );
@@ -297,11 +298,11 @@ export function ChatsAppComponent({
     setScrollToBottomTrigger((prev) => prev + 1);
   }, [handleNudge]);
 
-  // Combined stop function for both AI chat and @ryo mentions
+  // Combined stop function for both AI chat and @zi mentions
   const handleStop = useCallback(() => {
     stop(); // Stop regular AI chat
-    stopRyo(); // Stop @ryo chat
-  }, [stop, stopRyo]);
+    stopZi(); // Stop @zi chat
+  }, [stop, stopZi]);
 
   // Font size handlers using store action
   const handleIncreaseFontSize = useCallback(() => {
@@ -459,7 +460,7 @@ export function ChatsAppComponent({
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
   const isWindowsLegacyTheme = isXpTheme;
   const isMacTheme = currentTheme === "macosx";
-  const isOffline = useOffline();
+  const isOS1Theme = currentTheme === "os1";
 
   const menuBar = (
     <ChatsMenuBar
@@ -512,7 +513,7 @@ export function ChatsAppComponent({
     : messages.map((msg: AIChatMessage) => ({
         ...msg,
         // metadata with createdAt is already present from AIChatMessage
-        username: msg.role === "user" ? username || "You" : "Ryo",
+        username: msg.role === "user" ? username || "You" : "Zi",
       }));
 
   return (
@@ -524,7 +525,7 @@ export function ChatsAppComponent({
             ? currentRoom.type === "private"
               ? getPrivateRoomDisplayName(currentRoom, username)
               : `#${currentRoom.name}`
-            : "@ryo"
+            : "@zi"
         }
         onClose={onClose}
         isForeground={isForeground}
@@ -635,27 +636,44 @@ export function ChatsAppComponent({
             </div>
 
             {/* Chat area */}
-            <div className="relative flex flex-col flex-1 h-full bg-white/85">
+            <div 
+              className={`relative flex flex-col flex-1 h-full ${
+                isOS1Theme 
+                  ? "bg-white/85 backdrop-blur-xl" 
+                  : "bg-white/85"
+              }`}
+              style={isOS1Theme ? {
+                backdropFilter: "blur(30px) saturate(180%)",
+                WebkitBackdropFilter: "blur(30px) saturate(180%)",
+              } : undefined}
+            >
               {/* Mobile chat title bar */}
               <div
                 className={`sticky top-0 z-10 flex items-center justify-between px-2 py-1 border-b ${
                   // Layer pinstripes with semi-transparent white via backgroundImage for macOS
-                  isMacTheme ? "" : "bg-neutral-200/90 backdrop-blur-lg"
+                  isMacTheme || isOS1Theme ? "" : "bg-neutral-200/90 backdrop-blur-lg"
                 } ${
                   isWindowsLegacyTheme
                     ? "border-[#919b9c]"
-                    : isMacTheme
+                    : isMacTheme || isOS1Theme
                     ? ""
                     : "border-black"
                 }`}
                 style={
-                  isMacTheme
-                    ? {
-                        backgroundImage: "var(--os-pinstripe-window)",
-                        opacity: 0.95,
-                        borderBottom:
-                          "var(--os-metrics-titlebar-border-width, 1px) solid var(--os-color-titlebar-border-inactive, rgba(0, 0, 0, 0.2))",
-                      }
+                  isMacTheme || isOS1Theme
+                    ? isOS1Theme
+                      ? {
+                          background: "rgba(255, 255, 255, 0.8)",
+                          backdropFilter: "blur(20px) saturate(180%)",
+                          WebkitBackdropFilter: "blur(20px) saturate(180%)",
+                          borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+                        }
+                      : {
+                          backgroundImage: "var(--os-pinstripe-window)",
+                          opacity: 0.95,
+                          borderBottom:
+                            "var(--os-metrics-titlebar-border-width, 1px) solid var(--os-color-titlebar-border-inactive, rgba(0, 0, 0, 0.2))",
+                        }
                     : undefined
                 }
               >
@@ -670,7 +688,7 @@ export function ChatsAppComponent({
                         ? currentRoom.type === "private"
                           ? getPrivateRoomDisplayName(currentRoom, username)
                           : `#${currentRoom.name}`
-                        : "@ryo"}
+                        : "@zi"}
                     </h2>
                     <ChevronDown className="h-3 w-3 transform transition-transform duration-200 text-neutral-400" />
                   </Button>
@@ -684,7 +702,7 @@ export function ChatsAppComponent({
                     )}
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* Create Account button shown only in @ryo view when no username is set */}
+                  {/* Create Account button shown only in @zi view when no username is set */}
                   {!currentRoom && !username && (
                     <Button
                       variant="ghost"
@@ -692,12 +710,12 @@ export function ChatsAppComponent({
                       className="flex items-center gap-1 px-2 py-1 h-7"
                     >
                       <span className="font-geneva-12 text-[11px] text-orange-600 hover:text-orange-700">
-                        {t("apps.chats.status.loginToRyOS")}
+                        Login to ZiOS
                       </span>
                     </Button>
                   )}
 
-                  {/* Clear chat button shown only in @ryo (no current room) */}
+                  {/* Clear chat button shown only in @zi (no current room) */}
                   {!currentRoom && (
                     <Button
                       variant="ghost"
@@ -733,11 +751,11 @@ export function ChatsAppComponent({
                   ref={messagesContainerRef}
                 >
                   <ChatMessages
-                    key={currentRoomId || "ryo"}
+                    key={currentRoomId || "zi"}
                     messages={currentMessagesToDisplay}
                     isLoading={
                       (isLoading && !currentRoomId) ||
-                      (!!currentRoomId && isRyoLoading)
+                      (!!currentRoomId && isZiLoading)
                     }
                     error={!currentRoomId ? error : undefined}
                     onRetry={reload}
@@ -768,7 +786,7 @@ export function ChatsAppComponent({
                 >
                   {/* Show "Create Account" button in two cases:
                       1. In a chat room without username
-                      2. In @ryo chat when rate limit is hit for anonymous users */}
+                      2. In @zi chat when rate limit is hit for anonymous users */}
                   {(currentRoomId && !username) ||
                   (!currentRoomId && needsUsername && !username) ? (
                     isMacTheme ? (
@@ -819,7 +837,7 @@ export function ChatsAppComponent({
                       return (
                         <ChatInput
                           input={input}
-                          isLoading={isLoading || isRyoLoading}
+                          isLoading={isLoading || isZiLoading}
                           isForeground={isForeground}
                           onInputChange={handleInputChange}
                           onSubmit={handleSubmit}

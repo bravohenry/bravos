@@ -28,7 +28,6 @@ import { useSound, Sounds } from "@/hooks/useSound";
 import { useChatsStore } from "@/stores/useChatsStore";
 import { useTextEditStore } from "@/stores/useTextEditStore";
 import { useIpodStore } from "@/stores/useIpodStore";
-import { getTranslatedAppName } from "@/utils/i18n";
 import { generateHTML, type AnyExtension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -366,6 +365,7 @@ export function TerminalAppComponent({
   const [isInteractingWithPreview, setIsInteractingWithPreview] =
     useState(false);
   const [inputFocused, setInputFocused] = useState(false); // Add state for input focus
+  const [windowSize, setWindowSize] = useState({ width: 80, height: 24 }); // Terminal dimensions
   const spinnerChars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
   // Track if auto-scrolling is enabled
@@ -427,6 +427,38 @@ export function TerminalAppComponent({
     const { commandHistory } = useTerminalStore.getState();
     setHistoryCommands(commandHistory.map((cmd) => cmd.command));
   }, []);
+
+  // Calculate terminal dimensions based on window size
+  useEffect(() => {
+    const calculateTerminalSize = () => {
+      if (terminalRef.current) {
+        const container = terminalRef.current;
+        const style = window.getComputedStyle(container);
+        const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+        const availableWidth = container.clientWidth - padding;
+        const availableHeight = container.clientHeight;
+        
+        // Approximate character width (Monaco font at 12px is about 7.2px per char)
+        const charWidth = fontSize * 0.6;
+        const charHeight = fontSize * 1.2;
+        
+        const cols = Math.floor(availableWidth / charWidth);
+        const rows = Math.floor(availableHeight / charHeight);
+        
+        setWindowSize({ width: Math.max(80, cols), height: Math.max(24, rows) });
+      }
+    };
+
+    calculateTerminalSize();
+    const resizeObserver = new ResizeObserver(calculateTerminalSize);
+    if (terminalRef.current) {
+      resizeObserver.observe(terminalRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [fontSize]);
 
   // Initialize with welcome message
   useEffect(() => {
@@ -1278,16 +1310,16 @@ export function TerminalAppComponent({
           historyCommands[historyCommands.length - 1 - newIndex] || "";
 
         // If we're not in AI mode and the historic command was from AI mode
-        // (doesn't start with 'ryo' and was saved with 'ryo' prefix)
+        // (doesn't start with 'zi' and was saved with 'zi' prefix)
         const savedCommands = useTerminalStore.getState().commandHistory;
         const commandEntry = savedCommands[savedCommands.length - 1 - newIndex];
         if (
           !isInAiMode &&
           commandEntry &&
-          commandEntry.command.startsWith("ryo ") &&
-          !historicCommand.startsWith("ryo ")
+          commandEntry.command.startsWith("zi ") &&
+          !historicCommand.startsWith("zi ")
         ) {
-          setCurrentCommand("ryo " + historicCommand);
+          setCurrentCommand("zi " + historicCommand);
         } else {
           setCurrentCommand(historicCommand);
         }
@@ -1307,10 +1339,10 @@ export function TerminalAppComponent({
         if (
           !isInAiMode &&
           commandEntry &&
-          commandEntry.command.startsWith("ryo ") &&
-          !historicCommand.startsWith("ryo ")
+          commandEntry.command.startsWith("zi ") &&
+          !historicCommand.startsWith("zi ")
         ) {
-          setCurrentCommand("ryo " + historicCommand);
+          setCurrentCommand("zi " + historicCommand);
         } else {
           setCurrentCommand(historicCommand);
         }
@@ -2054,7 +2086,7 @@ export function TerminalAppComponent({
     // Store in Zustand (including AI commands)
     useTerminalStore
       .getState()
-      .addCommand(command.startsWith("ryo ") ? command : `ryo ${command}`);
+      .addCommand(command.startsWith("zi ") ? command : `zi ${command}`);
 
     // Reset animated lines to ensure only new content gets animated
     setAnimatedLines(new Set());
@@ -2112,7 +2144,8 @@ export function TerminalAppComponent({
         setCommandHistory([
           {
             command: "",
-            output: i18n.t("apps.terminal.output.chatCleared"),
+            output:
+              "chat cleared. you're still chatting with zi. type 'exit' to return to terminal.",
             path: "ai-assistant",
           },
         ]);
@@ -2348,7 +2381,7 @@ export function TerminalAppComponent({
         !item.output.startsWith("command not found") &&
         !item.output.includes("commands") &&
         !item.output.includes("     __  __") &&
-        !item.output.includes("ask ryo anything.") &&
+        !item.output.includes("ask zi anything.") &&
         // Don't animate ls command output
         !(item.command && item.command.trim().startsWith("ls"))
       ) {
@@ -2486,7 +2519,7 @@ export function TerminalAppComponent({
                   {item.path === "ai-user" ? (
                     <span className="text-purple-400 mr-2 select-text cursor-text">
                       <span className="inline-block w-2 text-center">→</span>{" "}
-                      ryo
+                      zi
                     </span>
                   ) : (
                     <span className="text-green-400 mr-2 select-text cursor-text">
@@ -2510,7 +2543,7 @@ export function TerminalAppComponent({
                     item.output && isUrgentMessage(item.output) ? "text-red-400" : ""
                   } ${
                     // Add system message styling
-                    item.output && (item.output.startsWith("ask ryo anything") ||
+                    (item.output.startsWith("ask zi anything") ||
                     item.output.startsWith("usage:") ||
                     item.output.startsWith("command not found:") ||
                     item.output.includes("type 'help' for") ||
@@ -2529,7 +2562,7 @@ export function TerminalAppComponent({
                         <span className="inline-block w-2 text-center">
                           {(item.output || "").split(" ")[0]}
                         </span>{" "}
-                        ryo
+                        zi
                       </span>
                       <span className="text-gray-500 italic shimmer-subtle">
                         {" "}{i18n.t("apps.terminal.output.isThinking")}
@@ -2692,12 +2725,12 @@ export function TerminalAppComponent({
                       <span className="inline-block w-2 text-center">
                         {spinnerChars[spinnerIndex]}
                       </span>{" "}
-                      ryo
+                      zi
                     </span>
                   </span>
                 ) : (
                   <>
-                    <span className="inline-block w-2 text-center">→</span> ryo
+                    <span className="inline-block w-2 text-center">→</span> zi
                   </>
                 )}
               </span>
@@ -2770,7 +2803,7 @@ export function TerminalAppComponent({
       {!isXpTheme && isForeground && menuBar}
       <WindowFrame
         appId="terminal"
-        title={getTranslatedAppName("terminal")}
+        title={`Terminal — -zsh — ${windowSize.width}x${windowSize.height}`}
         onClose={onClose}
         isForeground={isForeground}
         transparentBackground={true}
@@ -2781,14 +2814,14 @@ export function TerminalAppComponent({
         menuBar={isXpTheme ? menuBar : undefined}
       >
         <motion.div
-          className="terminal-content flex flex-col h-full w-full bg-black/80 backdrop-blur-lg text-white antialiased font-monaco overflow-hidden select-text"
+          className="flex flex-col h-full w-full bg-[#1e1e1e] text-white antialiased font-monaco overflow-hidden select-text terminal-container"
           style={{
             // Use CSS custom property to allow !important override in macOS theme
-            "--terminal-font-size": `${fontSize}px`,
             fontSize: `${fontSize}px`,
             fontFamily:
               '"Monaco", "ArkPixel", "SerenityOS-Emoji", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", "Courier New", monospace',
-          } as React.CSSProperties}
+            color: "#ffffff",
+          }}
           animate={
             terminalFlash
               ? {
@@ -2832,10 +2865,10 @@ export function TerminalAppComponent({
             name: "Terminal",
             version: "1.0",
             creator: {
-              name: "Ryo Lu",
-              url: "https://ryo.lu",
+              name: "Zihan",
+              url: "https://bravohenry.com",
             },
-            github: "https://github.com/ryokun6/ryos",
+            github: "https://github.com/bravohenry/bravos",
             icon: "/icons/default/terminal.png",
           }
         }

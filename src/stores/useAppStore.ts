@@ -134,10 +134,10 @@ interface AppStoreState extends AppManagerState {
   setMasterVolume: (v: number) => void;
   _debugCheckInstanceIntegrity: () => void;
   
-  // ryOS version (fetched from version.json)
-  ryOSVersion: string | null;
-  ryOSBuildNumber: string | null;
-  ryOSBuildTime: string | null;
+  // ziOS version (fetched from version.json)
+  ziOSVersion: string | null;
+  ziOSBuildNumber: string | null;
+  ziOSBuildTime: string | null;
   setRyOSVersion: (version: string, buildNumber: string, buildTime?: string) => void;
 }
 
@@ -184,15 +184,15 @@ export const useAppStore = create<AppStoreState>()(
       masterVolume: 1,
       setMasterVolume: (vol) => set({ masterVolume: vol }),
 
-      // ryOS version (fetched from version.json)
-      ryOSVersion: null,
-      ryOSBuildNumber: null,
-      ryOSBuildTime: null,
+      // ziOS version (fetched from version.json)
+      ziOSVersion: null,
+      ziOSBuildNumber: null,
+      ziOSBuildTime: null,
       setRyOSVersion: (version, buildNumber, buildTime) =>
         set({
-          ryOSVersion: version,
-          ryOSBuildNumber: buildNumber,
-          ryOSBuildTime: buildTime || null,
+          ziOSVersion: version,
+          ziOSBuildNumber: buildNumber,
+          ziOSBuildTime: buildTime || null,
         }),
 
       updateWindowState: (appId, position, size) =>
@@ -926,9 +926,9 @@ export const useAppStore = create<AppStoreState>()(
         ttsVoice: state.ttsVoice,
         ipodVolume: state.ipodVolume,
         masterVolume: state.masterVolume,
-        ryOSVersion: state.ryOSVersion,
-        ryOSBuildNumber: state.ryOSBuildNumber,
-        ryOSBuildTime: state.ryOSBuildTime,
+        ziOSVersion: state.ziOSVersion,
+        ziOSBuildNumber: state.ziOSBuildNumber,
+        ziOSBuildTime: state.ziOSBuildTime,
         instances: Object.fromEntries(
           Object.entries(state.instances)
             .filter(([, inst]) => inst.isOpen)

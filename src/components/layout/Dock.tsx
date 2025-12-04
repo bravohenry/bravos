@@ -7,18 +7,23 @@ import {
   forwardRef,
 } from "react";
 import type React from "react";
+import { useTranslation } from "react-i18next";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { useAppStoreShallow } from "@/stores/helpers";
 import { ThemedIcon } from "@/components/shared/ThemedIcon";
-import { AppId, getAppIconPath, appRegistry } from "@/config/appRegistry";
+import { AppId, getAppIconPath, appRegistry, getNonFinderApps } from "@/config/appRegistry";
+import { getTranslatedAppName, getTranslatedFolderNameFromName } from "@/utils/i18n";
 import { useLaunchApp } from "@/hooks/useLaunchApp";
 import { useFinderStore } from "@/stores/useFinderStore";
 import { useFilesStore } from "@/stores/useFilesStore";
 import { useIsPhone } from "@/hooks/useIsPhone";
+import { useLongPress } from "@/hooks/useLongPress";
+import { useSound, Sounds } from "@/hooks/useSound";
 import type { AppInstance } from "@/stores/useAppStore";
 import type { AppletViewerInitialData } from "@/apps/applet-viewer";
-import { RightClickMenu } from "@/components/ui/right-click-menu";
+import { RightClickMenu, MenuItem } from "@/components/ui/right-click-menu";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
+import { requestCloseWindow } from "@/utils/windowUtils";
 import {
   AnimatePresence,
   motion,
@@ -27,6 +32,7 @@ import {
   useSpring,
   useTransform,
   useIsPresent,
+  type MotionValue,
 } from "framer-motion";
 
 // 常量配置
@@ -88,12 +94,18 @@ const findMostRecentInstance = (
 
 function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
   const isPhone = useIsPhone();
-  const { instances, instanceOrder, bringInstanceToForeground } =
+  const { instances, instanceOrder, bringInstanceToForeground, restoreInstance, minimizeInstance, closeAppInstance } =
     useAppStoreShallow((s) => ({
       instances: s.instances,
       instanceOrder: s.instanceOrder,
       bringInstanceToForeground: s.bringInstanceToForeground,
+      restoreInstance: s.restoreInstance,
+      minimizeInstance: s.minimizeInstance,
+      closeAppInstance: s.closeAppInstance,
     }));
+  
+  // Sound for hide/minimize action from dock context menu
+  const { play: playZoomMinimize } = useSound(Sounds.WINDOW_ZOOM_MINIMIZE);
 
   const launchApp = useLaunchApp();
   const files = useFilesStore((s) => s.items);
@@ -107,7 +119,15 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
     x: number;
     y: number;
   } | null>(null);
+  const [applicationsContextMenuPos, setApplicationsContextMenuPos] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const [isEmptyTrashDialogOpen, setIsEmptyTrashDialogOpen] = useState(false);
+  const [appContextMenu, setAppContextMenu] = useState<{ x: number; y: number; appId: AppId; instanceId?: string } | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [isSwapping, setIsSwapping] = useState(false);
+  const { t } = useTranslation();
   const dockContainerRef = useRef<HTMLDivElement | null>(null);
   
   // 检查垃圾桶是否为空
@@ -115,6 +135,16 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
     () => !Object.values(files).some((item) => item.status === "trashed"),
     [files]
   );
+  
+  // 处理图标悬停
+  const handleIconHover = useCallback((id: string) => {
+    setHoveredId(id);
+  }, []);
+  
+  // 处理图标离开
+  const handleIconLeave = useCallback(() => {
+    setHoveredId(null);
+  }, []);
 
   // 获取 Applet 信息（图标和名称）
   const getAppletInfo = useCallback(
@@ -236,7 +266,7 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
         launchApp("finder", { initialPath });
       }
     },
-    [instances, instanceOrder, bringInstanceToForeground, launchApp]
+    [instances, instanceOrder, bringInstanceToForeground, restoreInstance, launchApp]
   );
 
   // 聚焦指定路径的 Finder 窗口，或启动新窗口
@@ -253,7 +283,12 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
             (fi.currentPath === targetPath ||
               fi.currentPath.startsWith(`${targetPath}/`))
           ) {
-            bringInstanceToForeground(id);
+            // If minimized, restore it; otherwise just bring to foreground
+            if (inst.isMinimized) {
+              restoreInstance(id);
+            } else {
+              bringInstanceToForeground(id);
+            }
             return;
           }
         }
@@ -269,9 +304,93 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
       instances,
       finderInstances,
       bringInstanceToForeground,
+      restoreInstance,
       launchApp,
     ]
   );
+  
+  // 获取文件夹上下文菜单项
+  const getFolderContextMenuItems = useCallback((path: string, isTrash: boolean): MenuItem[] => {
+    if (isTrash) {
+      return [
+        {
+          type: "item",
+          label: t("apps.finder.contextMenu.open"),
+          onSelect: () => {
+            focusFinderAtPathOrLaunch("/Trash");
+            setTrashContextMenuPos(null);
+          },
+        },
+        { type: "separator" },
+        {
+          type: "item",
+          label: t("apps.finder.contextMenu.emptyTrash"),
+          onSelect: () => {
+            setIsEmptyTrashDialogOpen(true);
+            setTrashContextMenuPos(null);
+          },
+          disabled: isTrashEmpty,
+        },
+      ];
+    } else {
+      return [
+        {
+          type: "item",
+          label: t("apps.finder.contextMenu.open"),
+          onSelect: () => {
+            focusFinderAtPathOrLaunch("/Applications");
+            setApplicationsContextMenuPos(null);
+          },
+        },
+      ];
+    }
+  }, [t, focusFinderAtPathOrLaunch, isTrashEmpty]);
+  
+  // 获取应用上下文菜单项
+  const getAppContextMenuItems = useCallback((appId: AppId, instanceId?: string): MenuItem[] => {
+    const items: MenuItem[] = [];
+    const instance = instanceId ? instances[instanceId] : null;
+    const isMinimized = instance?.isMinimized ?? false;
+    
+    if (instanceId) {
+      items.push({
+        type: "item",
+        label: isMinimized ? t("common.dock.show") : t("common.dock.hide"),
+        onSelect: () => {
+          if (isMinimized) {
+            restoreInstance(instanceId);
+          } else {
+            minimizeInstance(instanceId);
+            playZoomMinimize();
+          }
+          setAppContextMenu(null);
+        },
+      });
+      items.push({ type: "separator" });
+      items.push({
+        type: "item",
+        label: t("common.dock.quit"),
+        onSelect: () => {
+          requestCloseWindow(instanceId);
+          setAppContextMenu(null);
+        },
+      });
+    } else {
+      items.push({
+        type: "item",
+        label: t("common.dock.showAll"),
+        onSelect: () => {
+          const appInstances = Object.values(instances).filter(
+            (i) => i.appId === appId && i.isOpen && i.isMinimized
+          );
+          appInstances.forEach((inst) => restoreInstance(inst.instanceId));
+          setAppContextMenu(null);
+        },
+      });
+    }
+    
+    return items;
+  }, [t, instances, restoreInstance, minimizeInstance, playZoomMinimize]);
 
   // Dock 放大效果：使用 Framer Motion 在容器级别控制
   const mouseX = useMotionValue<number>(Infinity);
@@ -358,6 +477,13 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
       onDrop?: (e: React.DragEvent<HTMLButtonElement>) => void;
       onDragLeave?: (e: React.DragEvent<HTMLButtonElement>) => void;
       onContextMenu?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+      mouseX?: MotionValue<number>;
+      magnifyEnabled?: boolean;
+      isNew?: boolean;
+      isHovered?: boolean;
+      isSwapping?: boolean;
+      onHover?: () => void;
+      onLeave?: () => void;
     }
   >(
     (
@@ -371,6 +497,13 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
         onDrop,
         onDragLeave,
         onContextMenu,
+        mouseX: _mouseX,
+        magnifyEnabled: _magnifyEnabled,
+        isNew: _isNew,
+        isHovered: _isHovered,
+        isSwapping: _isSwapping,
+        onHover,
+        onLeave,
       },
       forwardedRef
     ) => {
@@ -384,7 +517,7 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
         : DOCK_CONFIG.BASE_BUTTON_SIZE.macosx;
       
       // 计算鼠标距离图标中心的距离
-      const distanceCalc = useTransform(mouseX, (val) => {
+      const distanceCalc = useTransform(_mouseX || mouseX, (val) => {
         const bounds = wrapperRef.current?.getBoundingClientRect();
         if (!bounds || !Number.isFinite(val)) return Infinity;
         return val - (bounds.left + bounds.width / 2);
@@ -404,7 +537,7 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
       
       // 图标宽度值
       const widthValue = isPresent
-        ? magnifyEnabled
+        ? (_magnifyEnabled ?? magnifyEnabled)
           ? sizeSpring
           : baseButtonSize
         : 0;
@@ -608,13 +741,16 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
             },
           }}
           onMouseMove={
-            magnifyEnabled && !trashContextMenuPos
+            magnifyEnabled && !trashContextMenuPos && !appContextMenu
               ? (e) => mouseX.set(e.clientX)
               : undefined
           }
           onMouseLeave={
-            magnifyEnabled && !trashContextMenuPos
-              ? () => mouseX.set(Infinity)
+            magnifyEnabled && !trashContextMenuPos && !appContextMenu
+              ? () => {
+                  mouseX.set(Infinity);
+                  handleIconLeave();
+                }
               : undefined
           }
         >
@@ -657,12 +793,22 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
                       idKey={item.instanceId}
                       onClick={() => bringInstanceToForeground(item.instanceId!)}
                       isEmoji={isEmoji}
+                      mouseX={mouseX}
+                      magnifyEnabled={magnifyEnabled}
+                      isNew={hasMounted && !seenIdsRef.current.has(item.instanceId!)}
+                      isHovered={hoveredId === item.instanceId}
+                      isSwapping={isSwapping}
+                      onHover={() => handleIconHover(item.instanceId!)}
+                      onLeave={handleIconLeave}
                     />
                   );
                 } else {
                   // Render regular app
                   const icon = getAppIconPath(item.appId);
-                  const label = appRegistry[item.appId]?.name ?? item.appId;
+                  const label = getTranslatedAppName(item.appId);
+                  const isLoading = Object.values(instances).some(
+                    (i) => i.appId === item.appId && i.isOpen && i.isLoading
+                  );
                   return (
                     <IconButton
                       key={item.appId}
@@ -679,18 +825,49 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
               <Divider key="divider-between" idKey="between" />
 
               {/* Applications (left of Trash) */}
-              <IconButton
-                key="__applications__"
-                label="Applications"
-                icon="/icons/default/applications.png"
-                idKey="__applications__"
-                onClick={() =>
-                  focusFinderAtPathOrLaunch("/Applications", {
-                    path: "/Applications",
-                    viewType: "large",
-                  })
-                }
-              />
+              {(() => {
+                const handleApplicationsContextMenu = (
+                  e: React.MouseEvent<HTMLButtonElement>
+                ) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+
+                  const containerRect =
+                    dockContainerRef.current?.getBoundingClientRect();
+                  if (!containerRect) {
+                    setApplicationsContextMenuPos({ x: e.clientX, y: e.clientY });
+                    return;
+                  }
+
+                  setApplicationsContextMenuPos({
+                    x: e.clientX - containerRect.left,
+                    y: e.clientY - containerRect.top,
+                  });
+                };
+
+                return (
+                  <IconButton
+                    key="__applications__"
+                    label={t("common.dock.applications")}
+                    icon="/icons/default/applications.png"
+                    idKey="__applications__"
+                    onClick={() =>
+                      focusFinderAtPathOrLaunch("/Applications", {
+                        path: "/Applications",
+                        viewType: "large",
+                      })
+                    }
+                    onContextMenu={handleApplicationsContextMenu}
+                    mouseX={mouseX}
+                    magnifyEnabled={magnifyEnabled}
+                    isNew={hasMounted && !seenIdsRef.current.has("__applications__")}
+                    isHovered={hoveredId === "__applications__"}
+                    isSwapping={isSwapping}
+                    onHover={() => handleIconHover("__applications__")}
+                    onLeave={handleIconLeave}
+                  />
+                );
+              })()}
 
               {/* Trash (right side) */}
               {(() => {
@@ -766,7 +943,7 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
                   >
                     <IconButton
                       key="__trash__"
-                      label="Trash"
+                      label={t("common.dock.trash")}
                       icon={trashIcon}
                       idKey="__trash__"
                       onClick={() => {
@@ -776,6 +953,13 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
                       onDrop={handleTrashDrop}
                       onDragLeave={handleTrashDragLeave}
                       onContextMenu={handleTrashContextMenu}
+                      mouseX={mouseX}
+                      magnifyEnabled={magnifyEnabled}
+                      isNew={hasMounted && !seenIdsRef.current.has("__trash__")}
+                      isHovered={hoveredId === "__trash__"}
+                      isSwapping={isSwapping}
+                      onHover={() => handleIconHover("__trash__")}
+                      onLeave={handleIconLeave}
                     />
                   </motion.div>
                 );
@@ -785,23 +969,31 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
         </motion.div>
       </div>
       <RightClickMenu
-        items={[
-          {
-            type: "item",
-            label: "Empty Trash...",
-            onSelect: () => {
-              setIsEmptyTrashDialogOpen(true);
-              setTrashContextMenuPos(null);
-            },
-            disabled: isTrashEmpty,
-          },
-        ]}
+        items={getFolderContextMenuItems("/Trash", true)}
         position={trashContextMenuPos}
         onClose={() => {
           setTrashContextMenuPos(null);
           mouseX.set(Infinity);
         }}
       />
+      <RightClickMenu
+        items={getFolderContextMenuItems("/Applications", false)}
+        position={applicationsContextMenuPos}
+        onClose={() => {
+          setApplicationsContextMenuPos(null);
+          mouseX.set(Infinity);
+        }}
+      />
+      {appContextMenu && (
+        <RightClickMenu
+          items={getAppContextMenuItems(appContextMenu.appId, appContextMenu.instanceId)}
+          position={appContextMenu}
+          onClose={() => {
+            setAppContextMenu(null);
+            mouseX.set(Infinity);
+          }}
+        />
+      )}
       <ConfirmDialog
         isOpen={isEmptyTrashDialogOpen}
         onOpenChange={setIsEmptyTrashDialogOpen}
@@ -809,8 +1001,8 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
           fileStore.emptyTrash();
           setIsEmptyTrashDialogOpen(false);
         }}
-        title="Empty Trash"
-        description="Are you sure you want to empty the Trash? This action cannot be undone."
+        title={t("apps.finder.dialogs.emptyTrash.title")}
+        description={t("apps.finder.dialogs.emptyTrash.description")}
       />
     </div>
   );

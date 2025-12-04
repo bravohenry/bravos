@@ -24,7 +24,7 @@ A modern web-based desktop environment inspired by classic macOS and Windows, bu
 
 #### OS1 Theme (Default)
 
-The OS1 branch extends ryOS with a comprehensive macOS-inspired theme featuring:
+The OS1 branch extends ziOS with a comprehensive macOS-inspired theme featuring:
 
 - **Authentic macOS System Sounds**: Real system sounds extracted from macOS, including VoiceOver and Dwell Control sounds for window interactions
 - **SF Symbols Integration**: Native Apple SF Symbols for icons throughout the interface
@@ -47,7 +47,6 @@ The OS1 branch extends ryOS with a comprehensive macOS-inspired theme featuring:
 
 ### Built-in Applications
 
-<<<<<<< HEAD
 - **Finder**: File manager with Quick Access & Storage Info
 - **TextEdit**: Rich text editing with markdown support and task lists
   - Multi-window support - open multiple documents simultaneously
@@ -155,15 +154,7 @@ The OS1 branch extends ryOS with a comprehensive macOS-inspired theme featuring:
   - Applet authentication bridge for secure API access
   - Custom window sizes per applet
   - Integration with Finder for file management
-  - Create applets via ryOS Chat AI assistant
-
-## Quick Start
-
-1. Launch apps from the Finder, Desktop, or Apple/Start menu
-2. Drag windows to move, drag edges to resize
-3. Use Control Panels to customize appearance and sounds
-4. Chat with Zi AI for help or to control apps
-5. Files auto-save to browser storage
+  - Create applets via ziOS Chat AI assistant
 
 ## Project Structure
 
@@ -211,7 +202,7 @@ AGPL-3.0 — See [LICENSE](LICENSE) for details.
 
 ## OS1 Branch Enhancements
 
-The OS1 branch (default) includes significant enhancements built on top of the base ryOS:
+The OS1 branch (default) includes significant enhancements built on top of the base ziOS:
 
 ### What's New in OS1
 

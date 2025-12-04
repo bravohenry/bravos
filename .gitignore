@@ -15,7 +15,6 @@ dist-ssr
 .env
 .env.local
 .env.*.local
-version.json
 
 # Editor directories and files
 .vscode/*
@@ -29,4 +28,5 @@ version.json
 *.sw?
 .vercel
 .env*.local
+package-lock.json
 *.jsdos
