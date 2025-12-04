@@ -14,7 +14,6 @@ import { useAppStoreShallow } from "@/stores/helpers";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { getTheme } from "@/themes";
 import { ThemedIcon } from "@/components/shared/ThemedIcon";
-import { motion, AnimatePresence } from "framer-motion";
 
 interface WindowFrameProps {
   children: React.ReactNode;
@@ -107,9 +106,9 @@ export function WindowFrame({
   // For green button zoom (maximize/restore window size)
   const { play: playWindowExpand } = useSound(Sounds.WINDOW_EXPAND);
   const { play: playWindowCollapse } = useSound(Sounds.WINDOW_COLLAPSE);
-  // For dock minimize/restore
-  const { play: playZoomMinimize } = useSound(Sounds.WINDOW_ZOOM_MINIMIZE);
-  const { play: playZoomMaximize } = useSound(Sounds.WINDOW_ZOOM_MAXIMIZE);
+  // For dock minimize/restore (currently unused but kept for future use)
+  // const { play: playZoomMinimize } = useSound(Sounds.WINDOW_ZOOM_MINIMIZE);
+  // const { play: playZoomMaximize } = useSound(Sounds.WINDOW_ZOOM_MAXIMIZE);
   const { play: playWindowMoveStop } = useSound(Sounds.WINDOW_MOVE_STOP);
   const vibrateMaximize = useVibration(50, 100);
   const vibrateClose = useVibration(50, 50);
@@ -209,8 +208,9 @@ export function WindowFrame({
     }
   };
 
-  // Called when close animation completes
-  const handleCloseAnimationComplete = useCallback(() => {
+  // Called when close animation completes (currently unused but kept for future use)
+  // @ts-expect-error - 保留用于未来使用
+  const _handleCloseAnimationComplete = useCallback(() => {
     if (isClosing) {
       setIsOpen(false);
       isClosingRef.current = false;
@@ -463,8 +463,8 @@ export function WindowFrame({
 
   // Calculate dock icon or taskbar item position relative to window center (used for both minimize and restore animations)
   // Note: Currently unused but kept for potential future use
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _dockIconOffset = useMemo(() => {
+  // @ts-expect-error - 保留用于未来使用
+  const _dockIconOffset = useMemo<{ x: number; y: number } | null>(() => {
     // First try to find the dock icon (macOS theme)
     const dockIcon = document.querySelector(`[data-dock-icon="${appId}"]`);
     if (dockIcon) {
@@ -797,9 +797,9 @@ export function WindowFrame({
   }, []);
 
   // 如果窗口正在最小化动画中，仍然渲染（等待动画完成）
-  // 如果窗口已最小化且不在恢复动画中，不渲染
+  // 如果窗口已最小化且不在恢复动画中，不渲染（除非 keepMountedWhenMinimized 为 true）
   const isVisible = isOpen && !isClosing;
-  if (!isVisible || (isMinimized && !isMinimizing && !isRestoring)) return null;
+  if (!isVisible || (isMinimized && !isMinimizing && !isRestoring && !keepMountedWhenMinimized)) return null;
 
   // Calculate dynamic style for swipe animation feedback
   const getSwipeStyle = () => {

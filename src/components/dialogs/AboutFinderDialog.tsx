@@ -33,9 +33,9 @@ export function AboutFinderDialog({
   const { t } = useTranslation();
   const { appStates } = useAppContext();
   const currentTheme = useThemeStore((state) => state.current);
-  const version = useAppStore((state) => state.ryOSVersion);
-  const buildNumber = useAppStore((state) => state.ryOSBuildNumber);
-  const buildTime = useAppStore((state) => state.ryOSBuildTime);
+  const version = useAppStore((state) => state.ziOSVersion);
+  const buildNumber = useAppStore((state) => state.ziOSBuildNumber);
+  const buildTime = useAppStore((state) => state.ziOSBuildTime);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
   const [versionDisplayMode, setVersionDisplayMode] = useState(0); // 0: version, 1: commit, 2: date
 

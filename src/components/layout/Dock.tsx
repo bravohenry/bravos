@@ -11,13 +11,13 @@ import { useTranslation } from "react-i18next";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { useAppStoreShallow } from "@/stores/helpers";
 import { ThemedIcon } from "@/components/shared/ThemedIcon";
-import { AppId, getAppIconPath, appRegistry, getNonFinderApps } from "@/config/appRegistry";
-import { getTranslatedAppName, getTranslatedFolderNameFromName } from "@/utils/i18n";
+import { AppId, getAppIconPath, appRegistry } from "@/config/appRegistry";
+import { getTranslatedAppName } from "@/utils/i18n";
 import { useLaunchApp } from "@/hooks/useLaunchApp";
 import { useFinderStore } from "@/stores/useFinderStore";
 import { useFilesStore } from "@/stores/useFilesStore";
 import { useIsPhone } from "@/hooks/useIsPhone";
-import { useLongPress } from "@/hooks/useLongPress";
+// import { useLongPress } from "@/hooks/useLongPress"; // 未使用
 import { useSound, Sounds } from "@/hooks/useSound";
 import type { AppInstance } from "@/stores/useAppStore";
 import type { AppletViewerInitialData } from "@/apps/applet-viewer";
@@ -94,14 +94,13 @@ const findMostRecentInstance = (
 
 function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
   const isPhone = useIsPhone();
-  const { instances, instanceOrder, bringInstanceToForeground, restoreInstance, minimizeInstance, closeAppInstance } =
+  const { instances, instanceOrder, bringInstanceToForeground, restoreInstance, minimizeInstance } =
     useAppStoreShallow((s) => ({
       instances: s.instances,
       instanceOrder: s.instanceOrder,
       bringInstanceToForeground: s.bringInstanceToForeground,
       restoreInstance: s.restoreInstance,
       minimizeInstance: s.minimizeInstance,
-      closeAppInstance: s.closeAppInstance,
     }));
   
   // Sound for hide/minimize action from dock context menu
@@ -126,7 +125,8 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
   const [isEmptyTrashDialogOpen, setIsEmptyTrashDialogOpen] = useState(false);
   const [appContextMenu, setAppContextMenu] = useState<{ x: number; y: number; appId: AppId; instanceId?: string } | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [isSwapping, setIsSwapping] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [isSwapping, _setIsSwapping] = useState(false);
   const { t } = useTranslation();
   const dockContainerRef = useRef<HTMLDivElement | null>(null);
   
@@ -310,7 +310,7 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
   );
   
   // 获取文件夹上下文菜单项
-  const getFolderContextMenuItems = useCallback((path: string, isTrash: boolean): MenuItem[] => {
+  const getFolderContextMenuItems = useCallback((_path: string, isTrash: boolean): MenuItem[] => {
     if (isTrash) {
       return [
         {
@@ -502,8 +502,8 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
         isNew: _isNew,
         isHovered: _isHovered,
         isSwapping: _isSwapping,
-        onHover,
-        onLeave,
+        onHover: _onHover,
+        onLeave: _onLeave,
       },
       forwardedRef
     ) => {
@@ -806,7 +806,8 @@ function MacDock({ isOS1 = false }: { isOS1?: boolean } = {}) {
                   // Render regular app
                   const icon = getAppIconPath(item.appId);
                   const label = getTranslatedAppName(item.appId);
-                  const isLoading = Object.values(instances).some(
+                  // @ts-expect-error - 保留用于未来使用
+                  const _isLoading = Object.values(instances).some(
                     (i) => i.appId === item.appId && i.isOpen && i.isLoading
                   );
                   return (

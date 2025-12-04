@@ -138,7 +138,7 @@ interface AppStoreState extends AppManagerState {
   ziOSVersion: string | null;
   ziOSBuildNumber: string | null;
   ziOSBuildTime: string | null;
-  setRyOSVersion: (version: string, buildNumber: string, buildTime?: string) => void;
+  setZiOSVersion: (version: string, buildNumber: string, buildTime?: string) => void;
 }
 
 const CURRENT_APP_STORE_VERSION = 3; // bump for instanceOrder unification
@@ -188,7 +188,7 @@ export const useAppStore = create<AppStoreState>()(
       ziOSVersion: null,
       ziOSBuildNumber: null,
       ziOSBuildTime: null,
-      setRyOSVersion: (version, buildNumber, buildTime) =>
+      setZiOSVersion: (version, buildNumber, buildTime) =>
         set({
           ziOSVersion: version,
           ziOSBuildNumber: buildNumber,

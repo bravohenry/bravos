@@ -187,13 +187,13 @@ const base64ToBlob = (dataUrl: string): Blob => {
 
 // Version display component that reads from app store
 function VersionDisplay() {
-  const { ryOSVersion, ryOSBuildNumber } = useAppStoreShallow((state) => ({
-    ryOSVersion: state.ryOSVersion,
-    ryOSBuildNumber: state.ryOSBuildNumber,
+  const { ziOSVersion, ziOSBuildNumber } = useAppStoreShallow((state) => ({
+    ziOSVersion: state.ziOSVersion,
+    ziOSBuildNumber: state.ziOSBuildNumber,
   }));
   
-  const displayVersion = ryOSVersion || "...";
-  const displayBuild = ryOSBuildNumber ? ` (${ryOSBuildNumber})` : "";
+  const displayVersion = ziOSVersion || "...";
+  const displayBuild = ziOSBuildNumber ? ` (${ziOSBuildNumber})` : "";
   
   return (
     <p className="text-[11px] text-gray-600 font-geneva-12">

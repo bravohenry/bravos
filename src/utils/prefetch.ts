@@ -35,8 +35,8 @@ let isUpdateInProgress = false;
 function getStoredVersion(): { version: string | null; buildNumber: string | null } {
   const state = useAppStore.getState();
   return {
-    version: state.ryOSVersion,
-    buildNumber: state.ryOSBuildNumber,
+    version: state.ziOSVersion,
+    buildNumber: state.ziOSBuildNumber,
   };
 }
 
@@ -44,7 +44,7 @@ function getStoredVersion(): { version: string | null; buildNumber: string | nul
  * Store version in the app store (call after successful prefetch)
  */
 function storeVersion(version: string, buildNumber: string, buildTime?: string): void {
-  useAppStore.getState().setRyOSVersion(version, buildNumber, buildTime);
+  useAppStore.getState().setZiOSVersion(version, buildNumber, buildTime);
   console.log(`[Prefetch] Stored version: ${version} (${buildNumber})`);
 }
 
