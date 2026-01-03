@@ -91,7 +91,7 @@ Tool handlers in `src/apps/chats/tools/` follow a registry pattern:
 Defined in `api/_utils/aiPrompts.ts`:
 
 - `CORE_PRIORITY_INSTRUCTIONS` - Persona adherence rules
-- `RYO_PERSONA_INSTRUCTIONS` - Ryo's identity and background
+- `ZI_PERSONA_INSTRUCTIONS` - Zi's identity and background
 - `ANSWER_STYLE_INSTRUCTIONS` - Response style and tone
 - `CODE_GENERATION_INSTRUCTIONS` - HTML applet generation rules
 - `CHAT_INSTRUCTIONS` - Chat behavior and nudge handling

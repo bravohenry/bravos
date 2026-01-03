@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Utility APIs - ryOS Docs</title>
+  <title>Utility APIs - ZiOS Docs</title>
   <link rel="icon" href="/icons/mac-192.png">
   <style>
     @font-face { font-family: "Geneva"; src: url("/fonts/geneva-12.woff2") format("woff2"); }
@@ -165,14 +165,14 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
       </button>
       <a href="/" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit">
-        <img src="/icons/mac-192.png" alt="ryOS" width="20" height="20">
-        <span>ryOS</span>
+        <img src="/icons/mac-192.png" alt="ZiOS" width="20" height="20">
+        <span>ZiOS</span>
       </a>
       <span style="color:#999">/</span>
       <span style="color:#666">Docs</span>
     </div>
     <div class="header-right">
-      <a href="https://github.com/ryokun6/ryos" target="_blank" class="github">
+      <a href="https://github.com/ryokun6/zios" target="_blank" class="github">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
         GitHub
       </a>
@@ -293,7 +293,7 @@
     <main class="content">
       <article>
         <h1>Utility APIs</h1>
-<p>ryOS provides several utility API endpoints for common operations like fetching link previews, checking iframe embeddability, sharing applets, and admin operations. These endpoints are implemented as Vercel Edge Functions for optimal performance.</p>
+<p>ZiOS provides several utility API endpoints for common operations like fetching link previews, checking iframe embeddability, sharing applets, and admin operations. These endpoints are implemented as Vercel Edge Functions for optimal performance.</p>
 <h2>Link Preview</h2>
 <p>Fetches metadata from URLs for rich link previews. Supports Open Graph, Twitter Cards, and standard meta tags with special handling for YouTube URLs.</p>
 <h3>Endpoint</h3>
@@ -430,7 +430,7 @@ const waybackSrc = `/api/iframe-check?url=https://example.com&amp;mode=proxy&amp
       "icon": "star",
       "createdAt": 1704067200000,
       "featured": true,
-      "createdBy": "ryo"
+      "createdBy": "zi"
     },
     {
       "id": "def456...",
@@ -450,14 +450,14 @@ const waybackSrc = `/api/iframe-check?url=https://example.com&amp;mode=proxy&amp
 <strong>Response (200):</strong>
 <pre><code>{
   "id": "abc123def456...",
-  "shareUrl": "https://os.ryo.lu/applet-viewer/abc123def456...",
+  "shareUrl": "https://os.zi.lu/applet-viewer/abc123def456...",
   "updated": false,
   "createdAt": 1704067200000
 }</code></pre>
 <strong>Response Fields:</strong>
 <table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>id</code></td><td>string</td><td>Unique applet ID (32 characters)</td></tr><tr><td><code>shareUrl</code></td><td>string</td><td>Full URL to view the applet</td></tr><tr><td><code>updated</code></td><td>boolean</td><td>Whether an existing applet was updated</td></tr><tr><td><code>createdAt</code></td><td>number</td><td>Timestamp of creation/update</td></tr></tbody></table>
 <h3>DELETE - Delete Applet (Admin Only)</h3>
-<p>Requires admin authentication (user "ryo" with valid token).</p>
+<p>Requires admin authentication (user "zi" with valid token).</p>
 <strong>Query Parameters:</strong>
 <table><thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td><code>id</code></td><td>string</td><td>Yes</td><td>Applet ID to delete</td></tr></tbody></table>
 <strong>Response (200):</strong>
@@ -505,12 +505,12 @@ const applet = await fetch(`/api/share-applet?id=${id}`).then(r =&gt; r.json());
 const { applets } = await fetch('/api/share-applet?list=true').then(r =&gt; r.json());</code></pre>
 <hr>
 <h2>Admin API</h2>
-<p>Administrative endpoints for user management in the chat system. All operations require admin authentication (user "ryo" with valid token).</p>
+<p>Administrative endpoints for user management in the chat system. All operations require admin authentication (user "zi" with valid token).</p>
 <h3>Endpoint</h3>
 <table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td>GET</td><td><code>/api/admin</code></td><td>Query users and statistics</td></tr><tr><td>POST</td><td><code>/api/admin</code></td><td>Perform admin actions</td></tr></tbody></table>
 <h3>Authentication</h3>
 <p>All admin endpoints require:</p>
-<table><thead><tr><th>Header</th><th>Description</th></tr></thead><tbody><tr><td><code>Authorization</code></td><td>Bearer token: <code>Bearer &lt;token&gt;</code></td></tr><tr><td><code>X-Username</code></td><td>Must be <code>"ryo"</code></td></tr></tbody></table>
+<table><thead><tr><th>Header</th><th>Description</th></tr></thead><tbody><tr><td><code>Authorization</code></td><td>Bearer token: <code>Bearer &lt;token&gt;</code></td></tr><tr><td><code>X-Username</code></td><td>Must be <code>"zi"</code></td></tr></tbody></table>
 <p>Unauthorized requests return <code>403 Forbidden</code>.</p>
 <h3>GET Operations</h3>
 <strong>Query Parameters:</strong>
@@ -577,7 +577,7 @@ const { applets } = await fetch('/api/share-applet?list=true').then(r =&gt; r.js
 <strong>Request Body:</strong>
 <table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td><code>action</code></td><td>string</td><td>Yes</td><td>Operation to perform</td></tr><tr><td><code>targetUsername</code></td><td>string</td><td>Yes</td><td>User to act on</td></tr><tr><td><code>reason</code></td><td>string</td><td>No</td><td>Reason for action (for bans)</td></tr></tbody></table>
 <h4><code>deleteUser</code> Action</h4>
-<p>Permanently delete a user account (cannot delete admin "ryo").</p>
+<p>Permanently delete a user account (cannot delete admin "zi").</p>
 <strong>Request:</strong>
 <pre><code>{
   "action": "deleteUser",
@@ -590,7 +590,7 @@ const { applets } = await fetch('/api/share-applet?list=true').then(r =&gt; r.js
 <strong>Effects:</strong>
 <ul><li>Deletes user record</li><li>Deletes password hash</li><li>Invalidates all authentication tokens</li></ul>
 <h4><code>banUser</code> Action</h4>
-<p>Ban a user from the chat system (cannot ban admin "ryo").</p>
+<p>Ban a user from the chat system (cannot ban admin "zi").</p>
 <strong>Request:</strong>
 <pre><code>{
   "action": "banUser",
@@ -617,7 +617,7 @@ const { applets } = await fetch('/api/share-applet?list=true').then(r =&gt; r.js
 <h3>Example</h3>
 <pre><code>const adminHeaders = {
   'Authorization': `Bearer ${adminToken}`,
-  'X-Username': 'ryo'
+  'X-Username': 'zi'
 };
 
 // Get system statistics

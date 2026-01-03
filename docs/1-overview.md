@@ -1,8 +1,8 @@
 # Overview
 
-ryOS is a web-based desktop environment that brings the nostalgia of classic operating systems to modern browsers. Experience the charm of Mac OS X Aqua, System 7, Windows XP, and Windows 98—all running in your browser with 17 fully-functional apps, an AI assistant, and a complete virtual file system.
+ZiOS is a web-based desktop environment that brings the nostalgia of classic operating systems to modern browsers. Experience the charm of Mac OS X Aqua, System 7, Windows XP, and Windows 98—all running in your browser with 17 fully-functional apps, an AI assistant, and a complete virtual file system.
 
-Whether you're exploring the retro aesthetics, building HTML applets, or chatting with Ryo (the AI assistant), ryOS offers a unique blend of nostalgia and modern web technology.
+Whether you're exploring the retro aesthetics, building HTML applets, or chatting with Zi (the AI assistant), ZiOS offers a unique blend of nostalgia and modern web technology.
 
 ```mermaid
 graph TB
@@ -53,7 +53,7 @@ graph TB
 
 - **[Multi-Theme Support](/docs/theme-system):** System 7, Mac OS X (Aqua), Windows XP, Windows 98
 - **[17 Built-in Apps](/docs/apps):** Finder, TextEdit, Paint, iPod, Terminal, Chats, and more
-- **[AI Assistant (Ryo)](/docs/ai-system):** Chat, tool calling, app control, code generation
+- **[AI Assistant (Zi)](/docs/ai-system):** Chat, tool calling, app control, code generation
 - **[Virtual File System](/docs/file-system):** IndexedDB-backed with lazy loading
 - **[Real-time Chat](/docs/chat-rooms-api):** Pusher-powered rooms with AI integration
 - **[Audio System](/docs/audio-system):** Synthesizer, soundboard, TTS, and UI sounds

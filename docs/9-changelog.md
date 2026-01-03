@@ -1,6 +1,6 @@
 # Changelog
 
-A summary of changes and updates to ryOS, organized by month.
+A summary of changes and updates to ZiOS, organized by month.
 
 ---
 
@@ -74,16 +74,16 @@ A summary of changes and updates to ryOS, organized by month.
 
 ## October 2025
 
-- Enhance ryOS Applet Viewer with new sharing, import/export, and content handling features.
+- Enhance ZiOS Applet Viewer with new sharing, import/export, and content handling features.
 - Improve applet design guidelines for enhanced clarity and responsiveness.
-- Implement HTML generation and saving functionality for ryOS Applets.
+- Implement HTML generation and saving functionality for ZiOS Applets.
 - Upgrade Zod library from v3 to v4.
 
 <details>
 <summary>Minor changes (10)</summary>
 
 - Add icon support and toast notifications for generated HTML applets.
-- Refactor chat and file management functionality in ryOS.
+- Refactor chat and file management functionality in ZiOS.
 - Improve AI prompt instructions for app generation and Chinese responses.
 - Enhance MacDock component with emoji scaling and layout adjustments.
 - Update app icons and file handling for applets.
@@ -137,14 +137,14 @@ A summary of changes and updates to ryOS, organized by month.
 - Improved chat message handling, styling, and emoji support in chat rooms.
 - Enhanced app components to conditionally render the menu bar based on foreground state.
 - Implemented CORS and rate limiting across multiple API endpoints.
-- Fixed aquarium token detection for Ryo's messages in chat rooms.
+- Fixed aquarium token detection for Zi's messages in chat rooms.
 
 </details>
 
 ## July 2025
 
 - Add emoji aquarium feature to chat messages.
-- Implement server-side Ryo reply generation and update chat handling.
+- Implement server-side Zi reply generation and update chat handling.
 - Enhance iPod app with fullscreen lyrics controls, translation, and improved responsiveness.
 - Implement link previews in chats with custom handling for YouTube and web links.
 - Refactor instance management in AppManager and useAppStore for improved consistency and performance.

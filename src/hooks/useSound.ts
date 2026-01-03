@@ -1,24 +1,11 @@
-import { useCallback, useEffect, useRef } from "react";
-import { useAudioSettingsStore } from "@/stores/useAudioSettingsStore";
+import { useCallback, useEffect, useRef, useMemo } from "react";
+import { useAppStore } from "@/stores/useAppStore";
+import { useThemeStore } from "@/stores/useThemeStore";
 import { getAudioContext, resumeAudioContext } from "@/lib/audioContext";
-
-// Mobile detection for performance tuning
-const isMobileDevice =
-  typeof navigator !== "undefined" &&
-  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  );
-
-// Mobile Safari handles 8-16 concurrent sources efficiently, desktop can handle more
-const MAX_CONCURRENT_SOURCES = isMobileDevice ? 16 : 32;
-// Limit cache size to prevent memory issues on mobile
-const MAX_CACHE_SIZE = isMobileDevice ? 15 : 30;
 
 // Global audio context and cache
 const audioBufferCache = new Map<string, AudioBuffer>();
 const activeSources = new Set<AudioBufferSourceNode>();
-// Pending load deduplication - prevent duplicate fetches for the same sound
-const pendingLoads = new Map<string, Promise<AudioBuffer>>();
 
 // Track the AudioContext instance we last saw so we can invalidate caches if a
 // new one is created by the shared helper.
@@ -32,7 +19,6 @@ const preloadSound = async (soundPath: string): Promise<AudioBuffer> => {
   const currentCtx = getAudioContext();
   if (currentCtx !== lastCtx) {
     audioBufferCache.clear();
-    pendingLoads.clear();
     lastCtx = currentCtx;
   }
 
@@ -40,35 +26,16 @@ const preloadSound = async (soundPath: string): Promise<AudioBuffer> => {
     return audioBufferCache.get(soundPath)!;
   }
 
-  // Check if there's already a pending load for this sound
-  if (pendingLoads.has(soundPath)) {
-    return pendingLoads.get(soundPath)!;
+  try {
+    const response = await fetch(soundPath);
+    const arrayBuffer = await response.arrayBuffer();
+    const audioBuffer = await getAudioContext().decodeAudioData(arrayBuffer);
+    audioBufferCache.set(soundPath, audioBuffer);
+    return audioBuffer;
+  } catch (error) {
+    console.error("Error loading sound:", error);
+    throw error;
   }
-
-  // Create the load promise and store it
-  const loadPromise = (async () => {
-    try {
-      const response = await fetch(soundPath);
-      const arrayBuffer = await response.arrayBuffer();
-      const audioBuffer = await getAudioContext().decodeAudioData(arrayBuffer);
-      // LRU-style eviction: remove oldest entry if cache is full
-      if (audioBufferCache.size >= MAX_CACHE_SIZE) {
-        const firstKey = audioBufferCache.keys().next().value;
-        if (firstKey) audioBufferCache.delete(firstKey);
-      }
-      audioBufferCache.set(soundPath, audioBuffer);
-      return audioBuffer;
-    } catch (error) {
-      console.error("Error loading sound:", error);
-      throw error;
-    } finally {
-      // Remove from pending loads when done (success or failure)
-      pendingLoads.delete(soundPath);
-    }
-  })();
-
-  pendingLoads.set(soundPath, loadPromise);
-  return loadPromise;
 };
 
 // Preload multiple sounds at once
@@ -76,19 +43,97 @@ export const preloadSounds = async (sounds: string[]) => {
   await Promise.all(sounds.map(preloadSound));
 };
 
+// Predefined sound paths for easy access
+export const Sounds = {
+  ALERT_SOSUMI: "/sounds/AlertSosumi.mp3",
+  WINDOW_CLOSE: "/sounds/WindowClose.mp3",
+  WINDOW_OPEN: "/sounds/WindowOpen.mp3",
+  WINDOW_EXPAND: "/sounds/WindowExpand.mp3",
+  WINDOW_COLLAPSE: "/sounds/WindowCollapse.mp3",
+  BUTTON_CLICK: "/sounds/ButtonClickDown.mp3",
+  MENU_OPEN: "/sounds/MenuOpen.mp3",
+  MENU_CLOSE: "/sounds/MenuClose.mp3",
+  // Window movement and resize sounds
+  WINDOW_MOVE_MOVING: "/sounds/WindowMoveMoving.mp3",
+  WINDOW_MOVE_STOP: "/sounds/WindowMoveStop.mp3",
+  WINDOW_RESIZE_RESIZING: "/sounds/WindowResizeResizing.mp3",
+  WINDOW_RESIZE_STOP: "/sounds/WindowResizeStop.mp3",
+  // Dock minimize/restore sounds
+  WINDOW_ZOOM_MINIMIZE: "/sounds/WindowCollapse.mp3",
+  WINDOW_ZOOM_MAXIMIZE: "/sounds/WindowExpand.mp3",
+  // Minesweeper sounds
+  CLICK: "/sounds/Click.mp3",
+  ALERT_BONK: "/sounds/AlertBonk.mp3",
+  ALERT_INDIGO: "/sounds/AlertIndigo.mp3",
+  MSN_NUDGE: "/sounds/MSNNudge.mp3",
+  // Video player sounds
+  VIDEO_TAPE: "/sounds/VideoTapeIn.mp3",
+  // Photo booth sounds
+  PHOTO_SHUTTER: "/sounds/PhotoShutter.mp3",
+  // Boot sound
+  BOOT: "/sounds/Boot.mp3",
+  VOLUME_CHANGE: "/sounds/Volume.mp3",
+  // iPod sounds
+  IPOD_CLICK_WHEEL: "/sounds/WheelsOfTime.m4a",
+} as const;
+
+// OS1 主题使用 macOS 系统声音的映射（仅在 OS1 主题下生效）
+const OS1_SOUND_OVERRIDES: Partial<Record<keyof typeof Sounds, string>> = {
+  ALERT_SOSUMI: "/sounds/sosumi.mp3",
+  BUTTON_CLICK: "/sounds/pop.mp3",
+  MENU_OPEN: "/sounds/ping.mp3",
+  MENU_CLOSE: "/sounds/tink.mp3",
+  WINDOW_OPEN: "/sounds/vo-guideprogress.m4a",
+  WINDOW_CLOSE: "/sounds/basso.mp3",
+  WINDOW_EXPAND: "/sounds/hero.mp3",
+  WINDOW_COLLAPSE: "/sounds/basso.mp3",
+  CLICK: "/sounds/tink.mp3",
+  VOLUME_CHANGE: "/sounds/ping.mp3",
+  // 窗口移动和调整大小声音 - 使用 Dwell Control 声音
+  WINDOW_MOVE_MOVING: "/sounds/dwell-activate.m4a",    // Dwell Control 激活声，适合重复快速播放
+  WINDOW_RESIZE_RESIZING: "/sounds/dwell-activate.m4a", // 与移动中一致
+  // 注意：WINDOW_MOVE_STOP 和 WINDOW_RESIZE_STOP 在 OS1 主题下不使用（不播放声音）
+};
+
+// 根据当前主题获取正确的声音路径
+function getThemedSoundPath(originalPath: string, currentTheme: string): string {
+  // 仅在 OS1 主题下使用 macOS 系统声音
+  if (currentTheme !== "os1") {
+    return originalPath;
+  }
+
+  // 查找原始路径对应的 Sounds key
+  const soundKey = (Object.entries(Sounds) as [keyof typeof Sounds, string][]).find(
+    ([_, path]) => path === originalPath
+  )?.[0];
+
+  // 如果找到对应的 key 且有 OS1 覆盖，使用覆盖路径
+  if (soundKey && OS1_SOUND_OVERRIDES[soundKey]) {
+    return OS1_SOUND_OVERRIDES[soundKey];
+  }
+
+  return originalPath;
+}
+
 export function useSound(soundPath: string, volume: number = 0.3) {
   const gainNodeRef = useRef<GainNode | null>(null);
   // Track active sources for this specific hook instance so we can stop them
   const instanceSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
-  // Reactively track global UI volume from audio settings store
-  const uiVolume = useAudioSettingsStore((s) => s.uiVolume);
-  const masterVolume = useAudioSettingsStore((s) => s.masterVolume);
+  // Reactively track global UI volume
+  const uiVolume = useAppStore((s) => s.uiVolume);
+  const masterVolume = useAppStore((s) => s.masterVolume); // Get masterVolume
+  const currentTheme = useThemeStore((s) => s.current);
 
-  // Create gain node only once on mount
+  // 根据主题获取正确的声音路径
+  const themedSoundPath = useMemo(
+    () => getThemedSoundPath(soundPath, currentTheme),
+    [soundPath, currentTheme]
+  );
+
   useEffect(() => {
     // Create gain node for volume control
     gainNodeRef.current = getAudioContext().createGain();
-    gainNodeRef.current.gain.value = volume * uiVolume * masterVolume;
+    gainNodeRef.current.gain.value = volume * uiVolume * masterVolume; // Apply masterVolume
 
     // Connect to destination
     gainNodeRef.current.connect(getAudioContext().destination);
@@ -101,32 +146,18 @@ export function useSound(soundPath: string, volume: number = 0.3) {
       instanceSourcesRef.current.forEach((source) => {
         try {
           source.stop();
-          source.disconnect();
         } catch {
           // Source may have already ended
         }
       });
       instanceSourcesRef.current.clear();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only create gain node once on mount
-
-  // Separate effect to update gain value when volumes change (with ramping)
-  useEffect(() => {
-    if (gainNodeRef.current && gainNodeRef.current.context.state !== "closed") {
-      const ctx = getAudioContext();
-      const now = ctx.currentTime;
-      const targetVolume = volume * uiVolume * masterVolume;
-      // Use a short ramp to avoid clicks
-      gainNodeRef.current.gain.setValueAtTime(gainNodeRef.current.gain.value, now);
-      gainNodeRef.current.gain.linearRampToValueAtTime(targetVolume, now + 0.01);
-    }
   }, [volume, uiVolume, masterVolume]);
 
   // Internal function to create and play a source
   const createAndPlaySource = useCallback(async (loop: boolean = false) => {
-    // Check if UI sounds are enabled via audio settings store
-    if (!useAudioSettingsStore.getState().uiSoundsEnabled) {
+    // Check if UI sounds are enabled via global store
+    if (!useAppStore.getState().uiSoundsEnabled) {
       return null;
     }
 
@@ -134,7 +165,7 @@ export function useSound(soundPath: string, volume: number = 0.3) {
       // Ensure audio context is running before playing
       await resumeAudioContext();
 
-      const audioBuffer = await preloadSound(soundPath);
+      const audioBuffer = await preloadSound(themedSoundPath);
       // If the gain node belongs to a stale AudioContext (closed), recreate it
       if (
         !gainNodeRef.current ||
@@ -164,7 +195,7 @@ export function useSound(soundPath: string, volume: number = 0.3) {
       gainNodeRef.current.gain.setValueAtTime(targetVolume, getAudioContext().currentTime);
 
       // If too many concurrent sources are active, skip to avoid audio congestion
-      if (activeSources.size > MAX_CONCURRENT_SOURCES) {
+      if (activeSources.size > 32) {
         console.debug("Skipping sound – too many concurrent sources");
         return null;
       }
@@ -178,11 +209,6 @@ export function useSound(soundPath: string, volume: number = 0.3) {
 
       // Clean up when done (only for non-looping sounds)
       source.onended = () => {
-        try {
-          source.disconnect();
-        } catch {
-          // Source may have already been disconnected
-        }
         activeSources.delete(source);
         instanceSourcesRef.current.delete(source);
       };
@@ -192,29 +218,24 @@ export function useSound(soundPath: string, volume: number = 0.3) {
       console.error("Error playing sound:", error);
       return null;
     }
-  }, [volume, soundPath, uiVolume, masterVolume]);
+  }, [volume, themedSoundPath, uiVolume, masterVolume]);
 
   // Stop all currently playing sounds from this hook instance
   const stop = useCallback(() => {
-    // Add micro-fade before stop to avoid clicks
+    // Immediately cut gain to 0 for instant silence
     if (gainNodeRef.current) {
-      const ctx = getAudioContext();
-      const now = ctx.currentTime;
-      gainNodeRef.current.gain.setValueAtTime(gainNodeRef.current.gain.value, now);
-      gainNodeRef.current.gain.linearRampToValueAtTime(0, now + 0.01);
+      gainNodeRef.current.gain.setValueAtTime(0, getAudioContext().currentTime);
     }
-    // Stop sources after a short delay to allow the fade to complete
-    setTimeout(() => {
-      instanceSourcesRef.current.forEach((source) => {
-        try {
-          source.stop();
-          source.disconnect();
-        } catch {
-          // Source may have already ended
-        }
-      });
-      instanceSourcesRef.current.clear();
-    }, 15);
+    // Then stop all sources
+    instanceSourcesRef.current.forEach((source) => {
+      try {
+        source.stop();
+        source.disconnect();
+      } catch {
+        // Source may have already ended
+      }
+    });
+    instanceSourcesRef.current.clear();
   }, []);
 
   const play = useCallback(async () => {
@@ -231,84 +252,42 @@ export function useSound(soundPath: string, volume: number = 0.3) {
   const fadeOut = useCallback(
     (duration: number = 0.5) => {
       if (gainNodeRef.current) {
-        const ctx = getAudioContext();
-        const now = ctx.currentTime;
-        // Use current gain value as starting point
         gainNodeRef.current.gain.setValueAtTime(
-          gainNodeRef.current.gain.value,
-          now
+          volume,
+          getAudioContext().currentTime
         );
-        gainNodeRef.current.gain.linearRampToValueAtTime(0, now + duration);
+        gainNodeRef.current.gain.linearRampToValueAtTime(
+          0,
+          getAudioContext().currentTime + duration
+        );
       }
     },
-    []
+    [volume]
   );
 
   const fadeIn = useCallback(
     (duration: number = 0.5) => {
       if (gainNodeRef.current) {
-        const ctx = getAudioContext();
-        const now = ctx.currentTime;
-        const targetVolume = volume * uiVolume * masterVolume;
-        gainNodeRef.current.gain.setValueAtTime(0, now);
+        gainNodeRef.current.gain.setValueAtTime(
+          0,
+          getAudioContext().currentTime
+        );
         gainNodeRef.current.gain.linearRampToValueAtTime(
-          targetVolume,
-          now + duration
+          volume,
+          getAudioContext().currentTime + duration
         );
       }
     },
-    [volume, uiVolume, masterVolume]
+    [volume]
   );
 
   return { play, playLoop, stop, fadeOut, fadeIn };
 }
 
-// Predefined sound paths for easy access
-export const Sounds = {
-  ALERT_SOSUMI: "/sounds/AlertSosumi.mp3",
-  WINDOW_CLOSE: "/sounds/WindowClose.mp3",
-  WINDOW_OPEN: "/sounds/WindowOpen.mp3",
-  WINDOW_EXPAND: "/sounds/WindowExpand.mp3",
-  WINDOW_COLLAPSE: "/sounds/WindowCollapse.mp3",
-  WINDOW_ZOOM_MINIMIZE: "/sounds/WindowZoomMinimize.mp3",
-  WINDOW_ZOOM_MAXIMIZE: "/sounds/WindowZoomMaximize.mp3",
-  BUTTON_CLICK: "/sounds/ButtonClickDown.mp3",
-  MENU_OPEN: "/sounds/MenuOpen.mp3",
-  MENU_CLOSE: "/sounds/MenuClose.mp3",
-  // Window movement and resize sounds
-  WINDOW_MOVE_MOVING: "/sounds/WindowMoveMoving.mp3",
-  WINDOW_MOVE_STOP: "/sounds/WindowMoveStop.mp3",
-  WINDOW_RESIZE_RESIZING: "/sounds/WindowResizeResizing.mp3",
-  WINDOW_RESIZE_STOP: "/sounds/WindowResizeStop.mp3",
-  // Minesweeper sounds
-  CLICK: "/sounds/Click.mp3",
-  ALERT_BONK: "/sounds/AlertBonk.mp3",
-  ALERT_INDIGO: "/sounds/AlertIndigo.mp3",
-  MSN_NUDGE: "/sounds/MSNNudge.mp3",
-  // Video player sounds
-  VIDEO_TAPE: "/sounds/VideoTapeIn.mp3",
-  // Photo booth sounds
-  PHOTO_SHUTTER: "/sounds/PhotoShutter.mp3",
-  // Boot sound
-  BOOT: "/sounds/Boot.mp3",
-  VOLUME_CHANGE: "/sounds/Volume.mp3",
-  // iPod sounds
-  IPOD_CLICK_WHEEL: "/sounds/WheelsOfTime.m4a",
-} as const;
-
 // Lazily preload sounds after the first user interaction (click or touch)
 if (typeof document !== "undefined") {
   const handleFirstInteraction = () => {
-    // On mobile, only preload essential sounds to conserve memory
-    const soundsToPreload = isMobileDevice
-      ? [
-          Sounds.BUTTON_CLICK,
-          Sounds.WINDOW_OPEN,
-          Sounds.WINDOW_CLOSE,
-          Sounds.MENU_OPEN,
-        ]
-      : Object.values(Sounds);
-    preloadSounds(soundsToPreload);
+    preloadSounds(Object.values(Sounds));
     // Remove listeners after first invocation to avoid repeated work
     document.removeEventListener("click", handleFirstInteraction);
     document.removeEventListener("touchstart", handleFirstInteraction);

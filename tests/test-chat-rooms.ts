@@ -19,7 +19,7 @@ let testToken: string | null = null;
 let testUsername: string | null = null;
 
 // Admin user credentials for dev testing
-const ADMIN_USERNAME = "ryo";
+const ADMIN_USERNAME = "zi";
 const ADMIN_PASSWORD = "testtest";
 let adminToken: string | null = null;
 
@@ -273,7 +273,7 @@ async function testListTokens(): Promise<void> {
 }
 
 // ============================================================================
-// Admin User Tests (ryo)
+// Admin User Tests (zi)
 // ============================================================================
 
 async function testAdminAuthenticate(): Promise<void> {
@@ -1007,8 +1007,8 @@ export async function runChatRoomsTests(): Promise<{ passed: number; failed: num
   await runTest("POST sendMessage - unauthorized", testSendMessageUnauthorized);
   await runTest("DELETE deleteRoom - unauthorized", testDeleteRoomUnauthorized);
 
-  console.log("\n  Admin User (ryo)\n");
-  await runTest("POST authenticateWithPassword - admin (ryo)", testAdminAuthenticate);
+  console.log("\n  Admin User (zi)\n");
+  await runTest("POST authenticateWithPassword - admin (zi)", testAdminAuthenticate);
   await runTest("GET debugPresence - admin authorized", testAdminDebugPresence);
   await runTest("GET debugPresence - non-admin unauthorized", testAdminDebugPresenceUnauthorized);
   await runTest("POST cleanupPresence - admin authorized", testAdminCleanupPresence);

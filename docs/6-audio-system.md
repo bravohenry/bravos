@@ -1,6 +1,6 @@
 # Audio System
 
-Overview of ryOS audio capabilities and architecture.
+Overview of ZiOS audio capabilities and architecture.
 
 ## Technologies
 
@@ -102,7 +102,7 @@ source.stop(0);
 
 ## Audio Playback
 
-ryOS provides multiple audio playback mechanisms:
+ZiOS provides multiple audio playback mechanisms:
 
 ### iPod App
 
@@ -309,7 +309,7 @@ Audio settings are managed via `useAudioSettingsStore` (Zustand with persistence
 ### Persistence
 
 All settings are persisted to localStorage via Zustand's persist middleware:
-- Storage key: `ryos:audio-settings`
+- Storage key: `zios:audio-settings`
 - Version: 1 (for migration support)
 
 ### Convenience Selectors

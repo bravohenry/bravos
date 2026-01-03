@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>State Management - ryOS Docs</title>
+  <title>State Management - ZiOS Docs</title>
   <link rel="icon" href="/icons/mac-192.png">
   <style>
     @font-face { font-family: "Geneva"; src: url("/fonts/geneva-12.woff2") format("woff2"); }
@@ -165,14 +165,14 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
       </button>
       <a href="/" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit">
-        <img src="/icons/mac-192.png" alt="ryOS" width="20" height="20">
-        <span>ryOS</span>
+        <img src="/icons/mac-192.png" alt="ZiOS" width="20" height="20">
+        <span>ZiOS</span>
       </a>
       <span style="color:#999">/</span>
       <span style="color:#666">Docs</span>
     </div>
     <div class="header-right">
-      <a href="https://github.com/ryokun6/ryos" target="_blank" class="github">
+      <a href="https://github.com/ryokun6/zios" target="_blank" class="github">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
         GitHub
       </a>
@@ -293,7 +293,7 @@
     <main class="content">
       <article>
         <h1>State Management</h1>
-<p>ryOS uses Zustand for state management with 21+ stores following consistent patterns, combined with localStorage and IndexedDB for persistence.</p>
+<p>ZiOS uses Zustand for state management with 21+ stores following consistent patterns, combined with localStorage and IndexedDB for persistence.</p>
 <h2>Architecture Overview</h2>
 <pre class="mermaid">flowchart TB
     subgraph "Presentation Layer"
@@ -348,9 +348,9 @@
     API --> REDIS</pre>
 <h2>Store Inventory</h2>
 <h3>Core System Stores</h3>
-<table><thead><tr><th>Store</th><th>Persistence Key</th><th>Purpose</th></tr></thead><tbody><tr><td><code>useAppStore</code></td><td><code>ryos:app-store</code></td><td>Window/instance management, boot state, AI model selection</td></tr><tr><td><code>useFilesStore</code></td><td><code>ryos:files</code></td><td>Virtual filesystem metadata</td></tr><tr><td><code>useThemeStore</code></td><td><code>os_theme</code> (manual)</td><td>OS theme selection</td></tr><tr><td><code>useDisplaySettingsStore</code></td><td><code>ryos:display-settings</code></td><td>Wallpaper, shaders, screen saver</td></tr><tr><td><code>useDockStore</code></td><td><code>dock-storage</code></td><td>Dock pinned items, scale, visibility</td></tr><tr><td><code>useAudioSettingsStore</code></td><td><code>ryos:audio-settings</code></td><td>Volume controls, audio feature toggles</td></tr><tr><td><code>useLanguageStore</code></td><td><code>ryos:language</code></td><td>UI language preference</td></tr></tbody></table>
+<table><thead><tr><th>Store</th><th>Persistence Key</th><th>Purpose</th></tr></thead><tbody><tr><td><code>useAppStore</code></td><td><code>zios:app-store</code></td><td>Window/instance management, boot state, AI model selection</td></tr><tr><td><code>useFilesStore</code></td><td><code>zios:files</code></td><td>Virtual filesystem metadata</td></tr><tr><td><code>useThemeStore</code></td><td><code>os_theme</code> (manual)</td><td>OS theme selection</td></tr><tr><td><code>useDisplaySettingsStore</code></td><td><code>zios:display-settings</code></td><td>Wallpaper, shaders, screen saver</td></tr><tr><td><code>useDockStore</code></td><td><code>dock-storage</code></td><td>Dock pinned items, scale, visibility</td></tr><tr><td><code>useAudioSettingsStore</code></td><td><code>zios:audio-settings</code></td><td>Volume controls, audio feature toggles</td></tr><tr><td><code>useLanguageStore</code></td><td><code>zios:language</code></td><td>UI language preference</td></tr></tbody></table>
 <h3>App-Specific Stores</h3>
-<table><thead><tr><th>Store</th><th>Persistence Key</th><th>Purpose</th></tr></thead><tbody><tr><td><code>useChatsStore</code></td><td><code>ryos:chats</code></td><td>Chat rooms, messages, authentication</td></tr><tr><td><code>useIpodStore</code></td><td><code>ryos:ipod</code></td><td>Music library, playback state, lyrics</td></tr><tr><td><code>useVideoStore</code></td><td><code>ryos:videos</code></td><td>Video library, playback</td></tr><tr><td><code>useKaraokeStore</code></td><td><code>ryos:karaoke</code></td><td>Karaoke session state</td></tr><tr><td><code>useTerminalStore</code></td><td><code>ryos:terminal</code></td><td>Command history, vim state</td></tr><tr><td><code>useSynthStore</code></td><td><code>ryos:synth</code></td><td>Synthesizer presets</td></tr><tr><td><code>useSoundboardStore</code></td><td><code>ryos:soundboard</code></td><td>Soundboard slots and recordings</td></tr><tr><td><code>useAppletStore</code></td><td><code>applet-storage</code></td><td>Applet window dimensions</td></tr><tr><td><code>useFinderStore</code></td><td><code>ryos:finder</code></td><td>Finder instances, view preferences</td></tr><tr><td><code>useTextEditStore</code></td><td><code>ryos:textedit</code></td><td>Recent documents</td></tr><tr><td><code>useInternetExplorerStore</code></td><td><code>ryos:ie</code></td><td>Favorites, history</td></tr><tr><td><code>usePaintStore</code></td><td><code>ryos:paint</code></td><td>Tool settings</td></tr><tr><td><code>usePhotoBoothStore</code></td><td><code>ryos:photobooth</code></td><td>Recent photos</td></tr><tr><td><code>usePcStore</code></td><td><code>ryos:pc</code></td><td>Virtual PC state</td></tr></tbody></table>
+<table><thead><tr><th>Store</th><th>Persistence Key</th><th>Purpose</th></tr></thead><tbody><tr><td><code>useChatsStore</code></td><td><code>zios:chats</code></td><td>Chat rooms, messages, authentication</td></tr><tr><td><code>useIpodStore</code></td><td><code>zios:ipod</code></td><td>Music library, playback state, lyrics</td></tr><tr><td><code>useVideoStore</code></td><td><code>zios:videos</code></td><td>Video library, playback</td></tr><tr><td><code>useKaraokeStore</code></td><td><code>zios:karaoke</code></td><td>Karaoke session state</td></tr><tr><td><code>useTerminalStore</code></td><td><code>zios:terminal</code></td><td>Command history, vim state</td></tr><tr><td><code>useSynthStore</code></td><td><code>zios:synth</code></td><td>Synthesizer presets</td></tr><tr><td><code>useSoundboardStore</code></td><td><code>zios:soundboard</code></td><td>Soundboard slots and recordings</td></tr><tr><td><code>useAppletStore</code></td><td><code>applet-storage</code></td><td>Applet window dimensions</td></tr><tr><td><code>useFinderStore</code></td><td><code>zios:finder</code></td><td>Finder instances, view preferences</td></tr><tr><td><code>useTextEditStore</code></td><td><code>zios:textedit</code></td><td>Recent documents</td></tr><tr><td><code>useInternetExplorerStore</code></td><td><code>zios:ie</code></td><td>Favorites, history</td></tr><tr><td><code>usePaintStore</code></td><td><code>zios:paint</code></td><td>Tool settings</td></tr><tr><td><code>usePhotoBoothStore</code></td><td><code>zios:photobooth</code></td><td>Recent photos</td></tr><tr><td><code>usePcStore</code></td><td><code>zios:pc</code></td><td>Virtual PC state</td></tr></tbody></table>
 <h3>Store Architecture Diagram</h3>
 <pre class="mermaid">graph TD
     subgraph Core["Core System"]
@@ -421,7 +421,7 @@ export const useExampleStore = create&lt;ExampleState&gt;()(
       getItemById: (id) =&gt; get().items.find((item) =&gt; item.id === id),
     }),
     {
-      name: "ryos:example",           // localStorage key
+      name: "zios:example",           // localStorage key
       version: 1,                      // Migration version
       storage: createJSONStorage(() =&gt; localStorage),
       
@@ -454,7 +454,7 @@ export const useExampleStore = create&lt;ExampleState&gt;()(
 <pre><code>persist(
   (set) =&gt; ({ /* state and actions */ }),
   {
-    name: "ryos:audio-settings",
+    name: "zios:audio-settings",
     version: STORE_VERSION,
     partialize: (state) =&gt; ({
       masterVolume: state.masterVolume,
@@ -474,7 +474,7 @@ const STORES = {
   CUSTOM_WALLPAPERS: "custom_wallpapers",
 };
 
-// Database: ryOS (version 7)
+// Database: ZiOS (version 7)
 interface StoredContent {
   name: string;               // Original filename
   content: string | Blob;     // File content
@@ -630,9 +630,9 @@ window.dispatchEvent(
     end
 
     subgraph Persist["localStorage"]
-        P1[(ryos:ipod)]
-        P2[(ryos:chats)]
-        P3[(ryos:app-store)]
+        P1[(zios:ipod)]
+        P2[(zios:chats)]
+        P3[(zios:app-store)]
     end
 
     C1 <--> S1

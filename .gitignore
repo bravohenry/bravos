@@ -35,3 +35,4 @@ src-tauri/target
 src-tauri/apple.p8
 
 core
+public/assets/games/jsdos/command-conquer.jsdos

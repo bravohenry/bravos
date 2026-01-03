@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat Rooms API - ryOS Docs</title>
+  <title>Chat Rooms API - ZiOS Docs</title>
   <link rel="icon" href="/icons/mac-192.png">
   <style>
     @font-face { font-family: "Geneva"; src: url("/fonts/geneva-12.woff2") format("woff2"); }
@@ -165,14 +165,14 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
       </button>
       <a href="/" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit">
-        <img src="/icons/mac-192.png" alt="ryOS" width="20" height="20">
-        <span>ryOS</span>
+        <img src="/icons/mac-192.png" alt="ZiOS" width="20" height="20">
+        <span>ZiOS</span>
       </a>
       <span style="color:#999">/</span>
       <span style="color:#666">Docs</span>
     </div>
     <div class="header-right">
-      <a href="https://github.com/ryokun6/ryos" target="_blank" class="github">
+      <a href="https://github.com/ryokun6/zios" target="_blank" class="github">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
         GitHub
       </a>
@@ -296,7 +296,7 @@
 <p>Real-time chat rooms API powered by Pusher WebSockets and Redis (Upstash). Supports public and private rooms with presence tracking, token-based authentication, and AI-powered replies.</p>
 <h2>Endpoints</h2>
 <p>All actions are performed on a single endpoint using the <code>action</code> query parameter.</p>
-<table><thead><tr><th>Method</th><th>Action</th><th>Description</th><th>Auth Required</th></tr></thead><tbody><tr><td>GET</td><td><code>getRooms</code></td><td>List all accessible rooms</td><td>No</td></tr><tr><td>GET</td><td><code>getRoom</code></td><td>Get a single room by ID</td><td>Yes</td></tr><tr><td>GET</td><td><code>getMessages</code></td><td>Get messages for a room</td><td>No</td></tr><tr><td>GET</td><td><code>getBulkMessages</code></td><td>Get messages for multiple rooms</td><td>No</td></tr><tr><td>GET</td><td><code>getRoomUsers</code></td><td>Get active users in a room</td><td>Yes</td></tr><tr><td>GET</td><td><code>getUsers</code></td><td>Search users by username</td><td>No</td></tr><tr><td>GET</td><td><code>checkPassword</code></td><td>Check if user has password set</td><td>Yes</td></tr><tr><td>GET</td><td><code>cleanupPresence</code></td><td>Clean up expired presence (admin)</td><td>Yes (admin)</td></tr><tr><td>GET</td><td><code>debugPresence</code></td><td>Debug presence data (admin)</td><td>Yes (admin)</td></tr><tr><td>POST</td><td><code>createRoom</code></td><td>Create a new room</td><td>Yes</td></tr><tr><td>POST</td><td><code>joinRoom</code></td><td>Join a room</td><td>No</td></tr><tr><td>POST</td><td><code>leaveRoom</code></td><td>Leave a room</td><td>No</td></tr><tr><td>POST</td><td><code>switchRoom</code></td><td>Switch between rooms</td><td>No</td></tr><tr><td>POST</td><td><code>sendMessage</code></td><td>Send a message to a room</td><td>Yes</td></tr><tr><td>POST</td><td><code>generateRyoReply</code></td><td>Generate AI reply from Ryo</td><td>Yes</td></tr><tr><td>POST</td><td><code>createUser</code></td><td>Create a new user account</td><td>No</td></tr><tr><td>POST</td><td><code>generateToken</code></td><td>Generate auth token for user</td><td>Yes</td></tr><tr><td>POST</td><td><code>refreshToken</code></td><td>Refresh an existing token</td><td>No</td></tr><tr><td>POST</td><td><code>verifyToken</code></td><td>Verify token validity</td><td>No</td></tr><tr><td>POST</td><td><code>authenticateWithPassword</code></td><td>Login with username/password</td><td>No</td></tr><tr><td>POST</td><td><code>setPassword</code></td><td>Set user password</td><td>Yes</td></tr><tr><td>POST</td><td><code>clearAllMessages</code></td><td>Clear all messages (admin)</td><td>Yes (admin)</td></tr><tr><td>POST</td><td><code>resetUserCounts</code></td><td>Reset all user counts (admin)</td><td>Yes (admin)</td></tr><tr><td>POST</td><td><code>listTokens</code></td><td>List user's active tokens</td><td>Yes</td></tr><tr><td>POST</td><td><code>logoutAllDevices</code></td><td>Logout from all devices</td><td>Yes</td></tr><tr><td>POST</td><td><code>logoutCurrent</code></td><td>Logout current session</td><td>Yes</td></tr><tr><td>DELETE</td><td><code>deleteRoom</code></td><td>Delete a room</td><td>Yes</td></tr><tr><td>DELETE</td><td><code>deleteMessage</code></td><td>Delete a message (admin)</td><td>Yes (admin)</td></tr></tbody></table>
+<table><thead><tr><th>Method</th><th>Action</th><th>Description</th><th>Auth Required</th></tr></thead><tbody><tr><td>GET</td><td><code>getRooms</code></td><td>List all accessible rooms</td><td>No</td></tr><tr><td>GET</td><td><code>getRoom</code></td><td>Get a single room by ID</td><td>Yes</td></tr><tr><td>GET</td><td><code>getMessages</code></td><td>Get messages for a room</td><td>No</td></tr><tr><td>GET</td><td><code>getBulkMessages</code></td><td>Get messages for multiple rooms</td><td>No</td></tr><tr><td>GET</td><td><code>getRoomUsers</code></td><td>Get active users in a room</td><td>Yes</td></tr><tr><td>GET</td><td><code>getUsers</code></td><td>Search users by username</td><td>No</td></tr><tr><td>GET</td><td><code>checkPassword</code></td><td>Check if user has password set</td><td>Yes</td></tr><tr><td>GET</td><td><code>cleanupPresence</code></td><td>Clean up expired presence (admin)</td><td>Yes (admin)</td></tr><tr><td>GET</td><td><code>debugPresence</code></td><td>Debug presence data (admin)</td><td>Yes (admin)</td></tr><tr><td>POST</td><td><code>createRoom</code></td><td>Create a new room</td><td>Yes</td></tr><tr><td>POST</td><td><code>joinRoom</code></td><td>Join a room</td><td>No</td></tr><tr><td>POST</td><td><code>leaveRoom</code></td><td>Leave a room</td><td>No</td></tr><tr><td>POST</td><td><code>switchRoom</code></td><td>Switch between rooms</td><td>No</td></tr><tr><td>POST</td><td><code>sendMessage</code></td><td>Send a message to a room</td><td>Yes</td></tr><tr><td>POST</td><td><code>generateRyoReply</code></td><td>Generate AI reply from Zi</td><td>Yes</td></tr><tr><td>POST</td><td><code>createUser</code></td><td>Create a new user account</td><td>No</td></tr><tr><td>POST</td><td><code>generateToken</code></td><td>Generate auth token for user</td><td>Yes</td></tr><tr><td>POST</td><td><code>refreshToken</code></td><td>Refresh an existing token</td><td>No</td></tr><tr><td>POST</td><td><code>verifyToken</code></td><td>Verify token validity</td><td>No</td></tr><tr><td>POST</td><td><code>authenticateWithPassword</code></td><td>Login with username/password</td><td>No</td></tr><tr><td>POST</td><td><code>setPassword</code></td><td>Set user password</td><td>Yes</td></tr><tr><td>POST</td><td><code>clearAllMessages</code></td><td>Clear all messages (admin)</td><td>Yes (admin)</td></tr><tr><td>POST</td><td><code>resetUserCounts</code></td><td>Reset all user counts (admin)</td><td>Yes (admin)</td></tr><tr><td>POST</td><td><code>listTokens</code></td><td>List user's active tokens</td><td>Yes</td></tr><tr><td>POST</td><td><code>logoutAllDevices</code></td><td>Logout from all devices</td><td>Yes</td></tr><tr><td>POST</td><td><code>logoutCurrent</code></td><td>Logout current session</td><td>Yes</td></tr><tr><td>DELETE</td><td><code>deleteRoom</code></td><td>Delete a room</td><td>Yes</td></tr><tr><td>DELETE</td><td><code>deleteMessage</code></td><td>Delete a message (admin)</td><td>Yes (admin)</td></tr></tbody></table>
 <h2>Authentication</h2>
 <p>The API uses token-based authentication with the following headers:</p>
 <pre><code>X-Username: &lt;username&gt;
@@ -352,7 +352,7 @@ interface BulkMessagesResult {
 <h3>Creating Rooms</h3>
 <strong>Public Rooms</strong> (admin only):
 <pre><code>POST /api/chat-rooms?action=createRoom
-Headers: { X-Username: "ryo", Authorization: "Bearer &lt;token&gt;" }
+Headers: { X-Username: "zi", Authorization: "Bearer &lt;token&gt;" }
 Body: { name: "general", type: "public" }</code></pre>
 <strong>Private Rooms</strong> (any authenticated user):
 <pre><code>POST /api/chat-rooms?action=createRoom
@@ -385,7 +385,7 @@ Body: { previousRoomId: "abc123", nextRoomId: "def456", username: "alice" }</cod
 <h3>Deleting Rooms</h3>
 <ul><li><strong>Public rooms</strong>: Admin only</li></ul><ul><li><strong>Private rooms</strong>: Any member can leave; room is deleted when ≤1 member remains</li></ul>
 <pre><code>DELETE /api/chat-rooms?action=deleteRoom&amp;roomId=abc123
-Headers: { X-Username: "ryo", Authorization: "Bearer &lt;token&gt;" }</code></pre>
+Headers: { X-Username: "zi", Authorization: "Bearer &lt;token&gt;" }</code></pre>
 <h2>Messages</h2>
 <h3>Sending Messages</h3>
 <pre><code>POST /api/chat-rooms?action=sendMessage
@@ -401,13 +401,13 @@ GET /api/chat-rooms?action=getMessages&amp;roomId=abc123&amp;limit=50
 
 // Multiple rooms
 GET /api/chat-rooms?action=getBulkMessages&amp;roomIds=abc123,def456</code></pre>
-<h3>AI-Powered Replies (Ryo)</h3>
-<p>Generate responses from the AI assistant "Ryo":</p>
+<h3>AI-Powered Replies (Zi)</h3>
+<p>Generate responses from the AI assistant "Zi":</p>
 <pre><code>POST /api/chat-rooms?action=generateRyoReply
 Headers: { X-Username: "alice", Authorization: "Bearer &lt;token&gt;" }
 Body: {
   roomId: "abc123",
-  prompt: "@ryo what do you think?",
+  prompt: "@zi what do you think?",
   systemState: {
     chatRoomContext: {
       recentMessages: "alice: Hello\nbob: Hi there",
@@ -469,7 +469,7 @@ const users = await getActiveUsersInRoom(roomId);
 const count = await refreshRoomUserCount(roomId);</code></pre>
 <h3>Admin Cleanup</h3>
 <pre><code>GET /api/chat-rooms?action=cleanupPresence
-Headers: { X-Username: "ryo", Authorization: "Bearer &lt;token&gt;" }</code></pre>
+Headers: { X-Username: "zi", Authorization: "Bearer &lt;token&gt;" }</code></pre>
 <h2>Example Usage</h2>
 <h3>Complete Flow: Create User and Send Message</h3>
 <pre><code>// 1. Create user
@@ -550,7 +550,7 @@ const { token: newToken } = await res.json();</code></pre>
 <pre><code>export const runtime = "nodejs";
 export const maxDuration = 15; // seconds</code></pre>
 <h2>Related</h2>
-<ul><li><a href="/docs/overview">ryOS Overview</a> - Main documentation</li></ul><ul><li><a href="/docs/chat-api">Chat API</a> - AI chat endpoint</li><li><a href="https://pusher.com/docs">Pusher Documentation</a></li><li><a href="https://upstash.com/docs/redis/overall/getstarted">Upstash Redis</a></li></ul>
+<ul><li><a href="/docs/overview">ZiOS Overview</a> - Main documentation</li></ul><ul><li><a href="/docs/chat-api">Chat API</a> - AI chat endpoint</li><li><a href="https://pusher.com/docs">Pusher Documentation</a></li><li><a href="https://upstash.com/docs/redis/overall/getstarted">Upstash Redis</a></li></ul>
       </article>
       
       <nav class="nav">

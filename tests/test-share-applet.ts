@@ -306,7 +306,7 @@ async function testDeleteWithInvalidToken(): Promise<void> {
   const res = await fetchWithAuth(
     `${BASE_URL}/api/share-applet?id=${testAppletId}`,
     "invalid_token_12345",
-    "ryo",
+    "zi",
     { method: "DELETE" }
   );
   assertEq(res.status, 403, `Expected 403 for invalid token, got ${res.status}`);
@@ -319,7 +319,7 @@ async function testPatchWithInvalidToken(): Promise<void> {
   const res = await fetchWithAuth(
     `${BASE_URL}/api/share-applet?id=${testAppletId}`,
     "invalid_token_12345",
-    "ryo",
+    "zi",
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

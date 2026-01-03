@@ -9,133 +9,31 @@ import {
   SupportedModel,
   DEFAULT_MODEL,
   getModelInstance,
-} from "./_utils/aiModels.js";
+} from "./utils/aiModels.js";
 import {
   CORE_PRIORITY_INSTRUCTIONS,
-  RYO_PERSONA_INSTRUCTIONS,
+  ZI_PERSONA_INSTRUCTIONS,
   ANSWER_STYLE_INSTRUCTIONS,
   CODE_GENERATION_INSTRUCTIONS,
   CHAT_INSTRUCTIONS,
   TOOL_USAGE_INSTRUCTIONS,
-} from "./_utils/aiPrompts.js";
+  DELIVERABLE_REQUIREMENTS,
+} from "./utils/aiPrompts.js";
 import { z } from "zod";
 import { SUPPORTED_AI_MODELS } from "../src/types/aiModels.js";
 import { appIds } from "../src/config/appIds.js";
-import { checkAndIncrementAIMessageCount } from "./_utils/rate-limit.js";
+import type { OsThemeId } from "../src/themes/types.js";
+import {
+  checkAndIncrementAIMessageCount,
+  AI_LIMIT_PER_5_HOURS,
+  } from "./utils/rate-limit.js";
 import { Redis } from "@upstash/redis";
-import { validateAuthToken } from "./_utils/auth-validate.js";
-import { getEffectiveOrigin, isAllowedOrigin } from "./_utils/cors.js";
+import { getEffectiveOrigin, isAllowedOrigin } from "./utils/cors.js";
 
 // Central list of supported theme IDs for tool validation
 const themeIds = ["system7", "macosx", "xp", "win98"] as const;
 
-// Shared media control schema validation refinement
-const mediaControlRefinement = (data: { action: string; id?: string; title?: string; artist?: string }, ctx: z.RefinementCtx) => {
-  const { action, id, title, artist } = data;
-
-  if (action === "addAndPlay") {
-    if (!id) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "The 'addAndPlay' action requires the 'id' parameter (YouTube ID or URL).",
-        path: ["id"],
-      });
-    }
-    if (title !== undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Do not provide 'title' when using 'addAndPlay' (information is fetched automatically).",
-        path: ["title"],
-      });
-    }
-    if (artist !== undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Do not provide 'artist' when using 'addAndPlay' (information is fetched automatically).",
-        path: ["artist"],
-      });
-    }
-    return;
-  }
-
-  if (action === "playKnown") {
-    if (!id && !title && !artist) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "The 'playKnown' action requires at least one of 'id', 'title', or 'artist'.",
-        path: ["id"],
-      });
-    }
-    return;
-  }
-
-  if (
-    (action === "toggle" || action === "play" || action === "pause") &&
-    (id !== undefined || title !== undefined || artist !== undefined)
-  ) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Do not provide 'id', 'title', or 'artist' when using playback state actions ('toggle', 'play', 'pause').",
-      path: ["action"],
-    });
-  }
-
-  if (
-    (action === "next" || action === "previous") &&
-    (id !== undefined || title !== undefined || artist !== undefined)
-  ) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Do not provide 'id', 'title', or 'artist' when using track navigation actions ('next', 'previous').",
-      path: ["action"],
-    });
-  }
-};
-
-// Factory for creating media control schemas (iPod, Karaoke)
-const createMediaControlSchema = (options: { hasEnableVideo?: boolean } = {}) => {
-  const baseSchema = z.object({
-    action: z
-      .enum(["toggle", "play", "pause", "playKnown", "addAndPlay", "next", "previous"])
-      .default("toggle")
-      .describe("Playback operation to perform. Defaults to 'toggle' when omitted."),
-    id: z
-      .string()
-      .optional()
-      .describe("For 'playKnown' (optional) or 'addAndPlay' (required): YouTube video ID or supported URL."),
-    title: z
-      .string()
-      .optional()
-      .describe("For 'playKnown': The title (or part of it) of the song to play."),
-    artist: z
-      .string()
-      .optional()
-      .describe("For 'playKnown': The artist name (or part of it) of the song to play."),
-    enableTranslation: z
-      .string()
-      .optional()
-      .describe(
-        "ONLY use when user explicitly requests translated lyrics. Set to language code (e.g., 'en', 'zh-TW', 'ja', 'ko', 'es', 'fr', 'de', 'pt', 'it', 'ru') to translate, or 'off'/'original' to show original lyrics. By default, do NOT set this - lyrics should remain in original language."
-      ),
-    enableFullscreen: z
-      .boolean()
-      .optional()
-      .describe("Enable fullscreen mode. Can be combined with any action."),
-  });
-
-  if (options.hasEnableVideo) {
-    return baseSchema.extend({
-      enableVideo: z
-        .boolean()
-        .optional()
-        .describe("Enable video playback. Can be combined with any action."),
-    }).superRefine(mediaControlRefinement);
-  }
-
-  return baseSchema.superRefine(mediaControlRefinement);
-};
-
-// Update SystemState type to match new store structure (optimized for token efficiency)
+// Update SystemState type to match new store structure
 interface SystemState {
   username?: string | null;
   /** User's operating system (e.g., "iOS", "Android", "macOS", "Windows", "Linux") */
@@ -145,39 +43,41 @@ interface SystemState {
   internetExplorer: {
     url: string;
     year: string;
+    status: string;
     currentPageTitle: string | null;
-    /** Markdown form of the AI generated HTML (more token-efficient than raw HTML) */
+    aiGeneratedHtml: string | null;
+    /** Optional markdown form of the AI generated HTML to keep context compact */
     aiGeneratedMarkdown?: string | null;
   };
   video: {
     currentVideo: {
       id: string;
+      url: string;
       title: string;
       artist?: string;
     } | null;
     isPlaying: boolean;
+    loopAll: boolean;
+    loopCurrent: boolean;
+    isShuffled: boolean;
   };
   ipod?: {
     currentTrack: {
       id: string;
+      url: string;
       title: string;
       artist?: string;
     } | null;
     isPlaying: boolean;
+    loopAll: boolean;
+    loopCurrent: boolean;
+    isShuffled: boolean;
     currentLyrics?: {
       lines: Array<{
         startTimeMs: string;
         words: string;
       }>;
     } | null;
-  };
-  karaoke?: {
-    currentTrack: {
-      id: string;
-      title: string;
-      artist?: string;
-    } | null;
-    isPlaying: boolean;
   };
   textEdit?: {
     instances: Array<{
@@ -217,14 +117,43 @@ interface SystemState {
       appletPath?: string;
       appletId?: string;
     }>;
+    instanceWindowOrder: string[];
   };
   chatRoomContext?: {
     roomId: string;
     recentMessages: string;
     mentionedMessage: string;
   };
+  /** Current OS theme */
+  theme?: {
+    current: OsThemeId;
+  };
 }
 
+// Allowed origins for API requests
+const ALLOWED_ORIGINS = new Set([
+  "https://os.bravohenry.com",
+  "http://localhost:3000",
+  "http://localhost:5173", // Vite dev server 默认端口
+]);
+
+// Function to validate request origin
+// Allow explicit origins defined in ALLOWED_ORIGINS, or any localhost port
+const isValidOrigin = (origin: string | null): boolean => {
+  if (!origin) return false;
+  // Check explicit allowed origins
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  // Allow any localhost port number
+  try {
+    const url = new URL(origin);
+    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+      return true;
+    }
+  } catch {
+    // Invalid URL, fall through to return false
+  }
+  return false;
+};
 
 // Allow streaming responses up to 60 seconds
 export const maxDuration = 80;
@@ -239,10 +168,12 @@ export const config = {
 const STATIC_SYSTEM_PROMPT = [
   CORE_PRIORITY_INSTRUCTIONS,
   ANSWER_STYLE_INSTRUCTIONS,
-  RYO_PERSONA_INSTRUCTIONS,
+  ZI_PERSONA_INSTRUCTIONS,
   CHAT_INSTRUCTIONS,
   TOOL_USAGE_INSTRUCTIONS,
   CODE_GENERATION_INSTRUCTIONS,
+  // Include delivery requirements after code generation instructions
+  DELIVERABLE_REQUIREMENTS,
 ].join("\n");
 
 const CACHE_CONTROL_OPTIONS = {
@@ -267,7 +198,7 @@ const generateDynamicSystemPrompt = (systemState?: SystemState) => {
     day: "numeric",
   });
 
-  const ryoTimeZone = "America/Los_Angeles";
+  const ziTimeZone = "America/Los_Angeles";
 
   if (!systemState) return "";
 
@@ -276,7 +207,7 @@ const generateDynamicSystemPrompt = (systemState?: SystemState) => {
 Current User: ${systemState.username || "you"}
 
 ## TIME & LOCATION
-Ryo Time: ${timeString} on ${dateString} (${ryoTimeZone})`;
+Zi Time: ${timeString} on ${dateString} (${ziTimeZone})`;
 
   if (systemState.userLocalTime) {
     prompt += `
@@ -374,36 +305,10 @@ Video: ${systemState.video.currentVideo.title}${videoArtist} (Playing)`;
 iPod: ${systemState.ipod.currentTrack.title}${trackArtist} (${playingStatus})`;
 
     if (systemState.ipod.currentLyrics?.lines) {
-      // Truncate lyrics to ~10 lines to save tokens (full lyrics can be 100+ lines)
-      const allLines = systemState.ipod.currentLyrics.lines;
-      const maxLines = 10;
-      const truncatedLines = allLines.length > maxLines 
-        ? allLines.slice(0, maxLines)
-        : allLines;
-      const lyricsText = truncatedLines.map((line) => line.words).join("\n");
-      const truncationNote = allLines.length > maxLines ? `\n(${allLines.length - maxLines} more lines...)` : "";
       prompt += `
-Lyrics Preview:
-${lyricsText}${truncationNote}`;
+Current Lyrics:
+${systemState.ipod.currentLyrics.lines.map((line) => line.words).join("\n")}`;
     }
-  }
-
-  // Check if Karaoke app is open
-  const hasOpenKaraoke =
-    systemState.runningApps?.foreground?.appId === "karaoke" ||
-    systemState.runningApps?.background?.some((app) => app.appId === "karaoke");
-
-  if (hasOpenKaraoke && systemState.karaoke?.currentTrack) {
-    if (!hasMedia) {
-      prompt += `\n\n## MEDIA PLAYBACK`;
-      hasMedia = true;
-    }
-    const karaokePlayingStatus = systemState.karaoke.isPlaying ? "Playing" : "Paused";
-    const karaokeTrackArtist = systemState.karaoke.currentTrack.artist
-      ? ` by ${systemState.karaoke.currentTrack.artist}`
-      : "";
-    prompt += `
-Karaoke: ${systemState.karaoke.currentTrack.title}${karaokeTrackArtist} (${karaokePlayingStatus})`;
   }
 
   // Browser Section
@@ -463,7 +368,7 @@ ${index + 1}. ${instance.title}${unsavedMark}${pathInfo} (instanceId: ${instance
     prompt += `\n\n<chat_room_reply_instructions>
 ## CHAT ROOM CONTEXT
 Room ID: ${systemState.chatRoomContext.roomId}
-Your Role: Respond as 'ryo' in this IRC-style chat room
+Your Role: Respond as 'zi' in this IRC-style chat room
 Response Style: Use extremely concise responses
 
 Recent Conversation:
@@ -488,6 +393,86 @@ const redis = new Redis({
   url: process.env.REDIS_KV_REST_API_URL,
   token: process.env.REDIS_KV_REST_API_TOKEN,
 });
+
+// Add auth validation function
+const AUTH_TOKEN_PREFIX = "chat:token:";
+const TOKEN_LAST_PREFIX = "chat:token:last:";
+const USER_TTL_SECONDS = 90 * 24 * 60 * 60; // 90 days (for tokens only)
+const TOKEN_GRACE_PERIOD = 365 * 24 * 60 * 60; // 365 days (1 year)
+
+async function validateAuthToken(
+  username: string | undefined | null,
+  authToken: string | undefined | null
+): Promise<{ valid: boolean; newToken?: string }> {
+  if (!username || !authToken) {
+    return { valid: false };
+  }
+
+  const normalizedUsername = username.toLowerCase();
+  // 1) New multi-token scheme: chat:token:user:{username}:{token}
+  const userScopedKey = `chat:token:user:${normalizedUsername}:${authToken}`;
+  const exists = await redis.exists(userScopedKey);
+  if (exists) {
+    await redis.expire(userScopedKey, USER_TTL_SECONDS);
+    return { valid: true };
+  }
+
+  // 2) Fallback to legacy single-token mapping (username -> token)
+  const legacyKey = `${AUTH_TOKEN_PREFIX}${normalizedUsername}`;
+  const storedToken = await redis.get(legacyKey);
+
+  if (storedToken && storedToken === authToken) {
+    await redis.expire(legacyKey, USER_TTL_SECONDS);
+    return { valid: true };
+  }
+
+  // Token not found or doesn't match - check if it's in grace period
+  const lastTokenKey = `${TOKEN_LAST_PREFIX}${normalizedUsername}`;
+  const lastTokenData = await redis.get(lastTokenKey);
+
+  if (lastTokenData) {
+    try {
+      const { token: lastToken, expiredAt } = JSON.parse(
+        lastTokenData as string
+      );
+      const gracePeriodEnd = expiredAt + TOKEN_GRACE_PERIOD * 1000;
+
+      // Check if the provided token matches the last valid token and is within grace period
+      if (lastToken === authToken && Date.now() < gracePeriodEnd) {
+        console.log(
+          `[Auth] Token in grace period for user ${username}, refreshing...`
+        );
+
+        // Generate new token using Web Crypto API (Edge Runtime compatible)
+        const tokenBytes = new Uint8Array(32);
+        crypto.getRandomValues(tokenBytes);
+        const newToken = Array.from(tokenBytes, (byte) =>
+          byte.toString(16).padStart(2, "0")
+        ).join("");
+
+        // Store the old token for future grace period use
+        await redis.set(
+          lastTokenKey,
+          JSON.stringify({
+            token: authToken,
+            expiredAt: Date.now(),
+          }),
+          { ex: TOKEN_GRACE_PERIOD }
+        );
+
+        // Issue a new token in the new multi-token scheme
+        const newUserScopedKey = `chat:token:user:${normalizedUsername}:${newToken}`;
+        await redis.set(newUserScopedKey, Date.now(), { ex: USER_TTL_SECONDS });
+
+        return { valid: true, newToken };
+      }
+    } catch (e) {
+      console.error("[Auth] Error parsing last token data:", e);
+    }
+  }
+
+  return { valid: false };
+}
 
 export default async function handler(req: Request) {
   // Check origin before processing request
@@ -547,8 +532,8 @@ export default async function handler(req: Request) {
 
     // Get IP address for rate limiting anonymous users
     // For Vercel deployments, use x-vercel-forwarded-for (won't be overwritten by proxies)
-    // For localhost/local dev, use a fixed identifier
-    const isLocalDev = validOrigin?.startsWith("http://localhost") || validOrigin?.startsWith("http://127.0.0.1") || validOrigin?.includes("100.110.251.60");
+    // For localhost, use a fixed identifier
+    const isLocalhost = origin === "http://localhost:3000" || origin === "http://localhost:5173";
     let ip: string;
 
     if (isLocalDev) {
@@ -580,12 +565,8 @@ export default async function handler(req: Request) {
     // ---------------------------
     // Rate-limit & auth checks
     // ---------------------------
-    // Validate authentication (all users, including "ryo", must present a valid token)
-    // Enable grace period for expired tokens (client is responsible for token refresh)
-    const validationResult = await validateAuthToken(redis, username, authToken, {
-      allowExpired: true,
-      refreshOnGrace: false,
-    });
+    // Validate authentication (all users, including "zi", must present a valid token)
+    const validationResult = await validateAuthToken(username, authToken);
 
     // If a username was provided but the token is missing/invalid, reject the request early
     if (username && !validationResult.valid) {
@@ -633,7 +614,7 @@ export default async function handler(req: Request) {
           isAuthenticated,
           count: rateLimitResult.count,
           limit: rateLimitResult.limit,
-          message: `You've hit your limit of ${rateLimitResult.limit} messages in this 5-hour window. Please wait a few hours and try again.`,
+          message: `You've hit your limit of ${AI_LIMIT_PER_5_HOURS} messages in this 5-hour window. Please wait a few hours and try again.`,
         };
 
         return new Response(JSON.stringify(errorResponse), {
@@ -737,7 +718,7 @@ export default async function handler(req: Request) {
       tools: {
         launchApp: {
           description:
-            "Launch an application in the ryOS interface when the user explicitly requests it. If the id is 'internet-explorer', you must provide BOTH a real 'url' and a 'year' for time-travel; otherwise provide neither.",
+            "Launch an application in the ZiOS interface when the user explicitly requests it. If the id is 'internet-explorer', you must provide BOTH a real 'url' and a 'year' for time-travel; otherwise provide neither.",
           inputSchema: z
             .object({
               id: z.enum(appIds).describe("The app id to launch"),
@@ -810,27 +791,208 @@ export default async function handler(req: Request) {
         },
         closeApp: {
           description:
-            "Close an application in the ryOS interface—but only when the user explicitly asks you to close that specific app.",
+            "Close an application in the ZiOS interface—but only when the user explicitly asks you to close that specific app.",
           inputSchema: z.object({
             id: z.enum(appIds).describe("The app id to close"),
           }),
         },
-        // iPod control tools (uses shared media control schema with video support)
+        switchTheme: {
+          description:
+            "Switch the ZiOS UI theme to a specific OS style when the user explicitly requests it.",
+          inputSchema: z.object({
+            theme: z
+              .enum(themeIds)
+              .describe(
+                'The theme to switch to. One of "system7", "macosx", "xp", "win98".'
+              ),
+          }),
+        },
+        textEditSearchReplace: {
+          description:
+            "Search and replace text in a specific TextEdit document. You MUST always provide 'search', 'replace', and 'instanceId'. Set 'isRegex: true' ONLY if the user explicitly mentions using a regular expression. Use the instanceId from the tool result of textEditNewFile or from the system state TextEdit Windows list. If the specified instanceId doesn't exist, the system will fall back to the most recently created TextEdit instance.",
+          inputSchema: z.object({
+            search: z
+              .string()
+              .describe(
+                "REQUIRED: The text or regular expression to search for"
+              ),
+            replace: z
+              .string()
+              .describe(
+                "REQUIRED: The text that will replace each match of 'search'"
+              ),
+            isRegex: z
+              .boolean()
+              .optional()
+              .describe(
+                "Set to true if the 'search' field should be treated as a JavaScript regular expression (without flags). Defaults to false."
+              ),
+            instanceId: z
+              .string()
+              .describe(
+                "REQUIRED: The specific TextEdit instance ID to modify (e.g., '15'). Get this from the system state TextEdit Windows list."
+              ),
+          }),
+        },
+        textEditInsertText: {
+          description:
+            "Insert plain text into a specific TextEdit document. You MUST always provide 'text' and 'instanceId'. Appends to the end by default; use position 'start' to prepend. Use the instanceId from the tool result of textEditNewFile or from the system state TextEdit Windows list. If the specified instanceId doesn't exist, the system will fall back to the most recently created TextEdit instance.",
+          inputSchema: z.object({
+            text: z.string().describe("REQUIRED: The text to insert"),
+            position: z
+              .enum(["start", "end"])
+              .optional()
+              .describe(
+                "Where to insert the text: 'start' to prepend, 'end' to append. Default is 'end'."
+              ),
+            instanceId: z
+              .string()
+              .describe(
+                "REQUIRED: The specific TextEdit instance ID to modify (e.g., '15'). Get this from the system state TextEdit Windows list."
+              ),
+          }),
+        },
+        textEditNewFile: {
+          description:
+            "Create a new blank document in a new TextEdit instance. Returns an instanceId that MUST be used in subsequent textEditInsertText or textEditSearchReplace calls to modify this document. Use when the user explicitly requests a new or untitled file.",
+          inputSchema: z.object({
+            title: z
+              .string()
+              .optional()
+              .describe(
+                "Optional title for the new TextEdit window. If not provided, defaults to 'Untitled'."
+              ),
+          }),
+        },
+        // Add iPod control tools
         ipodControl: {
           description:
-            "Control playback in the iPod app. Launches the iPod automatically if needed. Use action 'toggle' (default), 'play', or 'pause' for playback state; 'playKnown' to play an existing library track by id/title/artist; 'addAndPlay' to add a track from a YouTube ID or URL and start playback; 'next' or 'previous' to navigate the playlist. Optionally enable video or fullscreen mode with enableVideo or enableFullscreen. LYRICS TRANSLATION: By default, keep lyrics in the ORIGINAL language - only use enableTranslation when the user EXPLICITLY asks for translated lyrics. IMPORTANT: If the user's OS is iOS, do NOT automatically start playback – instead, inform the user that due to iOS browser restrictions they need to press the center button or play button on the iPod themselves to start playing.",
-          inputSchema: createMediaControlSchema({ hasEnableVideo: true }),
-        },
-        // Karaoke control tools (uses shared media control schema without video)
-        karaokeControl: {
-          description:
-            "Control playback in the Karaoke app. Launches the Karaoke app automatically if needed. Use action 'toggle' (default), 'play', or 'pause' for playback state; 'playKnown' to play an existing library track by id/title/artist; 'addAndPlay' to add a track from a YouTube ID or URL and start playback; 'next' or 'previous' to navigate the playlist. Optionally enable fullscreen mode with enableFullscreen. LYRICS TRANSLATION: By default, keep lyrics in the ORIGINAL language - only use enableTranslation when the user EXPLICITLY asks for translated lyrics. IMPORTANT: If the user's OS is iOS, do NOT automatically start playback – instead, inform the user that due to iOS browser restrictions they need to tap the play button themselves to start playing. NOTE: Karaoke shares the same music library as iPod but has independent playback state.",
-          inputSchema: createMediaControlSchema(),
+            "Control playback in the iPod app. Launches the iPod automatically if needed. Use action 'toggle' (default), 'play', or 'pause' for playback state; 'playKnown' to play an existing library track by id/title/artist; 'addAndPlay' to add a track from a YouTube ID or URL and start playback; 'next' or 'previous' to navigate the playlist. Optionally enable video, lyric translations, or fullscreen mode with enableVideo, enableTranslation, or enableFullscreen. IMPORTANT: If the user's OS is iOS, do NOT automatically start playback – instead, inform the user that due to iOS browser restrictions they need to press the center button or play button on the iPod themselves to start playing.",
+          inputSchema: z
+            .object({
+              action: z
+                .enum([
+                  "toggle",
+                  "play",
+                  "pause",
+                  "playKnown",
+                  "addAndPlay",
+                  "next",
+                  "previous",
+                ])
+                .default("toggle")
+                .describe(
+                  "Playback operation to perform. Defaults to 'toggle' when omitted."
+                ),
+              id: z
+                .string()
+                .optional()
+                .describe(
+                  "For 'playKnown' (optional) or 'addAndPlay' (required): YouTube video ID or supported URL."
+                ),
+              title: z
+                .string()
+                .optional()
+                .describe(
+                  "For 'playKnown': The title (or part of it) of the song to play."
+                ),
+              artist: z
+                .string()
+                .optional()
+                .describe(
+                  "For 'playKnown': The artist name (or part of it) of the song to play."
+                ),
+              enableVideo: z
+                .boolean()
+                .optional()
+                .describe(
+                  "Enable video playback in the iPod. Can be combined with any action."
+                ),
+              enableTranslation: z
+                .string()
+                .optional()
+                .describe(
+                  "Enable lyric translations in the specified language code (e.g., 'en', 'zh-TW', 'ja', 'ko', 'es', 'fr', 'de', 'pt', 'it', 'ru'). Can be combined with any action. To disable/turn off translations and show original lyrics, set to 'off' or 'original'."
+                ),
+              enableFullscreen: z
+                .boolean()
+                .optional()
+                .describe(
+                  "Enable fullscreen mode for the iPod player. Can be combined with any action."
+                ),
+            })
+            .superRefine((data, ctx) => {
+              const { action, id, title, artist } = data;
+
+              if (action === "addAndPlay") {
+                if (!id) {
+                  ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message:
+                      "The 'addAndPlay' action requires the 'id' parameter (YouTube ID or URL).",
+                    path: ["id"],
+                  });
+                }
+                if (title !== undefined) {
+                  ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message:
+                      "Do not provide 'title' when using 'addAndPlay' (information is fetched automatically).",
+                    path: ["title"],
+                  });
+                }
+                if (artist !== undefined) {
+                  ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message:
+                      "Do not provide 'artist' when using 'addAndPlay' (information is fetched automatically).",
+                    path: ["artist"],
+                  });
+                }
+                return;
+              }
+
+              if (action === "playKnown") {
+                if (!id && !title && !artist) {
+                  ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message:
+                      "The 'playKnown' action requires at least one of 'id', 'title', or 'artist'.",
+                    path: ["id"],
+                  });
+                }
+                return;
+              }
+
+              if (
+                (action === "toggle" || action === "play" || action === "pause") &&
+                (id !== undefined || title !== undefined || artist !== undefined)
+              ) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  message:
+                    "Do not provide 'id', 'title', or 'artist' when using playback state actions ('toggle', 'play', 'pause').",
+                  path: ["action"],
+                });
+              }
+
+              if (
+                (action === "next" || action === "previous") &&
+                (id !== undefined || title !== undefined || artist !== undefined)
+              ) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  message:
+                    "Do not provide 'id', 'title', or 'artist' when using track navigation actions ('next', 'previous').",
+                  path: ["action"],
+                });
+              }
+            }),
         },
         // --- HTML generation & preview ---
         generateHtml: {
           description:
-            "Generate an HTML snippet for an ryOS Applet: a small windowed app (default ~320px wide) that runs inside ryOS, not the full page. Design mobile-first for ~320px width but keep layouts responsive to expand gracefully. Provide markup in 'html', a short 'title', and an 'icon' (emoji). DO NOT wrap it in markdown fences; the client will handle scaffolding.",
+            "Generate an HTML snippet for a ZiOS Applet: a small windowed app (default ~320px wide) that runs inside ZiOS, not the full page. Design mobile-first for ~320px width but keep layouts responsive to expand gracefully. Provide markup in 'html', a short 'title', and an 'icon' (emoji). DO NOT wrap it in markdown fences; the client will handle scaffolding.",
           inputSchema: z.object({
             html: z
               .string()
@@ -875,7 +1037,7 @@ export default async function handler(req: Request) {
         // --- Unified Virtual File System Tools ---
         list: {
           description:
-            "List items from the ryOS virtual file system. Returns a JSON array with metadata for each item. CRITICAL: You MUST ONLY reference items that are explicitly returned in the tool result. DO NOT suggest, mention, or hallucinate items that are not in the returned list.",
+            "List items from the ziOS virtual file system. Returns a JSON array with metadata for each item. CRITICAL: You MUST ONLY reference items that are explicitly returned in the tool result. DO NOT suggest, mention, or hallucinate items that are not in the returned list.",
           inputSchema: z.object({
             path: z
               .enum(["/Applets", "/Documents", "/Applications", "/Music", "/Applets Store"])
@@ -957,7 +1119,7 @@ export default async function handler(req: Request) {
         },
         edit: {
           description:
-            "Edit existing files in the ryOS virtual file system. For creating new files, use the write tool (documents) or generateHtml tool (applets). For larger rewrites, use write with mode 'overwrite'.\n\n" +
+            "Edit existing files in the ziOS virtual file system. For creating new files, use the write tool (documents) or generateHtml tool (applets). For larger rewrites, use write with mode 'overwrite'.\n\n" +
             "Before using this tool:\n" +
             "1. Use the read tool to understand the file's contents and context\n" +
             "2. Verify the file exists using list\n\n" +
@@ -994,138 +1156,10 @@ export default async function handler(req: Request) {
               ),
           }),
         },
-        // --- YouTube/Song Search Tool ---
-        searchSongs: {
-          description:
-            "Search for songs/videos on YouTube. Returns a list of results with video IDs, titles, and channel names. Use this to help users find music to add to their iPod. PREFER official music videos from verified artist channels (look for 'VEVO' or the artist's official channel). AVOID karaoke versions, instrumental versions, playlists, compilations, 'best of' collections, lyric videos, and covers unless specifically requested. After getting results, you can use ipodControl with action 'addAndPlay' to add a song using its videoId.",
-          inputSchema: z.object({
-            query: z
-              .string()
-              .min(1)
-              .max(200)
-              .describe(
-                "The search query. Include 'music video' or 'MV' for better results. Example: 'Never Gonna Give You Up Rick Astley music video'"
-              ),
-            maxResults: z
-              .number()
-              .int()
-              .min(1)
-              .max(10)
-              .optional()
-              .default(5)
-              .describe(
-                "Maximum number of results to return (1-10, default 5)"
-              ),
-          }),
-          execute: async ({ query, maxResults = 5 }) => {
-            log(`[searchSongs] Searching for: "${query}" (max ${maxResults} results)`);
-            
-            // Collect all available API keys for rotation
-            const apiKeys = [
-              process.env.YOUTUBE_API_KEY,
-              process.env.YOUTUBE_API_KEY_2,
-            ].filter((key): key is string => !!key);
-
-            if (apiKeys.length === 0) {
-              throw new Error("No YouTube API keys configured");
-            }
-
-            log(`[searchSongs] Available API keys: ${apiKeys.length}`);
-
-            // Helper to check if error is a quota exceeded error
-            const isQuotaError = (status: number, errorText: string): boolean => {
-              if (status === 403) {
-                const lowerText = errorText.toLowerCase();
-                return lowerText.includes("quota") || lowerText.includes("exceeded") || lowerText.includes("limit");
-              }
-              return false;
-            };
-
-            let lastError: string | null = null;
-
-            // Try each API key until one works
-            for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
-              const apiKey = apiKeys[keyIndex];
-              const keyLabel = keyIndex === 0 ? "primary" : `backup-${keyIndex}`;
-
-              try {
-                log(`[searchSongs] Trying ${keyLabel} API key (${keyIndex + 1}/${apiKeys.length})`);
-
-                const searchUrl = new URL("https://www.googleapis.com/youtube/v3/search");
-                searchUrl.searchParams.set("part", "snippet");
-                searchUrl.searchParams.set("type", "video");
-                searchUrl.searchParams.set("videoCategoryId", "10"); // Music category
-                searchUrl.searchParams.set("q", query);
-                searchUrl.searchParams.set("maxResults", String(maxResults));
-                searchUrl.searchParams.set("key", apiKey);
-
-                const response = await fetch(searchUrl.toString());
-                
-                if (!response.ok) {
-                  const errorText = await response.text();
-                  log(`[searchSongs] YouTube API error with ${keyLabel} key: ${response.status} - ${errorText}`);
-                  
-                  // Check if quota exceeded and we have more keys to try
-                  if (isQuotaError(response.status, errorText) && keyIndex < apiKeys.length - 1) {
-                    log(`[searchSongs] Quota exceeded for ${keyLabel} key, rotating to next key`);
-                    lastError = errorText;
-                    continue; // Try next key
-                  }
-                  
-                  throw new Error(`YouTube search failed: ${response.status}`);
-                }
-
-                const data = await response.json();
-                
-                if (!data.items || data.items.length === 0) {
-                  return { 
-                    results: [], 
-                    message: `No songs found for "${query}"` 
-                  };
-                }
-
-                // Transform results to a simpler format
-                const results = data.items.map((item: {
-                  id: { videoId: string };
-                  snippet: {
-                    title: string;
-                    channelTitle: string;
-                    publishedAt: string;
-                    thumbnails?: { medium?: { url: string } };
-                  };
-                }) => ({
-                  videoId: item.id.videoId,
-                  title: item.snippet.title,
-                  channelTitle: item.snippet.channelTitle,
-                  publishedAt: item.snippet.publishedAt,
-                }));
-
-                log(`[searchSongs] Found ${results.length} results for "${query}" using ${keyLabel} key`);
-                
-                return {
-                  results,
-                  message: `Found ${results.length} song(s) for "${query}"`,
-                  hint: "Use ipodControl with action 'addAndPlay' and the videoId to add a song to the iPod"
-                };
-              } catch (error) {
-                logError(`[searchSongs] Error with ${keyLabel} key:`, error);
-                // If we have more keys, try the next one
-                if (keyIndex < apiKeys.length - 1) {
-                  log(`[searchSongs] Retrying with next API key`);
-                  continue;
-                }
-                throw new Error(`Failed to search for songs: ${error instanceof Error ? error.message : 'Unknown error'}`);
-              }
-            }
-
-            // All keys exhausted
-            throw new Error(`All YouTube API keys exhausted. Last error: ${lastError || 'Unknown'}`);
-          },
-        },
         // --- System Settings Tool ---
         settings: {
           description:
-            "Change system settings in ryOS. Use this tool when the user asks to change language, theme, volume, enable/disable speech, or check for updates. Multiple settings can be changed in a single call.",
+            "Change system settings in ziOS. Use this tool when the user asks to change language, theme, volume, enable/disable speech, or check for updates. Multiple settings can be changed in a single call.",
           inputSchema: z.object({
             language: z
               .enum(["en", "zh-TW", "ja", "ko", "fr", "de", "es", "pt", "it", "ru"])
@@ -1157,7 +1191,7 @@ export default async function handler(req: Request) {
               .boolean()
               .optional()
               .describe(
-                "When true, triggers a check for ryOS updates. Will notify the user if an update is available."
+                "When true, triggers a check for ziOS updates. Will notify the user if an update is available."
               ),
           }),
         },
@@ -1187,6 +1221,13 @@ export default async function handler(req: Request) {
     const headers = new Headers(response.headers);
     headers.set("Access-Control-Allow-Origin", validOrigin);
 
+    // If token was refreshed, add it to response headers
+    if (validationResult.newToken) {
+      headers.set("X-New-Auth-Token", validationResult.newToken);
+      headers.set("Access-Control-Expose-Headers", "X-New-Auth-Token");
+      log(`Token refreshed for user ${username}, new token sent in headers`);
+    }
+
     return new Response(response.body, {
       status: response.status,
       headers,
@@ -1194,26 +1235,14 @@ export default async function handler(req: Request) {
   } catch (error) {
     console.error("Chat API error:", error);
 
-    // Ensure CORS headers are included on error responses so clients can read them
-    const corsHeaders: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    if (validOrigin) {
-      corsHeaders["Access-Control-Allow-Origin"] = validOrigin;
-    }
-
     // Check if error is a SyntaxError (likely from parsing JSON)
     if (error instanceof SyntaxError) {
       console.error(`400 Error: Invalid JSON - ${error.message}`);
-      return new Response(
-        JSON.stringify({ error: "Bad Request", message: `Invalid JSON - ${error.message}` }),
-        { status: 400, headers: corsHeaders }
-      );
+      return new Response(`Bad Request: Invalid JSON - ${error.message}`, {
+        status: 400,
+      });
     }
 
-    return new Response(
-      JSON.stringify({ error: "Internal Server Error" }),
-      { status: 500, headers: corsHeaders }
-    );
+    return new Response("Internal Server Error", { status: 500 });
   }
 }

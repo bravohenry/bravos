@@ -5,24 +5,24 @@ import {
   type ModelMessage,
   type UIMessage,
 } from "ai";
-import * as RateLimit from "./_utils/rate-limit.js";
+import * as RateLimit from "./utils/rate-limit.js";
 import {
   getEffectiveOrigin,
   isAllowedOrigin,
   preflightIfNeeded,
-} from "./_utils/cors.js";
+} from "./utils/cors.js";
 import {
   SupportedModel,
   DEFAULT_MODEL,
   getModelInstance,
-  } from "./_utils/aiModels.js";
+  } from "./utils/aiModels.js";
 import { Redis } from "@upstash/redis";
-import { normalizeUrlForCacheKey } from "./_utils/url.js";
+import { normalizeUrlForCacheKey } from "./utils/url.js";
 import {
   CORE_PRIORITY_INSTRUCTIONS,
-  RYO_PERSONA_INSTRUCTIONS,
-  IE_HTML_GENERATION_INSTRUCTIONS,
-  } from "./_utils/aiPrompts.js";
+  ZI_PERSONA_INSTRUCTIONS,
+  DELIVERABLE_REQUIREMENTS,
+  } from "./utils/aiPrompts.js";
 import { SUPPORTED_AI_MODELS } from "../src/types/aiModels.js";
 
 // CORS handled via shared utils
@@ -85,7 +85,7 @@ export const config = { runtime: "edge" };
 // Static portion of the system prompt shared across requests. This string is
 // passed via the `system` option to enable prompt caching by the model
 // provider.
-const STATIC_SYSTEM_PROMPT = `${CORE_PRIORITY_INSTRUCTIONS}\n\nThe user is in ryOS Internet Explorer asking to time travel with website context and a specific year. You are Ryo, a visionary designer specialized in turning present websites into past and futuristic coherent versions in story and design.\n\nGenerate content for the URL path and year provided, original site content, and use provided HTML as template if available.\n\n${IE_HTML_GENERATION_INSTRUCTIONS}`;
+const STATIC_SYSTEM_PROMPT = `${CORE_PRIORITY_INSTRUCTIONS}\n\nThe user is in ZiOS Internet Explorer asking to time travel with website context and a specific year. You are Zi, a visionary designer specialized in turning present websites into past and futuristic coherent versions in story and design.\n\nGenerate content for the URL path and year provided, original site content, and use provided HTML as template if available.\n\n${DELIVERABLE_REQUIREMENTS}`;
 
 // Function to generate the dynamic portion of the system prompt. This portion
 // depends on the requested year and URL and will be sent as a regular system
@@ -123,8 +123,8 @@ const getDynamicSystemPrompt = (
 
   const YEAR_NOT_SPECIFIED_INSTRUCTIONS = `Year not specified. Assume current year ${currentYear}.`;
 
-  const PERSONA_INSTRUCTIONS_BLOCK = `ABOUT THE DESIGNER (RYO LU):
-${RYO_PERSONA_INSTRUCTIONS}`;
+  const PERSONA_INSTRUCTIONS_BLOCK = `ABOUT THE DESIGNER (ZIHAN HUANG):
+${ZI_PERSONA_INSTRUCTIONS}`;
 
   // --- Determine Year Specific Instructions ---
 
@@ -144,10 +144,10 @@ ${RYO_PERSONA_INSTRUCTIONS}`;
 
   let finalPrompt = `${INTRO_LINE}\n\n${yearSpecificInstructions}`;
 
-  // Conditionally add Ryo's persona instructions
+  // Conditionally add Zi's persona instructions
   if (
     rawUrl &&
-    (rawUrl.includes("ryo.lu") ||
+    (rawUrl.includes("os.bravohenry.com") ||
       rawUrl.includes("x.com") ||
       rawUrl.includes("notion") ||
       rawUrl.includes("cursor"))
