@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat API - ryOS Docs</title>
+  <title>Chat API - ZiOS Docs</title>
   <link rel="icon" href="/icons/mac-192.png">
   <style>
     @font-face { font-family: "Geneva"; src: url("/fonts/geneva-12.woff2") format("woff2"); }
@@ -165,14 +165,14 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
       </button>
       <a href="/" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit">
-        <img src="/icons/mac-192.png" alt="ryOS" width="20" height="20">
-        <span>ryOS</span>
+        <img src="/icons/mac-192.png" alt="ZiOS" width="20" height="20">
+        <span>ZiOS</span>
       </a>
       <span style="color:#999">/</span>
       <span style="color:#666">Docs</span>
     </div>
     <div class="header-right">
-      <a href="https://github.com/ryokun6/ryos" target="_blank" class="github">
+      <a href="https://github.com/ryokun6/zios" target="_blank" class="github">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
         GitHub
       </a>
@@ -293,7 +293,7 @@
     <main class="content">
       <article>
         <h1>Chat API</h1>
-<p>The main AI chat endpoint for ryOS that powers the Chats application. This endpoint handles conversational AI interactions with the "Ryo" persona, supports multiple AI providers, and includes extensive tool calling capabilities for controlling the ryOS system.</p>
+<p>The main AI chat endpoint for ZiOS that powers the Chats application. This endpoint handles conversational AI interactions with the "Zi" persona, supports multiple AI providers, and includes extensive tool calling capabilities for controlling the ZiOS system.</p>
 <h2>Endpoint</h2>
 <table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td>POST</td><td><code>/api/chat</code></td><td>Main AI chat with streaming responses and tool calling</td></tr></tbody></table>
 <h2>Request</h2>
@@ -432,12 +432,12 @@ data: {"type":"finish","finishReason":"stop"}</code></pre>
 const model = queryModel || bodyModel || "gpt-5.1";</code></pre>
 <h2>Rate Limiting</h2>
 <table><thead><tr><th>User Type</th><th>Limit</th><th>Window</th></tr></thead><tbody><tr><td>Authenticated</td><td>15 messages</td><td>5 hours</td></tr><tr><td>Anonymous</td><td>3 messages</td><td>24 hours</td></tr></tbody></table>
-<p>Anonymous users are identified by IP address. The special user "ryo" (with valid token) has unlimited access.</p>
+<p>Anonymous users are identified by IP address. The special user "zi" (with valid token) has unlimited access.</p>
 <h2>Tool Calling</h2>
-<p>The Chat API supports extensive tool calling for controlling ryOS applications and system features.</p>
+<p>The Chat API supports extensive tool calling for controlling ZiOS applications and system features.</p>
 <h3>Application Control</h3>
 <h4><code>launchApp</code></h4>
-Launch an application in ryOS.
+Launch an application in ZiOS.
 <pre><code>{
   id: AppId;           // Required: App to launch
   url?: string;        // For internet-explorer: URL to load
@@ -530,7 +530,7 @@ Make targeted edits to existing files.
 }</code></pre>
 <h3>HTML/Applet Generation</h3>
 <h4><code>generateHtml</code></h4>
-Generate an HTML applet for ryOS.
+Generate an HTML applet for ZiOS.
 <pre><code>// Input
 {
   html: string;    // HTML content (body only)
@@ -569,7 +569,7 @@ Render an emoji aquarium in the chat bubble.
   },
   body: JSON.stringify({
     messages: [
-      { role: 'user', content: 'Hello, Ryo!' }
+      { role: 'user', content: 'Hello, Zi!' }
     ],
     model: 'claude-4',
     systemState: {
@@ -643,7 +643,7 @@ export const stream = true;     // Enable streaming</code></pre>
 <h2>Related Endpoints</h2>
 <table><thead><tr><th>Endpoint</th><th>Documentation</th><th>Description</th></tr></thead><tbody><tr><td><code>/api/applet-ai</code></td><td>-</td><td>Applet text + image generation</td></tr><tr><td><code>/api/ie-generate</code></td><td>-</td><td>Time-travel page generation</td></tr><tr><td><code>/api/speech</code></td><td>-</td><td>Text-to-speech synthesis</td></tr><tr><td><code>/api/audio-transcribe</code></td><td>-</td><td>Speech-to-text transcription</td></tr><tr><td><code>/api/youtube-search</code></td><td>-</td><td>YouTube music search</td></tr><tr><td><code>/api/song/</code></td><td>-</td><td>Song library CRUD operations</td></tr></tbody></table>
 <h2>System Prompt Structure</h2>
-<p>The Chat API uses a layered system prompt approach: <ol><li><strong>Static System Prompt</strong> (cached for performance):<ul><li>Core priority instructions</li><li>Ryo persona instructions</li><li>Answer style guidelines</li><li>Chat instructions</li><li>Tool usage instructions</li><li>Code generation instructions</li></ul></li><li><strong>Dynamic System Prompt</strong> (per-request):<ul><li>User context (username, OS, locale)</li><li>Time information (Ryo's time + user's local time)</li><li>Running applications</li><li>Media playback state</li><li>Browser state</li><li>TextEdit documents</li><li>Chat room context (if applicable)</li></ul></li></ol></p>
+<p>The Chat API uses a layered system prompt approach: <ol><li><strong>Static System Prompt</strong> (cached for performance):<ul><li>Core priority instructions</li><li>Zi persona instructions</li><li>Answer style guidelines</li><li>Chat instructions</li><li>Tool usage instructions</li><li>Code generation instructions</li></ul></li><li><strong>Dynamic System Prompt</strong> (per-request):<ul><li>User context (username, OS, locale)</li><li>Time information (Zi's time + user's local time)</li><li>Running applications</li><li>Media playback state</li><li>Browser state</li><li>TextEdit documents</li><li>Chat room context (if applicable)</li></ul></li></ol></p>
       </article>
       
       <nav class="nav">

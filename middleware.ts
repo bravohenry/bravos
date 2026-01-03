@@ -25,17 +25,17 @@ const APP_DESCRIPTIONS: Record<string, string> = {
   finder: "Browse and manage files",
   soundboard: "Record and trigger custom sounds",
   "internet-explorer": "Browse the web through time",
-  chats: "Talk to Ryo and neighbors online",
+  chats: "Talk to Zi and neighbors online",
   textedit: "Write and edit documents",
   paint: "Draw and edit art, like it's 1984",
   "photo-booth": "Take photos with shader effects",
   minesweeper: "Play this classic puzzle game",
-  videos: "Watch videos on ryOS",
+  videos: "Watch videos on ZiOS",
   ipod: "Click-wheel music player with live lyrics",
   karaoke: "Full-screen karaoke with live lyrics",
   synth: "Virtual synthesizer with custom sounds",
   pc: "DOS emulator with classic games",
-  terminal: "Command line interface with Ryo AI",
+  terminal: "Command line interface with Zi AI",
   "applet-viewer": "Explore and install community applets",
   "control-panels": "Set themes, sounds, and system preferences",
 };
@@ -81,7 +81,7 @@ function generateOgHtml(options: {
   <meta property="og:title" content="${escapeHtml(title)}">
   <meta property="og:description" content="${escapeHtml(description)}">
   <meta property="og:image" content="${escapeHtml(imageUrl)}">
-  <meta property="og:site_name" content="ryOS">
+  <meta property="og:site_name" content="ZiOS">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
@@ -213,7 +213,7 @@ async function getYouTubeInfo(videoId: string): Promise<{ title: string; artist:
   try {
     const oEmbedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
     const response = await fetch(oEmbedUrl, { 
-      headers: { "User-Agent": "ryOS/1.0" },
+      headers: { "User-Agent": "ZiOS/1.0" },
     });
     
     if (!response.ok) return null;
@@ -239,7 +239,7 @@ export default async function middleware(request: Request) {
 
   // Default values
   let imageUrl = `${baseUrl}/icons/mac-512.png`;
-  let title = "ryOS";
+  let title = "ZiOS";
   let description = "An AI OS experience, made with Cursor";
   let matched = false;
 
@@ -248,8 +248,8 @@ export default async function middleware(request: Request) {
   if (appMatch && APP_NAMES[appMatch[1]]) {
     const appId = appMatch[1];
     imageUrl = `${baseUrl}/icons/macosx/${APP_ICONS[appId]}`;
-    title = `${APP_NAMES[appId]} on ryOS`;
-    description = APP_DESCRIPTIONS[appId] || "Open app in ryOS";
+    title = `${APP_NAMES[appId]} on ZiOS`;
+    description = APP_DESCRIPTIONS[appId] || "Open app in ZiOS";
     matched = true;
   }
 
@@ -263,10 +263,10 @@ export default async function middleware(request: Request) {
     const ytInfo = await getYouTubeInfo(videoId);
     if (ytInfo) {
       title = `${ytInfo.title}`;
-      description = "Watch on ryOS Videos";
+      description = "Watch on ZiOS Videos";
     } else {
-      title = "Shared Video on ryOS";
-      description = "Watch on ryOS Videos";
+      title = "Shared Video on ZiOS";
+      description = "Watch on ZiOS Videos";
     }
     matched = true;
   }
@@ -284,10 +284,10 @@ export default async function middleware(request: Request) {
       imageUrl = formatKugouImageUrl(songInfo.cover, 400) || youtubeThumbnail;
       if (songInfo.artist) {
         title = `${songInfo.title} - ${songInfo.artist}`;
-        description = `Listen on ryOS iPod`;
+        description = `Listen on ZiOS iPod`;
       } else {
         title = songInfo.title;
-        description = "Listen on ryOS iPod";
+        description = "Listen on ZiOS iPod";
       }
     } else {
       const ytInfo = await getYouTubeInfo(videoId);
@@ -295,14 +295,14 @@ export default async function middleware(request: Request) {
       if (ytInfo) {
         if (ytInfo.artist) {
           title = `${ytInfo.title} - ${ytInfo.artist}`;
-          description = `Listen on ryOS iPod`;
+          description = `Listen on ZiOS iPod`;
         } else {
           title = ytInfo.title;
-          description = "Listen on ryOS iPod";
+          description = "Listen on ZiOS iPod";
         }
       } else {
-        title = "Shared Song - ryOS";
-        description = "Listen on ryOS iPod";
+        title = "Shared Song - ZiOS";
+        description = "Listen on ZiOS iPod";
       }
     }
     matched = true;
@@ -319,20 +319,20 @@ export default async function middleware(request: Request) {
     if (songInfo) {
       // Use song cover at 400 size if available, otherwise fall back to YouTube thumbnail
       imageUrl = formatKugouImageUrl(songInfo.cover, 400) || youtubeThumbnail;
-      // Format: "Sing [Title] - [Artist] on ryOS" or "Sing [Title] on ryOS"
+      // Format: "Sing [Title] - [Artist] on ZiOS" or "Sing [Title] on ZiOS"
       const songDisplay = songInfo.artist ? `${songInfo.title} - ${songInfo.artist}` : songInfo.title;
-      title = `Sing ${songDisplay} on ryOS`;
-      description = `Sing along on ryOS Karaoke`;
+      title = `Sing ${songDisplay} on ZiOS`;
+      description = `Sing along on ZiOS Karaoke`;
     } else {
       const ytInfo = await getYouTubeInfo(videoId);
       imageUrl = youtubeThumbnail;
       if (ytInfo) {
         const songDisplay = ytInfo.artist ? `${ytInfo.title} - ${ytInfo.artist}` : ytInfo.title;
-        title = `Sing ${songDisplay} on ryOS`;
-        description = `Sing along on ryOS Karaoke`;
+        title = `Sing ${songDisplay} on ZiOS`;
+        description = `Sing along on ZiOS Karaoke`;
       } else {
-        title = "Sing on ryOS Karaoke";
-        description = "Sing along on ryOS Karaoke";
+        title = "Sing on ZiOS Karaoke";
+        description = "Sing along on ZiOS Karaoke";
       }
     }
     matched = true;
@@ -342,8 +342,8 @@ export default async function middleware(request: Request) {
   const appletMatch = pathname.match(/^\/applet-viewer\/([a-zA-Z0-9_-]+)$/);
   if (appletMatch) {
     imageUrl = `${baseUrl}/icons/macosx/applet.png`;
-    title = "Shared Applet on ryOS";
-    description = "Open applet in ryOS";
+    title = "Shared Applet on ZiOS";
+    description = "Open applet in ZiOS";
     matched = true;
   }
 
@@ -374,19 +374,19 @@ export default async function middleware(request: Request) {
         }
         
         if (sharedYear === "current") {
-          title = `${hostname} on ryOS`;
-          description = "Open in ryOS Internet Explorer";
+          title = `${hostname} on ZiOS`;
+          description = "Open in ZiOS Internet Explorer";
         } else {
-          title = `${hostname} in ${sharedYear} on ryOS`;
-          description = "Time travel in ryOS Internet Explorer";
+          title = `${hostname} in ${sharedYear} on ZiOS`;
+          description = "Time travel in ZiOS Internet Explorer";
         }
       } else {
-        title = "Shared Page on ryOS";
-        description = "Open in ryOS Internet Explorer";
+        title = "Shared Page on ZiOS";
+        description = "Open in ZiOS Internet Explorer";
       }
     } catch {
-      title = "Shared Page on ryOS";
-      description = "Open in ryOS Internet Explorer";
+      title = "Shared Page on ZiOS";
+      description = "Open in ZiOS Internet Explorer";
     }
     matched = true;
   }

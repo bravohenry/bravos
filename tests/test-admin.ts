@@ -16,7 +16,7 @@ import {
 } from "./test-utils";
 
 // Admin user credentials for dev testing
-const ADMIN_USERNAME = "ryo";
+const ADMIN_USERNAME = "zi";
 const ADMIN_PASSWORD = "testtest";
 let adminToken: string | null = null;
 

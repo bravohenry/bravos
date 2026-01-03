@@ -1,6 +1,6 @@
 # Apps
 
-ryOS includes 17 built-in applications, each designed to replicate classic desktop experiences while adding modern functionality.
+ZiOS includes 17 built-in applications, each designed to replicate classic desktop experiences while adding modern functionality.
 
 ## App Overview
 
@@ -16,7 +16,7 @@ ryOS includes 17 built-in applications, each designed to replicate classic deskt
 | [Soundboard](/docs/soundboard) | Record and play sound effects | Audio |
 | [Synth](/docs/synth) | Virtual synthesizer with 3D waveform visualization | Audio |
 | [Terminal](/docs/terminal) | Command line interface with AI integration | Development |
-| [Chats](/docs/chats) | Chat with Ryo AI assistant and join chat rooms | Communication |
+| [Chats](/docs/chats) | Chat with Zi AI assistant and join chat rooms | Communication |
 | [Internet Explorer](/docs/internet-explorer) | Web browser with AI-powered content generation | Web |
 | [Applet Store](/docs/applet-store) | Browse and run user-created HTML applets | Utilities |
 | [Control Panels](/docs/control-panels) | System settings for themes, wallpapers, and audio | System |
@@ -64,7 +64,7 @@ Most apps are lazy-loaded for performance:
 - **Lyrics**: Synced lyrics with translations, furigana, romaji, pinyin
 
 ### AI Integration
-- **Ryo Assistant**: Chat interface with tool calling capabilities
+- **Zi Assistant**: Chat interface with tool calling capabilities
 - **Code Generation**: Generate HTML applets from natural language
 - **App Control**: Launch apps, switch themes, control playback via AI
 - **Content Generation**: AI-powered web content generation in IE
