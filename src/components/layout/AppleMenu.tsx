@@ -72,6 +72,7 @@ export function AppleMenu() {
   const launchApp = useLaunchApp();
   const currentTheme = useThemeStore((state) => state.current);
   const isMacOsxTheme = currentTheme === "macosx";
+  const isOS1Theme = currentTheme === "os1";
 
   // Recent items from store
   const recentApps = useAppStore((state) => state.recentApps);
@@ -158,7 +159,9 @@ export function AppleMenu() {
               style={{ width: 30, height: 30 }}
             />
           ) : (
-            "\uf8ff" // 
+            <span style={isOS1Theme ? { fontSize: "20px", lineHeight: 1 } : undefined}>
+              {"\uf8ff"} {/*  */}
+            </span>
           )}
         </MenubarTrigger>
         <MenubarContent align="start" sideOffset={1} className="px-0">

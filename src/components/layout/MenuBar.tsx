@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { AppleMenu } from "./AppleMenu";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,43 +6,28 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import {
-  Menubar,
-  MenubarMenu,
-  MenubarTrigger,
-  MenubarContent,
-  MenubarItem,
-  MenubarSeparator,
-  MenubarCheckboxItem,
-} from "@/components/ui/menubar";
+import { Menubar } from "@/components/ui/menubar";
 import { HelpDialog } from "@/components/dialogs/HelpDialog";
 import { AboutDialog } from "@/components/dialogs/AboutDialog";
 import { useLaunchApp } from "@/hooks/useLaunchApp";
 import { StartMenu } from "./StartMenu";
-import { useAppStoreShallow, useAudioSettingsStoreShallow, useDisplaySettingsStoreShallow } from "@/stores/helpers";
+import { useAppStoreShallow } from "@/stores/helpers";
 import { Slider } from "@/components/ui/slider";
-import { SpeakerSimpleLow, SpeakerSimpleHigh, SpeakerSimpleSlash, Gear, CaretUp, DotsThree } from "@phosphor-icons/react";
+import { Volume1, Volume2, VolumeX, Settings, ChevronUp } from "lucide-react";
 import { useSound, Sounds } from "@/hooks/useSound";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { getAppIconPath, appRegistry } from "@/config/appRegistry";
-import type { AppId } from "@/config/appRegistry";
-import type { AnyApp } from "@/apps/base/types";
 import { ThemedIcon } from "@/components/shared/ThemedIcon";
 import { useFilesStore } from "@/stores/useFilesStore";
 import type { AppInstance } from "@/stores/useAppStore";
 import type { AppletViewerInitialData } from "@/apps/applet-viewer";
-import { useOffline } from "@/hooks/useOffline";
-import { WifiSlash } from "@phosphor-icons/react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useTranslation } from "react-i18next";
-import { getTranslatedAppName } from "@/utils/i18n";
-import { useIsPhone } from "@/hooks/useIsPhone";
-import { isTauri, isTauriWindows } from "@/utils/platform";
 
-// Helper function to get app name (using translations)
+// Helper function to get app name
 const getAppName = (appId: string): string => {
-  return getTranslatedAppName(appId as AppId);
+  const app = appRegistry[appId as keyof typeof appRegistry];
+  return app?.name || appId;
 };
 
 const finderHelpItems = [
@@ -67,11 +52,11 @@ const finderMetadata = {
   name: "Finder",
   version: "1.0.0",
   creator: {
-    name: "Ryo Lu",
-    url: "https://ryo.lu",
+    name: "Zihan",
+    url: "https://bravohenry.com",
   },
-  github: "https://github.com/ryokun6/ryos",
-  icon: "/icons/mac.png",
+  github: "https://github.com/bravohenry/bravos",
+  icon: "mac.png",
 };
 
 interface MenuBarProps {
@@ -79,221 +64,11 @@ interface MenuBarProps {
   inWindowFrame?: boolean; // Add prop to indicate if MenuBar is inside a window
 }
 
-// Context to share scrolling state
-const ScrollingContext = React.createContext<{
-  isScrolling: boolean;
-  preventInteraction: (e: React.MouseEvent | React.TouchEvent) => boolean;
-}>({
-  isScrolling: false,
-  preventInteraction: () => false,
-});
-
-// Scrollable menu wrapper with fade masks for mobile
-function ScrollableMenuWrapper({ children }: { children: React.ReactNode }) {
-  const isPhone = useIsPhone();
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [scrollLeft, setScrollLeft] = useState(0);
-  const [scrollWidth, setScrollWidth] = useState(0);
-  const [clientWidth, setClientWidth] = useState(0);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Track touch state for preventing accidental taps during scroll
-  const touchStateRef = useRef<{
-    startX: number;
-    startY: number;
-    hasMoved: boolean;
-    startTime: number;
-  } | null>(null);
-  const hadRecentScrollRef = useRef(false);
-
-  const updateScrollState = useCallback(() => {
-    if (!scrollRef.current) return;
-    const { scrollLeft: left, scrollWidth: width, clientWidth: cw } = scrollRef.current;
-    setScrollLeft(left);
-    setScrollWidth(width);
-    setClientWidth(cw);
-  }, []);
-
-  const handleScroll = useCallback(() => {
-    updateScrollState();
-    hadRecentScrollRef.current = true;
-    
-    // Mark current touch as moved if there's an active touch
-    if (touchStateRef.current) {
-      touchStateRef.current.hasMoved = true;
-    }
-    
-    // Clear existing timeout
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-      scrollTimeoutRef.current = null;
-    }
-    
-    // Clear recent scroll flag after scroll ends
-    scrollTimeoutRef.current = setTimeout(() => {
-      hadRecentScrollRef.current = false;
-    }, 300);
-  }, [updateScrollState]);
-
-  // Check if interaction should be prevented
-  const shouldPreventInteraction = useCallback(() => {
-    // Prevent if there was recent scrolling
-    if (hadRecentScrollRef.current) {
-      return true;
-    }
-    // Prevent if current touch has moved
-    if (touchStateRef.current?.hasMoved) {
-      return true;
-    }
-    return false;
-  }, []);
-
-  const preventInteraction = useCallback((e: React.MouseEvent | React.TouchEvent | React.PointerEvent) => {
-    if (shouldPreventInteraction()) {
-      e.preventDefault();
-      e.stopPropagation();
-      return true;
-    }
-    return false;
-  }, [shouldPreventInteraction]);
-
-  useEffect(() => {
-    updateScrollState();
-    const resizeObserver = new ResizeObserver(updateScrollState);
-    if (scrollRef.current) {
-      resizeObserver.observe(scrollRef.current);
-    }
-    return () => {
-      resizeObserver.disconnect();
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-        scrollTimeoutRef.current = null;
-      }
-    };
-  }, [updateScrollState]);
-
-  const canScrollLeft = scrollLeft > 0;
-  const canScrollRight = scrollLeft < scrollWidth - clientWidth - 1;
-
-  // Calculate mask gradients based on scroll position
-  // In CSS masks: black = visible, transparent = hidden
-  const getMaskImage = () => {
-    if (!isPhone || scrollWidth <= clientWidth) {
-      return undefined;
-    }
-    
-    const fadeWidth = 24; // Width of fade in pixels
-    
-    if (canScrollLeft && canScrollRight) {
-      // Both sides need fade: transparent edges, black middle
-      return `linear-gradient(to right, transparent 0%, black ${fadeWidth}px, black calc(100% - ${fadeWidth}px), transparent 100%)`;
-    } else if (canScrollLeft) {
-      // Only left side needs fade: transparent left edge, black rest
-      return `linear-gradient(to right, transparent 0%, black ${fadeWidth}px, black 100%)`;
-    } else if (canScrollRight) {
-      // Only right side needs fade: black start, transparent right edge
-      return `linear-gradient(to right, black 0%, black calc(100% - ${fadeWidth}px), transparent 100%)`;
-    }
-    return undefined;
-  };
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    touchStateRef.current = {
-      startX: touch.clientX,
-      startY: touch.clientY,
-      hasMoved: false,
-      startTime: Date.now(),
-    };
-  }, []);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!touchStateRef.current) return;
-    
-    const touch = e.touches[0];
-    const deltaX = Math.abs(touch.clientX - touchStateRef.current.startX);
-    const deltaY = Math.abs(touch.clientY - touchStateRef.current.startY);
-    
-    // If any movement is significant, mark as moved
-    if (deltaX > 3 || deltaY > 3) {
-      touchStateRef.current.hasMoved = true;
-    }
-  }, []);
-
-  const handleTouchEnd = useCallback(() => {
-    // Keep hasMoved state briefly to catch click events that fire after touchend
-    const hadMoved = touchStateRef.current?.hasMoved;
-    touchStateRef.current = null;
-    
-    if (hadMoved) {
-      // Briefly keep the scroll prevention active
-      hadRecentScrollRef.current = true;
-      setTimeout(() => {
-        hadRecentScrollRef.current = false;
-      }, 100);
-    }
-  }, []);
-
-  if (!isPhone) {
-    return (
-      <ScrollingContext.Provider value={{ isScrolling: false, preventInteraction: () => false }}>
-        <div className="flex items-stretch h-full">
-          {children}
-        </div>
-      </ScrollingContext.Provider>
-    );
-  }
-
-  return (
-    <ScrollingContext.Provider value={{ isScrolling: hadRecentScrollRef.current, preventInteraction }}>
-      <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="flex-1 h-full overflow-x-auto overflow-y-hidden"
-        style={{
-          WebkitOverflowScrolling: "touch",
-          overscrollBehaviorX: "contain",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-          maskImage: getMaskImage(),
-          WebkitMaskImage: getMaskImage(),
-          touchAction: "pan-x",
-        }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        <div className="flex items-stretch h-full min-w-max">
-          {children}
-        </div>
-      </div>
-    </ScrollingContext.Provider>
-  );
-}
-
-interface ClockProps {
-  enableExposeToggle?: boolean;
-}
-
-function Clock({ enableExposeToggle = false }: ClockProps) {
+function Clock() {
   const [time, setTime] = useState(new Date());
   const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
   const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
-  const { i18n: i18nInstance } = useTranslation();
-  
-  // Get current locale from i18n (reactive to language changes)
-  const currentLocale = i18nInstance.language || "en";
-  
-  // Determine if locale prefers 24-hour format
-  const prefers24Hour = ["zh-TW", "ja", "de", "fr", "ko"].includes(currentLocale);
-  
-  // Handle click to toggle expose view
-  const handleClick = () => {
-    if (enableExposeToggle) {
-      window.dispatchEvent(new CustomEvent("toggleExposeView"));
-    }
-  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -317,104 +92,53 @@ function Clock({ enableExposeToggle = false }: ClockProps) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Helper function to format time without leading zeros for 24h format
-  const formatTime24h = (date: Date): string => {
-    const hour = date.getHours();
-    const minute = date.getMinutes().toString().padStart(2, "0");
-    return `${hour}:${minute}`;
-  };
-
   // Format the display based on theme and viewport width
-  // Use "numeric" for hour to avoid leading zeros (e.g., "0:08" instead of "00:08")
-  // "2-digit" would force leading zeros which Chinese/Japanese don't typically use
-  const hourFormat = "numeric";
-  
-  let displayTime: string;
+  let displayTime;
 
   if (isXpTheme) {
-    // For XP/98 themes: use 24h for locales that prefer it, otherwise 12h
-    if (prefers24Hour) {
-      displayTime = formatTime24h(time);
-    } else {
-      displayTime = time.toLocaleTimeString(currentLocale, {
-        hour: hourFormat,
-        minute: "2-digit",
-        hour12: true,
-      });
-    }
+    // For XP/98 themes: time with AM/PM (e.g., "1:34 AM")
+    displayTime = time.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
   } else if (viewportWidth < 420) {
-    // For small screens: just time (24h for locales that prefer it)
-    if (prefers24Hour) {
-      displayTime = formatTime24h(time);
-    } else {
-      displayTime = time.toLocaleTimeString(currentLocale, {
-        hour: hourFormat,
-        minute: "2-digit",
-        hour12: true,
-      });
-    }
+    // For small screens: just time without AM/PM (e.g., "1:34")
+    const timeString = time.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+    displayTime = timeString.replace(/\s?(AM|PM)$/i, "");
   } else if (viewportWidth >= 420 && viewportWidth <= 768) {
-    // For medium screens: time (24h for locales that prefer it)
-    if (prefers24Hour) {
-      displayTime = formatTime24h(time);
-    } else {
-      displayTime = time.toLocaleTimeString(currentLocale, {
-        hour: hourFormat,
-        minute: "2-digit",
-        hour12: true,
-      });
-    }
+    // For medium screens: time with AM/PM (e.g., "1:00 AM")
+    displayTime = time.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
   } else {
-    // For larger screens (> 768px): full date and time
-    const timeString = prefers24Hour 
-      ? formatTime24h(time)
-      : time.toLocaleTimeString(currentLocale, {
-          hour: hourFormat,
-          minute: "2-digit",
-          hour12: true,
-        });
-    
-    // Custom formatting for Chinese, Japanese, and Korean
-    if (currentLocale === "zh-TW") {
-      // Chinese format: "12月2日 週二 12:03"
-      const month = time.getMonth() + 1; // getMonth() returns 0-11, so add 1
-      const day = time.getDate();
-      const weekday = time.toLocaleDateString(currentLocale, { weekday: "short" });
-      displayTime = `${month}月${day}日 ${weekday} ${timeString}`;
-    } else if (currentLocale === "ja") {
-      // Japanese format: "12月2日 (火) 12:06"
-      const month = time.getMonth() + 1; // getMonth() returns 0-11, so add 1
-      const day = time.getDate();
-      const weekday = time.toLocaleDateString(currentLocale, { weekday: "short" });
-      displayTime = `${month}月${day}日 (${weekday}) ${timeString}`;
-    } else if (currentLocale === "ko") {
-      // Korean format: "12월2일 (화) 12:06" (similar to Japanese)
-      const month = time.getMonth() + 1; // getMonth() returns 0-11, so add 1
-      const day = time.getDate();
-      const weekday = time.toLocaleDateString(currentLocale, { weekday: "short" });
-      displayTime = `${month}월${day}일 (${weekday}) ${timeString}`;
-    } else {
-      // Default format for other locales: "Wed May 7 1:34 AM" or "Wed May 7 13:34"
-      const shortWeekday = time.toLocaleDateString(currentLocale, { weekday: "short" });
-      const month = time.toLocaleDateString(currentLocale, { month: "short" });
-      const day = time.getDate();
-      displayTime = `${shortWeekday} ${month} ${day} ${timeString}`;
-    }
+    // For larger screens (> 768px): full date and time (e.g., "Wed May 7 1:34 AM")
+    const shortWeekday = time.toLocaleDateString([], { weekday: "short" });
+    const month = time.toLocaleDateString([], { month: "short" });
+    const day = time.getDate();
+    const timeString = time.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+    displayTime = `${shortWeekday} ${month} ${day} ${timeString}`;
   }
 
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: Window drag handle for Tauri
     <div
-      role="presentation"
-      className={`${isXpTheme ? "" : "ml-auto mr-1 sm:mr-2"}`}
+      className={isXpTheme ? "" : "ml-auto mr-2"}
       style={{
         textShadow:
           currentTheme === "macosx"
             ? "0 2px 3px rgba(0, 0, 0, 0.25)"
             : undefined,
       }}
-      onClick={handleClick}
-      title={enableExposeToggle ? "Click to show all windows (F3)" : undefined}
     >
       {displayTime}
     </div>
@@ -422,7 +146,6 @@ function Clock({ enableExposeToggle = false }: ClockProps) {
 }
 
 function DefaultMenuItems() {
-  const { t } = useTranslation();
   const launchApp = useLaunchApp();
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
@@ -434,291 +157,294 @@ function DefaultMenuItems() {
   return (
     <>
       {/* File Menu */}
-      <MenubarMenu>
-        <MenubarTrigger className="text-md px-2 py-1 border-none focus-visible:ring-0">
-          {t("common.menu.file")}
-        </MenubarTrigger>
-        <MenubarContent align="start" sideOffset={1} className="px-0">
-          <MenubarItem
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="default"
+            className="h-6 text-md px-2 py-1 border-none hover:bg-black/10 active:bg-black/20 focus-visible:ring-0"
+            style={{ color: "inherit" }}
+          >
+            File
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" sideOffset={1} className="px-0">
+          <DropdownMenuItem
             onClick={() => handleLaunchFinder("/")}
-            className="text-md h-6 px-3"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            {t("apps.finder.menu.newFinderWindow")}
-          </MenubarItem>
-          <MenubarItem
+            New Finder Window
+          </DropdownMenuItem>
+          <DropdownMenuItem
             disabled
-            className="text-md h-6 px-3"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            {t("apps.finder.menu.newFolder")}
-          </MenubarItem>
-          <MenubarSeparator className="h-[2px] bg-black my-1" />
-          <MenubarItem
+            New Folder
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
+          <DropdownMenuItem
             disabled
-            className="text-md h-6 px-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {t("apps.finder.menu.moveToTrash")}
-          </MenubarItem>
-          <MenubarItem
+            Move to Trash
+          </DropdownMenuItem>
+          <DropdownMenuItem
             disabled
-            className="text-md h-6 px-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {t("apps.finder.menu.emptyTrash")}
-          </MenubarItem>
-          <MenubarSeparator className="h-[2px] bg-black my-1" />
-          <MenubarItem
-            disabled
-            className="text-md h-6 px-3"
-          >
-            {t("common.menu.close")}
-          </MenubarItem>
-        </MenubarContent>
-      </MenubarMenu>
+            Empty Trash...
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
+          <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
+            Close
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* Edit Menu */}
-      <MenubarMenu>
-        <MenubarTrigger className="text-md px-2 py-1 border-none focus-visible:ring-0">
-          {t("common.menu.edit")}
-        </MenubarTrigger>
-        <MenubarContent align="start" sideOffset={1} className="px-0">
-          <MenubarItem
-            disabled
-            className="text-md h-6 px-3"
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="default"
+            className="h-6 text-md px-2 py-1 border-none hover:bg-black/10 active:bg-black/20 focus-visible:ring-0"
+            style={{ color: "inherit" }}
           >
-            {t("common.menu.undo")}
-          </MenubarItem>
-          <MenubarSeparator className="h-[2px] bg-black my-1" />
-          <MenubarItem
+            Edit
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" sideOffset={1} className="px-0">
+          <DropdownMenuItem
             disabled
-            className="text-md h-6 px-3"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            {t("common.menu.cut")}
-          </MenubarItem>
-          <MenubarItem
+            Undo
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
+          <DropdownMenuItem
             disabled
-            className="text-md h-6 px-3"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            {t("common.menu.copy")}
-          </MenubarItem>
-          <MenubarItem
+            Cut
+          </DropdownMenuItem>
+          <DropdownMenuItem
             disabled
-            className="text-md h-6 px-3"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            {t("common.menu.paste")}
-          </MenubarItem>
-          <MenubarItem
+            Copy
+          </DropdownMenuItem>
+          <DropdownMenuItem
             disabled
-            className="text-md h-6 px-3"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            {t("common.menu.clear")}
-          </MenubarItem>
-          <MenubarSeparator className="h-[2px] bg-black my-1" />
-          <MenubarItem
+            Paste
+          </DropdownMenuItem>
+          <DropdownMenuItem
             disabled
-            className="text-md h-6 px-3"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            {t("common.menu.selectAll")}
-          </MenubarItem>
-        </MenubarContent>
-      </MenubarMenu>
+            Clear
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
+          <DropdownMenuItem
+            disabled
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
+          >
+            Select All
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* View Menu */}
-      <MenubarMenu>
-        <MenubarTrigger className="text-md px-2 py-1 border-none focus-visible:ring-0">
-          {t("common.menu.view")}
-        </MenubarTrigger>
-        <MenubarContent align="start" sideOffset={1} className="px-0">
-          <MenubarCheckboxItem
-            checked={false}
-            disabled
-            className="text-md h-6 px-3"
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="default"
+            className="h-6 text-md px-2 py-1 border-none hover:bg-black/10 active:bg-black/20 focus-visible:ring-0"
+            style={{ color: "inherit" }}
           >
-            {t("apps.finder.menu.bySmallIcon")}
-          </MenubarCheckboxItem>
-          <MenubarCheckboxItem
-            checked={true}
-            disabled
-            className="text-md h-6 px-3"
-          >
-            {t("apps.finder.menu.byIcon")}
-          </MenubarCheckboxItem>
-          <MenubarCheckboxItem
-            checked={false}
-            disabled
-            className="text-md h-6 px-3"
-          >
-            {t("apps.finder.menu.byList")}
-          </MenubarCheckboxItem>
-          <MenubarSeparator className="h-[2px] bg-black my-1" />
-          <MenubarCheckboxItem
-            checked={true}
-            disabled
-            className="text-md h-6 px-3"
-          >
-            {t("apps.finder.menu.byName")}
-          </MenubarCheckboxItem>
-          <MenubarCheckboxItem
-            checked={false}
-            disabled
-            className="text-md h-6 px-3"
-          >
-            {t("apps.finder.menu.byDate")}
-          </MenubarCheckboxItem>
-          <MenubarCheckboxItem
-            checked={false}
-            disabled
-            className="text-md h-6 px-3"
-          >
-            {t("apps.finder.menu.bySize")}
-          </MenubarCheckboxItem>
-          <MenubarCheckboxItem
-            checked={false}
-            disabled
-            className="text-md h-6 px-3"
-          >
-            {t("apps.finder.menu.byKind")}
-          </MenubarCheckboxItem>
-        </MenubarContent>
-      </MenubarMenu>
+            View
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" sideOffset={1} className="px-0">
+          <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
+            <span className="pl-4">by Small Icon</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
+            <span>✓ by Icon</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
+            <span className="pl-4">by List</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
+          <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
+            <span>✓ by Name</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
+            <span className="pl-4">by Date</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
+            <span className="pl-4">by Size</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem className="text-md h-6 px-3 active:bg-gray-900 active:text-white">
+            <span className="pl-4">by Kind</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* Go Menu */}
-      <MenubarMenu>
-        <MenubarTrigger className="text-md px-2 py-1 border-none focus-visible:ring-0">
-          {t("common.menu.go")}
-        </MenubarTrigger>
-        <MenubarContent align="start" sideOffset={1} className="px-0">
-          <MenubarItem
-            disabled
-            className="text-md h-6 px-3 disabled:opacity-50 disabled:cursor-not-allowed"
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="default"
+            className="h-6 text-md px-2 py-1 border-none hover:bg-black/10 active:bg-black/20 focus-visible:ring-0"
+            style={{ color: "inherit" }}
           >
-            {t("apps.finder.menu.back")}
-          </MenubarItem>
-          <MenubarItem
+            Go
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" sideOffset={1} className="px-0">
+          <DropdownMenuItem
             disabled
-            className="text-md h-6 px-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {t("apps.finder.menu.forward")}
-          </MenubarItem>
-          <MenubarSeparator className="h-[2px] bg-black my-1" />
-          <MenubarItem
+            Back
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Forward
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
+          <DropdownMenuItem
             onClick={() => handleLaunchFinder("/Applications")}
-            className="text-md h-6 px-3 flex items-center gap-2"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white flex items-center gap-2"
           >
             <ThemedIcon
               name="applications.png"
-              alt={t("common.menu.applications")}
+              alt="Applications"
               className="w-4 h-4 [image-rendering:pixelated]"
             />
-            {t("common.menu.applications")}
-          </MenubarItem>
-          <MenubarItem
+            Applications
+          </DropdownMenuItem>
+          <DropdownMenuItem
             onClick={() => handleLaunchFinder("/Documents")}
-            className="text-md h-6 px-3 flex items-center gap-2"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white flex items-center gap-2"
           >
             <ThemedIcon
               name="documents.png"
-              alt={t("common.menu.documents")}
+              alt="Documents"
               className="w-4 h-4 [image-rendering:pixelated]"
             />
-            {t("common.menu.documents")}
-          </MenubarItem>
-          <MenubarItem
+            Documents
+          </DropdownMenuItem>
+          <DropdownMenuItem
             onClick={() => handleLaunchFinder("/Images")}
-            className="text-md h-6 px-3 flex items-center gap-2"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white flex items-center gap-2"
           >
             <ThemedIcon
               name="images.png"
-              alt={t("common.menu.images")}
+              alt="Images"
               className="w-4 h-4 [image-rendering:pixelated]"
             />
-            {t("common.menu.images")}
-          </MenubarItem>
-          <MenubarItem
+            Images
+          </DropdownMenuItem>
+          <DropdownMenuItem
             onClick={() => handleLaunchFinder("/Music")}
-            className="text-md h-6 px-3 flex items-center gap-2"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white flex items-center gap-2"
           >
             <ThemedIcon
               name="sounds.png"
-              alt={t("common.menu.music")}
+              alt="Music"
               className="w-4 h-4 [image-rendering:pixelated]"
             />
-            {t("common.menu.music")}
-          </MenubarItem>
-          <MenubarItem
+            Music
+          </DropdownMenuItem>
+          <DropdownMenuItem
             onClick={() => handleLaunchFinder("/Sites")}
-            className="text-md h-6 px-3 flex items-center gap-2"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white flex items-center gap-2"
           >
             <ThemedIcon
               name="sites.png"
-              alt={t("common.menu.sites")}
+              alt="Sites"
               className="w-4 h-4 [image-rendering:pixelated]"
             />
-            {t("common.menu.sites")}
-          </MenubarItem>
-          <MenubarItem
+            Sites
+          </DropdownMenuItem>
+          <DropdownMenuItem
             onClick={() => handleLaunchFinder("/Videos")}
-            className="text-md h-6 px-3 flex items-center gap-2"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white flex items-center gap-2"
           >
             <ThemedIcon
               name="movies.png"
-              alt={t("common.menu.videos")}
+              alt="Videos"
               className="w-4 h-4 [image-rendering:pixelated]"
             />
-            {t("common.menu.videos")}
-          </MenubarItem>
-          <MenubarItem
+            Videos
+          </DropdownMenuItem>
+          <DropdownMenuItem
             onClick={() => handleLaunchFinder("/Trash")}
-            className="text-md h-6 px-3 flex items-center gap-2"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white flex items-center gap-2"
           >
             <ThemedIcon
               name="trash-empty.png"
-              alt={t("common.menu.trash")}
+              alt="Trash"
               className="w-4 h-4 [image-rendering:pixelated]"
             />
-            {t("common.menu.trash")}
-          </MenubarItem>
-        </MenubarContent>
-      </MenubarMenu>
+            Trash
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* Help Menu */}
-      <MenubarMenu>
-        <MenubarTrigger className="text-md px-2 py-1 border-none focus-visible:ring-0">
-          {t("common.menu.help")}
-        </MenubarTrigger>
-        <MenubarContent align="start" sideOffset={1} className="px-0">
-          <MenubarItem
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="default"
+            className="h-6 text-md px-2 py-1 border-none hover:bg-black/10 active:bg-black/20 focus-visible:ring-0"
+            style={{ color: "inherit" }}
+          >
+            Help
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" sideOffset={1} className="px-0">
+          <DropdownMenuItem
             onClick={() => setIsHelpDialogOpen(true)}
-            className="text-md h-6 px-3"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            {t("apps.finder.menu.finderHelp")}
-          </MenubarItem>
-          <MenubarSeparator className="h-[2px] bg-black my-1" />
-          <MenubarItem
+            Finder Help
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="h-[2px] bg-black my-1" />
+          <DropdownMenuItem
             onClick={() => setIsAboutDialogOpen(true)}
-            className="text-md h-6 px-3"
+            className="text-md h-6 px-3 active:bg-gray-900 active:text-white"
           >
-            {t("apps.finder.menu.aboutFinder")}
-          </MenubarItem>
-        </MenubarContent>
-      </MenubarMenu>
+            About Finder
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <HelpDialog
         isOpen={isHelpDialogOpen}
         onOpenChange={setIsHelpDialogOpen}
-        appId="finder"
+        appName="Finder"
         helpItems={finderHelpItems}
       />
       <AboutDialog
         isOpen={isAboutDialogOpen}
         onOpenChange={setIsAboutDialogOpen}
         metadata={finderMetadata}
-        appId="finder"
       />
     </>
   );
 }
 
 function VolumeControl() {
-  const { masterVolume, setMasterVolume } = useAudioSettingsStoreShallow((s) => ({
+  const { masterVolume, setMasterVolume } = useAppStoreShallow((s) => ({
     masterVolume: s.masterVolume,
     setMasterVolume: s.setMasterVolume,
   }));
@@ -730,12 +456,12 @@ function VolumeControl() {
 
   const getVolumeIcon = () => {
     if (masterVolume === 0) {
-      return <SpeakerSimpleSlash size={12} weight="fill" />;
+      return <VolumeX className="h-5 w-5" />;
     }
     if (masterVolume < 0.5) {
-      return <SpeakerSimpleLow size={12} weight="fill" />;
+      return <Volume1 className="h-5 w-5" />;
     }
-    return <SpeakerSimpleHigh size={12} weight="fill" />;
+    return <Volume2 className="h-5 w-5" />;
   };
 
   return (
@@ -776,7 +502,7 @@ function VolumeControl() {
         <Button
           variant="ghost"
           size="icon"
-          className="mt-2 h-6 w-6 text-md border-none focus-visible:ring-0"
+          className="mt-2 h-6 w-6 text-md border-none hover:bg-gray-200 active:bg-gray-900 active:text-white focus-visible:ring-0"
           onClick={() => {
             launchApp("control-panels", {
               initialData: { defaultTab: "sound" },
@@ -784,7 +510,7 @@ function VolumeControl() {
             setIsDropdownOpen(false);
           }}
         >
-          <Gear className="h-4 w-4" weight="bold" />
+          <Settings className="h-4 w-4" />
         </Button>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -793,27 +519,20 @@ function VolumeControl() {
 
 export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
   // Get apps from registry
-  const apps: AnyApp[] = useMemo(() => Object.values(appRegistry), []);
+  const apps = useMemo(() => Object.values(appRegistry), []);
   const {
     getForegroundInstance,
     instances,
 
     bringInstanceToForeground,
-    restoreInstance,
     foregroundInstanceId, // Add this to get the foreground instance ID
-    exposeMode,
   } = useAppStoreShallow((s) => ({
     getForegroundInstance: s.getForegroundInstance,
     instances: s.instances,
 
     bringInstanceToForeground: s.bringInstanceToForeground,
-    restoreInstance: s.restoreInstance,
     foregroundInstanceId: s.foregroundInstanceId, // Add this
-    exposeMode: s.exposeMode,
   }));
-
-  // Debug mode from display settings store
-  const debugMode = useDisplaySettingsStoreShallow((s) => s.debugMode);
 
   const foregroundInstance = getForegroundInstance();
   const hasActiveApp = !!foregroundInstance;
@@ -821,9 +540,12 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
   // Get current theme
   const currentTheme = useThemeStore((state) => state.current);
   const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
+  const isOS1Theme = currentTheme === "os1";
   
-  // Check if on phone (must be called before any early returns)
-  const isPhone = useIsPhone();
+  // Get foreground window title for OS1 theme
+  const foregroundWindowTitle = isOS1Theme && foregroundInstance 
+    ? (foregroundInstance.title || getAppName(foregroundInstance.appId))
+    : null;
 
   // Get file system items for applet icons
   const files = useFilesStore((s) => s.items);
@@ -868,40 +590,6 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
 
     return { icon, label, isEmoji };
   };
-
-  // Tauri fullscreen detection (must be declared before any early returns)
-  const isTauriApp = isTauri();
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  
-  // Track fullscreen state in Tauri
-  useEffect(() => {
-    if (!isTauriApp) return;
-    
-    let unlisten: (() => void) | undefined;
-    
-    (async () => {
-      try {
-        const { getCurrentWindow } = await import("@tauri-apps/api/window");
-        const win = getCurrentWindow();
-        
-        // Get initial fullscreen state
-        const fullscreen = await win.isFullscreen();
-        setIsFullscreen(fullscreen);
-        
-        // Listen for fullscreen changes
-        unlisten = await win.onResized(async () => {
-          const fs = await win.isFullscreen();
-          setIsFullscreen(fs);
-        });
-      } catch (error) {
-        console.error("Error setting fullscreen state:", error);
-      }
-    })();
-    
-    return () => {
-      unlisten?.();
-    };
-  }, [isTauriApp]);
 
   // Taskbar overflow handling (used for XP taskbar rendering)
   const runningAreaRef = useRef<HTMLDivElement>(null);
@@ -963,20 +651,15 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
   // If inside window frame for XP/98, use plain style
   if (inWindowFrame && isXpTheme) {
     return (
-      <Menubar
-        className="flex items-center border-none bg-transparent space-x-0 rounded-none"
+      <div
+        className="flex items-center h-7 px-1"
         style={{
           fontFamily: isXpTheme ? "var(--font-ms-sans)" : "var(--os-font-ui)",
           fontSize: "11px",
-          paddingLeft: "6px",
-          paddingRight: "2px",
-          height: "28px",
-          minHeight: "28px",
-          maxHeight: "28px",
         }}
       >
         {children}
-      </Menubar>
+      </div>
     );
   }
 
@@ -1000,14 +683,12 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
           position: "fixed",
         }}
       >
-      <div
-        className="absolute left-0 right-0 flex items-center h-[30px]"
-        style={{
-          bottom: "env(safe-area-inset-bottom, 0px)",
-          paddingLeft: "env(safe-area-inset-left, 0px)",
-          paddingRight: "env(safe-area-inset-right, 0px)",
-        }}
-      >
+        <div
+          className="absolute left-0 right-0 flex items-center h-[30px]"
+          style={{
+            bottom: "env(safe-area-inset-bottom, 0px)",
+          }}
+        >
           {/* Start Button */}
           <div className="flex items-center h-full">
             <StartMenu apps={apps} />
@@ -1018,7 +699,6 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
             ref={runningAreaRef}
             className="flex-1 flex items-center gap-0.5 px-2 overflow-hidden h-full"
           >
-            <AnimatePresence mode="popLayout">
             {(() => {
               const idsToRender =
                 visibleTaskbarIds.length > 0 || overflowTaskbarIds.length > 0
@@ -1030,7 +710,6 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
                 if (!instance || !instance.isOpen) return null;
 
                 const isForeground = instanceId === foregroundInstanceId;
-                const isMinimized = instance.isMinimized ?? false;
                 const isApplet = instance.appId === "applet-viewer";
                 
                 // Get icon and label based on app type
@@ -1040,35 +719,17 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
                 const isEmoji = appletInfo?.isEmoji || false;
 
                 return (
-                  <motion.button
+                  <button
                     key={instanceId}
-                    data-taskbar-item={instanceId}
-                    layout
-                    initial={{ scale: 0.8, opacity: 0, width: 0 }}
-                    animate={{ scale: 1, opacity: 1, width: "auto" }}
-                    exit={{ scale: 0.8, opacity: 0, width: 0 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 400,
-                      damping: 30,
-                      mass: 0.8,
-                    }}
                     className="px-2 gap-1 border-t border-y rounded-sm flex items-center justify-start"
-                    onClick={() => {
-                      // If minimized, restore it; otherwise just bring to foreground
-                      if (isMinimized) {
-                        restoreInstance(instanceId);
-                      } else {
-                        bringInstanceToForeground(instanceId);
-                      }
-                    }}
+                    onClick={() => bringInstanceToForeground(instanceId)}
                     style={{
                       height: "85%",
                       flex: "0 1 160px",
                       minWidth: "110px",
                       marginTop: "2px",
                       marginRight: "2px",
-                      background: isForeground && !isMinimized
+                      background: isForeground
                         ? currentTheme === "xp"
                           ? "#3980f4"
                           : "#c0c0c0"
@@ -1077,7 +738,7 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
                         : "#c0c0c0",
                       border:
                         currentTheme === "xp"
-                          ? isForeground && !isMinimized
+                          ? isForeground
                             ? "1px solid #255be1"
                             : "1px solid #255be1"
                           : "none",
@@ -1086,35 +747,35 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
                       boxShadow:
                         currentTheme === "xp"
                           ? "2px 2px 5px rgba(255, 255, 255, 0.267) inset"
-                          : isForeground && !isMinimized
+                          : isForeground
                           ? "inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px #dfdfdf, inset 2px 2px grey"
                           : "inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf",
-                      transition: "background 0.1s ease, box-shadow 0.1s ease, border-color 0.1s ease",
+                      transition: "all 0.1s ease",
                     }}
                     onMouseEnter={(e) => {
                       if (currentTheme === "xp") {
-                        if (isForeground && !isMinimized) {
+                        if (isForeground) {
                           e.currentTarget.style.background = "#4a92f9";
                           e.currentTarget.style.borderColor = "#2c64e3";
                         } else {
                           e.currentTarget.style.background = "#2a6ef1";
                           e.currentTarget.style.borderColor = "#1e56c9";
                         }
-                      } else if (currentTheme === "win98" && (!isForeground || isMinimized)) {
+                      } else if (currentTheme === "win98" && !isForeground) {
                         e.currentTarget.style.boxShadow =
                           "inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf";
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (currentTheme === "xp") {
-                        if (isForeground && !isMinimized) {
+                        if (isForeground) {
                           e.currentTarget.style.background = "#3980f4";
                           e.currentTarget.style.borderColor = "#255be1";
                         } else {
                           e.currentTarget.style.background = "#1658dd";
                           e.currentTarget.style.borderColor = "#255be1";
                         }
-                      } else if (currentTheme === "win98" && (!isForeground || isMinimized)) {
+                      } else if (currentTheme === "win98" && !isForeground) {
                         e.currentTarget.style.boxShadow =
                           "inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf";
                       }
@@ -1141,18 +802,16 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
                     <span className="truncate text-xs">
                       {displayLabel}
                     </span>
-                  </motion.button>
+                  </button>
                 );
               });
             })()}
-            </AnimatePresence>
 
             {/* Overflow menu button */}
             {overflowTaskbarIds.length > 0 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    type="button"
                     className="px-1 border-t border-y rounded-sm flex items-center justify-center"
                     style={{
                       height: "85%",
@@ -1209,7 +868,7 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
                       }
                     }}
                   >
-                    <CaretUp className="h-4 w-4" weight="bold" />
+                    <ChevronUp className="h-4 w-4" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -1222,7 +881,6 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
                     const instance = instances[instanceId];
                     if (!instance || !instance.isOpen) return null;
                     
-                    const isMinimized = instance.isMinimized ?? false;
                     const isApplet = instance.appId === "applet-viewer";
                     const appletInfo = isApplet ? getAppletInfo(instance) : null;
                     const displayIcon = appletInfo?.icon || getAppIconPath(instance.appId);
@@ -1232,15 +890,8 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
                     return (
                       <DropdownMenuItem
                         key={instanceId}
-                        onClick={() => {
-                          // If minimized, restore it; otherwise just bring to foreground
-                          if (isMinimized) {
-                            restoreInstance(instanceId);
-                          } else {
-                            bringInstanceToForeground(instanceId);
-                          }
-                        }}
-                        className="text-md h-6 px-3 flex items-center gap-2"
+                        onClick={() => bringInstanceToForeground(instanceId)}
+                        className="text-md h-6 px-3 active:bg-gray-900 active:text-white flex items-center gap-2"
                       >
                         {isEmoji ? (
                           <span
@@ -1297,7 +948,6 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
               paddingTop: currentTheme === "xp" ? "1px" : "0px",
             }}
           >
-            <OfflineIndicator />
             <div className="hidden sm:flex">
               <VolumeControl />
             </div>
@@ -1331,14 +981,9 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
   }
 
   // Default Mac-style top menubar
-  // In Tauri with titleBarStyle: overlay, add clearance for traffic lights (but not in fullscreen)
-  // Don't add clearance on Windows platform (Chromium - no traffic lights), only on Mac (WebKit)
-  const isWindowsPlatform = isTauriWindows();
-  const needsTrafficLightClearance = isTauriApp && !isFullscreen && !isWindowsPlatform && (currentTheme === "macosx" || currentTheme === "system7");
-  
   return (
     <div
-      className={`fixed top-0 left-0 right-0 flex border-b-[length:var(--os-metrics-border-width)] border-os-menubar items-center font-os-ui ${exposeMode ? "z-[9997]" : "z-[10002]"}`}
+      className="fixed top-0 left-0 right-0 flex border-b-[length:var(--os-metrics-border-width)] border-os-menubar px-2 h-os-menubar items-center font-os-ui"
       style={{
         background:
           currentTheme === "macosx"
@@ -1355,117 +1000,30 @@ export function MenuBar({ children, inWindowFrame = false }: MenuBarProps) {
             : undefined,
         fontFamily: "var(--os-font-ui)",
         color: "var(--os-color-menubar-text)",
-        // Add extra left padding for macOS traffic lights in Tauri
-        paddingLeft: needsTrafficLightClearance 
-          ? "calc(78px + env(safe-area-inset-left, 0px))" 
-          : "calc(0.5rem + env(safe-area-inset-left, 0px))",
-        paddingRight: "calc(0.5rem + env(safe-area-inset-right, 0px))",
-        // Make menubar taller in Tauri for better traffic light alignment
-        height: needsTrafficLightClearance ? "32px" : "var(--os-metrics-menubar-height)",
-        minHeight: needsTrafficLightClearance ? "32px" : "var(--os-metrics-menubar-height)",
-        maxHeight: needsTrafficLightClearance ? "32px" : "var(--os-metrics-menubar-height)",
       }}
     >
-      <ScrollableMenuWrapper>
-        <Menubar 
-          className="flex items-stretch border-none bg-transparent space-x-0 p-0 rounded-none h-full"
-        >
-          <AppleMenu />
-          {hasActiveApp && children ? children : <DefaultMenuItems />}
-        </Menubar>
-      </ScrollableMenuWrapper>
-      {/* Draggable spacer for Tauri window only */}
-      {isTauriApp && (
-        // biome-ignore lint/a11y/noStaticElementInteractions: Window drag handle for Tauri
-        <div
-          className="flex-1"
-          style={{
-            background: debugMode ? 'rgba(255, 0, 0, 0.3)' : undefined,
-            minHeight: '100%',
-          }}
-          onMouseDown={async (e) => {
-            if (e.buttons !== 1) return;
-            try {
-              const { getCurrentWindow } = await import("@tauri-apps/api/window");
-              if (e.detail === 2) {
-                await getCurrentWindow().toggleMaximize();
-              } else {
-                await getCurrentWindow().startDragging();
-              }
-            } catch {
-              // Ignore errors - Tauri window APIs may not be available in browser
-            }
-          }}
-        />
-      )}
-      <div className={`${isPhone ? "flex-shrink-0 px-2" : "ml-auto"} flex items-center`}>
-        <OfflineIndicator />
-        <ExposeButton />
+      <Menubar className="border-none bg-transparent p-0">
+        <div className="relative z-10">
+          <AppleMenu apps={apps} />
+        </div>
+        {/* OS1 主题：在 Apple logo 和 File 菜单之间显示当前活动窗口的标题 */}
+        {isOS1Theme && foregroundWindowTitle && (
+          <div className="flex items-center px-3">
+            <span className="text-sm font-bold text-os-menubar-text truncate max-w-md">
+              {foregroundWindowTitle}
+            </span>
+          </div>
+        )}
+        <div className="relative z-10">
+          {hasActiveApp ? children : <DefaultMenuItems />}
+        </div>
+      </Menubar>
+      <div className="ml-auto flex items-center relative z-10">
         <div className="hidden sm:flex">
           <VolumeControl />
         </div>
-        <Clock enableExposeToggle />
+        <Clock />
       </div>
     </div>
   );
 }
-
-function OfflineIndicator() {
-  const isOffline = useOffline();
-  const currentTheme = useThemeStore((state) => state.current);
-  const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
-
-  if (!isOffline) return null;
-
-  return (
-    <div
-      className="flex items-center"
-      style={{
-        marginRight: isXpTheme ? "4px" : "8px",
-        color:
-          currentTheme === "win98"
-            ? "#000000"
-            : isXpTheme
-            ? "#ffffff"
-            : "var(--os-color-menubar-text)",
-      }}
-      title="You are currently offline"
-    >
-      <WifiSlash
-        className={isXpTheme ? "h-3 w-3" : "h-4 w-4"}
-        weight="bold"
-        style={{
-          opacity: 0.7,
-        }}
-      />
-    </div>
-  );
-}
-
-function ExposeButton() {
-  const currentTheme = useThemeStore((state) => state.current);
-  const isXpTheme = currentTheme === "xp" || currentTheme === "win98";
-  
-  // Don't show on Windows themes (they have their own taskbar)
-  if (isXpTheme) return null;
-
-  const handleClick = () => {
-    window.dispatchEvent(new CustomEvent("toggleExposeView"));
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={handleClick}
-      className="flex items-center justify-center px-1.5 py-0.5"
-      style={{
-        marginRight: "4px",
-      }}
-      title="Mission Control (F3)"
-      aria-label="Mission Control (F3)"
-    >
-      <DotsThree aria-hidden="true" className="h-4 w-4" weight="bold" />
-    </button>
-  );
-}
-
